@@ -1,0 +1,59 @@
+version: '3.9'
+
+services:
+  postgres:
+    image: postgres:16-alpine
+    container_name: gtpp_postgres
+    restart: unless-stopped
+    environment:
+      POSTGRES_DB: gtpp
+      POSTGRES_USER: gtpp
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-gtpp_secret}
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+      - ./init.sql:/docker-entrypoint-initdb.d/01_init.sql
+    ports:
+      - "5434:5432"
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U gtpp -d gtpp"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+
+  backend:
+    build:
+      context: ./backend
+      dockerfile: Dockerfile
+    container_name: gtpp_backend
+    restart: unless-stopped
+    environment:
+      DATABASE_URL: postgresql://gtpp:${POSTGRES_PASSWORD:-gtpp_secret}@postgres:5432/gtpp
+      JWT_SECRET: ${JWT_SECRET:-gtpp_jwt_secret_change_in_production}
+      PORT: 3001
+      NODE_ENV: ${NODE_ENV:-development}
+      CORS_ORIGIN: http://localhost:5173
+    ports:
+      - "3004:3001"
+    depends_on:
+      postgres:
+        condition: service_healthy
+    volumes:
+      - ./backend/src:/app/src
+
+  frontend:
+    build:
+      context: ./frontend
+      dockerfile: Dockerfile
+    container_name: gtpp_frontend
+    restart: unless-stopped
+    environment:
+      VITE_API_URL: http://localhost:3004/api
+    ports:
+      - "5173:5173"
+    depends_on:
+      - backend
+    volumes:
+      - ./frontend/src:/app/src
+
+volumes:
+  postgres_data:
