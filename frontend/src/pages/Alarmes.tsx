@@ -1,6 +1,7 @@
 import { useState } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { alarmesApi, journeesApi } from '../lib/api';
+import { useAuth } from '../contexts/AuthContext';
 import PageHeader from '../components/PageHeader';
 import Modal from '../components/Modal';
 import { Plus, Trash2 } from 'lucide-react';
@@ -8,6 +9,8 @@ import { format } from 'date-fns';
 import type { Alarme } from '../types';
 
 export default function Alarmes() {
+  const { user } = useAuth();
+  const canEdit = user?.role !== 'operateur';
   const qc = useQueryClient();
   const [selectedDate, setSelectedDate] = useState(format(new Date(), 'yyyy-MM-dd'));
   const [showModal, setShowModal] = useState(false);
@@ -41,7 +44,7 @@ export default function Alarmes() {
           <div className="flex gap-2">
             <input type="date" value={selectedDate} onChange={(e) => setSelectedDate(e.target.value)}
               className="bg-slate-800 border border-slate-600 rounded-lg px-3 py-1.5 text-white text-sm focus:outline-none focus:border-amber-500" />
-            {journee && (
+            {journee && canEdit && (
               <button onClick={() => setShowModal(true)}
                 className="flex items-center gap-1.5 bg-amber-500 hover:bg-amber-600 text-slate-900 font-medium px-3 py-1.5 rounded-lg text-sm">
                 <Plus size={14} /> Ajouter
@@ -82,7 +85,7 @@ export default function Alarmes() {
                       {a.repetitive && <span className="text-xs text-yellow-400">Oui</span>}
                     </td>
                     <td className="px-4 py-2.5">
-                      <button onClick={() => deleteMut.mutate(a.id)} className="text-slate-600 hover:text-red-400 transition-colors"><Trash2 size={13} /></button>
+                      {canEdit && <button onClick={() => deleteMut.mutate(a.id)} className="text-slate-600 hover:text-red-400 transition-colors"><Trash2 size={13} /></button>}
                     </td>
                   </tr>
                 ))}

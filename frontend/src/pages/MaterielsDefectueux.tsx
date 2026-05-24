@@ -1,6 +1,7 @@
 import { useState } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { defautsApi } from '../lib/api';
+import { useAuth } from '../contexts/AuthContext';
 import PageHeader from '../components/PageHeader';
 import Modal from '../components/Modal';
 import { Plus, CheckCircle, Pencil } from 'lucide-react';
@@ -17,6 +18,8 @@ const STATUT_COLORS: Record<StatutDefaut, string> = {
 const EMPTY_FORM = { statut: 'ouvert', date_declaration: format(new Date(), 'yyyy-MM-dd') };
 
 export default function MaterielsDefectueux() {
+  const { user } = useAuth();
+  const canEdit = user?.role !== 'operateur';
   const qc = useQueryClient();
   const [filter, setFilter] = useState<'actif' | 'all'>('actif');
   const [showModal, setShowModal] = useState(false);
@@ -55,10 +58,12 @@ export default function MaterielsDefectueux() {
               <button onClick={() => setFilter('actif')} className={`px-3 py-1.5 text-sm transition-colors ${filter === 'actif' ? 'bg-amber-500 text-slate-900 font-medium' : 'text-slate-400 hover:text-white'}`}>Actifs</button>
               <button onClick={() => setFilter('all')} className={`px-3 py-1.5 text-sm transition-colors ${filter === 'all' ? 'bg-amber-500 text-slate-900 font-medium' : 'text-slate-400 hover:text-white'}`}>Tous</button>
             </div>
-            <button onClick={() => { setEditItem(null); setForm(EMPTY_FORM); setShowModal(true); }}
-              className="flex items-center gap-1.5 bg-amber-500 hover:bg-amber-600 text-slate-900 font-medium px-3 py-1.5 rounded-lg text-sm">
-              <Plus size={14} /> Nouveau
-            </button>
+            {canEdit && (
+              <button onClick={() => { setEditItem(null); setForm(EMPTY_FORM); setShowModal(true); }}
+                className="flex items-center gap-1.5 bg-amber-500 hover:bg-amber-600 text-slate-900 font-medium px-3 py-1.5 rounded-lg text-sm">
+                <Plus size={14} /> Nouveau
+              </button>
+            )}
           </div>
         }
       />
@@ -89,12 +94,14 @@ export default function MaterielsDefectueux() {
                   </td>
                   <td className="px-4 py-3 text-xs text-slate-400 max-w-xs truncate">{d.commentaires || '—'}</td>
                   <td className="px-4 py-3">
-                    <div className="flex gap-2">
-                      <button onClick={() => openEdit(d)} className="text-slate-500 hover:text-amber-400 transition-colors"><Pencil size={13} /></button>
-                      {d.statut !== 'cloture' && (
-                        <button onClick={() => cloturerMut.mutate(d.id)} title="Clôturer" className="text-slate-500 hover:text-green-400 transition-colors"><CheckCircle size={13} /></button>
-                      )}
-                    </div>
+                    {canEdit && (
+                      <div className="flex gap-2">
+                        <button onClick={() => openEdit(d)} className="text-slate-500 hover:text-amber-400 transition-colors"><Pencil size={13} /></button>
+                        {d.statut !== 'cloture' && (
+                          <button onClick={() => cloturerMut.mutate(d.id)} title="Clôturer" className="text-slate-500 hover:text-green-400 transition-colors"><CheckCircle size={13} /></button>
+                        )}
+                      </div>
+                    )}
                   </td>
                 </tr>
               ))}

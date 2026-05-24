@@ -14,6 +14,7 @@ import alarmesRouter from './routes/alarmes';
 import otRouter from './routes/ot';
 import defautsRouter from './routes/defauts';
 import dashboardRouter from './routes/dashboard';
+import { startReleveCron } from './cron';
 
 const app = express();
 const PORT = process.env.PORT || 3001;
@@ -60,6 +61,7 @@ async function seedAdmin() {
 app.listen(PORT, async () => {
   console.log(`GTpp backend démarré sur le port ${PORT}`);
   await seedAdmin();
+  startReleveCron();
 });
 
 export default app;

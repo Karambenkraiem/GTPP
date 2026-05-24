@@ -58,6 +58,7 @@ export default function Journee() {
 
   const canValiderBloc = ['chef_bloc', 'admin'].includes(user?.role || '');
   const canValiderQuart = ['chef_quart', 'chef_exploitation', 'admin'].includes(user?.role || '');
+  const canManageJournee = ['chef_quart', 'chef_exploitation', 'admin'].includes(user?.role || '');
 
   function handleAddPoste() {
     if (!journeeDetail) return;
@@ -84,7 +85,7 @@ export default function Journee() {
               className="bg-slate-800 border border-slate-600 rounded-lg px-3 py-2 text-white text-sm focus:outline-none focus:border-amber-500"
             />
           </div>
-          {!selectedJournee && (
+          {!selectedJournee && canManageJournee && (
             <button
               onClick={() => createJourneeMut.mutate()}
               className="flex items-center gap-2 bg-amber-500 hover:bg-amber-600 text-slate-900 font-medium px-4 py-2 rounded-lg text-sm transition-colors"
@@ -143,12 +144,14 @@ export default function Journee() {
             <div className="bg-slate-900 border border-slate-700 rounded-lg">
               <div className="flex items-center justify-between px-4 py-3 border-b border-slate-700">
                 <h3 className="text-sm font-medium text-white">Postes (4 tranches)</h3>
-                <button
-                  onClick={() => setShowPosteModal(true)}
-                  className="flex items-center gap-1.5 text-amber-400 hover:text-amber-300 text-xs transition-colors"
-                >
-                  <Plus size={13} /> Ajouter
-                </button>
+                {canManageJournee && (
+                  <button
+                    onClick={() => setShowPosteModal(true)}
+                    className="flex items-center gap-1.5 text-amber-400 hover:text-amber-300 text-xs transition-colors"
+                  >
+                    <Plus size={13} /> Ajouter
+                  </button>
+                )}
               </div>
               <div className="divide-y divide-slate-800">
                 {TRANCHES.map((tranche) => {

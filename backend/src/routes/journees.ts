@@ -31,8 +31,9 @@ router.get('/', async (req, res) => {
 
 router.get('/today', async (req, res) => {
   try {
-    const today = new Date();
-    today.setHours(0, 0, 0, 0);
+    const now = new Date();
+    const todayStr = `${now.getFullYear()}-${String(now.getMonth()+1).padStart(2,'0')}-${String(now.getDate()).padStart(2,'0')}`;
+    const today = new Date(todayStr + 'T00:00:00.000Z');
     let journee = await prisma.journee.findUnique({
       where: { jour: today },
       include: {

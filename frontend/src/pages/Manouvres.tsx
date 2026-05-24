@@ -1,6 +1,7 @@
 import { useState } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { manouvresApi, journeesApi } from '../lib/api';
+import { useAuth } from '../contexts/AuthContext';
 import PageHeader from '../components/PageHeader';
 import Modal from '../components/Modal';
 import { Plus, Trash2 } from 'lucide-react';
@@ -20,6 +21,8 @@ const TYPE_COLORS: Record<TypeManouvre, string> = {
 };
 
 export default function Manouvres() {
+  const { user } = useAuth();
+  const canEdit = user?.role !== 'operateur';
   const qc = useQueryClient();
   const today = format(new Date(), 'yyyy-MM-dd');
   const [selectedDate, setSelectedDate] = useState(today);
@@ -54,7 +57,7 @@ export default function Manouvres() {
           <div className="flex gap-2">
             <input type="date" value={selectedDate} onChange={(e) => setSelectedDate(e.target.value)}
               className="bg-slate-800 border border-slate-600 rounded-lg px-3 py-1.5 text-white text-sm focus:outline-none focus:border-amber-500" />
-            {journee && (
+            {journee && canEdit && (
               <button onClick={() => setShowModal(true)}
                 className="flex items-center gap-1.5 bg-amber-500 hover:bg-amber-600 text-slate-900 font-medium px-3 py-1.5 rounded-lg text-sm transition-colors">
                 <Plus size={14} /> Ajouter
@@ -84,9 +87,11 @@ export default function Manouvres() {
                 <div className="flex items-center gap-2 flex-shrink-0">
                   <span className="text-xs text-slate-500">F{m.feuille_numero}</span>
                   <span className="text-xs text-slate-500">{m.saiseur?.prenom} {m.saiseur?.nom}</span>
-                  <button onClick={() => deleteMut.mutate(m.id)} className="text-slate-600 hover:text-red-400 transition-colors">
-                    <Trash2 size={13} />
-                  </button>
+                  {canEdit && (
+                    <button onClick={() => deleteMut.mutate(m.id)} className="text-slate-600 hover:text-red-400 transition-colors">
+                      <Trash2 size={13} />
+                    </button>
+                  )}
                 </div>
               </div>
             ))}

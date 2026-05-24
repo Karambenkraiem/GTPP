@@ -78,6 +78,7 @@ export const relevesApi = {
   createOp: (data: any) => api.post('/releves/operateur', data).then((r) => r.data),
   updateOp: (id: string, data: any) => api.put(`/releves/operateur/${id}`, data).then((r) => r.data),
   deleteOp: (id: string) => api.delete(`/releves/operateur/${id}`).then((r) => r.data),
+  listJour: (date: string) => api.get(`/releves/jour/${date}`).then((r) => r.data),
 
   getCompteurs: (journeeId: string) =>
     api.get(`/releves/compteurs/${journeeId}`).then((r) => r.data),

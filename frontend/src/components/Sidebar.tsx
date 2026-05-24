@@ -1,19 +1,22 @@
 import { NavLink } from 'react-router-dom';
 import {
   LayoutDashboard, BookOpen, ClipboardList, Activity,
-  Wrench, Bell, FileText, AlertTriangle, Users, Settings, Zap, LogOut
+  Wrench, Bell, AlertTriangle, Users, Settings, Zap, LogOut, CalendarDays
 } from 'lucide-react';
 import { useAuth } from '../contexts/AuthContext';
 
-const navItems = [
+type NavItem = { to: string; icon: any; label: string; roles?: string[] };
+
+const navItems: NavItem[] = [
   { to: '/', icon: LayoutDashboard, label: 'Dashboard' },
   { to: '/journee', icon: BookOpen, label: 'Journée' },
-  { to: '/releves-bloc', icon: Activity, label: 'Relevés Chef Bloc' },
-  { to: '/releves-op', icon: ClipboardList, label: 'Relevés Opérateur' },
+  { to: '/releves-bloc', icon: Activity, label: 'Relevés Chef Bloc', roles: ['chef_bloc', 'chef_quart', 'admin', 'chef_exploitation'] },
+  { to: '/releves-op', icon: ClipboardList, label: 'Saisie Relevés Op.', roles: ['operateur', 'chef_quart', 'admin', 'chef_exploitation'] },
   { to: '/manouvres', icon: Zap, label: 'Manœuvres' },
   { to: '/alarmes', icon: Bell, label: 'Alarmes' },
   { to: '/ordres-travaux', icon: Wrench, label: 'Ordres de Travaux' },
   { to: '/defauts', icon: AlertTriangle, label: 'Matériels Défect.' },
+  { to: '/releves-jour', icon: CalendarDays, label: 'Visualisation' },
 ];
 
 const adminItems = [
@@ -29,9 +32,7 @@ export default function Sidebar() {
       {/* Logo */}
       <div className="px-4 py-5 border-b border-slate-700">
         <div className="flex items-center gap-2">
-          <div className="w-8 h-8 bg-amber-500 rounded flex items-center justify-center">
-            <Zap size={16} className="text-slate-900" />
-          </div>
+          <img src="/logo.png" alt="GTpp Logo" className="w-10 h-10 object-contain" />
           <div>
             <p className="text-white font-bold text-sm leading-tight">GTpp</p>
             <p className="text-slate-400 text-xs">La Goulette GE 9001E</p>
@@ -42,7 +43,7 @@ export default function Sidebar() {
       {/* Navigation */}
       <nav className="flex-1 overflow-y-auto py-3 px-2">
         <div className="space-y-0.5">
-          {navItems.map(({ to, icon: Icon, label }) => (
+          {navItems.filter(({ roles }) => !roles || roles.includes(user?.role ?? '')).map(({ to, icon: Icon, label }) => (
             <NavLink
               key={to}
               to={to}

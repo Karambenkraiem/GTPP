@@ -1,35 +1,118 @@
-import { useState } from 'react';
+import { useState, useEffect, useMemo } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { relevesApi, journeesApi, postesApi } from '../lib/api';
 import PageHeader from '../components/PageHeader';
-import Modal from '../components/Modal';
-import { Plus, Eye, Trash2 } from 'lucide-react';
+import { Save, Trash2, RotateCcw, FlaskConical, Pencil } from 'lucide-react';
+import { useToast, ToastContainer } from '../components/Toast';
 import { format } from 'date-fns';
-import type { RelevesOperateur, Poste } from '../types';
+import { fr } from 'date-fns/locale';
+import type { Poste } from '../types';
+import { TRANCHE_LABELS } from '../types';
+import { useAuth } from '../contexts/AuthContext';
 
-function Field({ label, name, value, onChange, unit, type = 'number' }: { label: string; name: string; value: any; onChange: (n: string, v: any) => void; unit?: string; type?: string }) {
+const SLOT_HOURS = [0, 2, 4, 6, 8, 10, 12, 14, 16, 18, 20, 22];
+
+function hourToTranche(h: number) {
+  if (h < 8) return 'h00_07h';
+  if (h < 14) return 'h07_14h';
+  if (h < 20) return 'h14_20h';
+  return 'h20_00h';
+}
+
+function onEnter(e: React.KeyboardEvent<HTMLInputElement | HTMLSelectElement | HTMLTextAreaElement>) {
+  if (e.key !== 'Enter') return;
+  e.preventDefault();
+  const box = (e.currentTarget as HTMLElement).closest('[data-form]') as HTMLElement;
+  if (!box) return;
+  const all = Array.from(
+    box.querySelectorAll('input:not([disabled]),select:not([disabled]),textarea:not([disabled])')
+  ) as HTMLElement[];
+  const i = all.indexOf(e.currentTarget as HTMLElement);
+  if (i >= 0 && i < all.length - 1) all[i + 1].focus();
+}
+
+function F({ label, name, value, set, unit }: { label: string; name: string; value: any; set: (n: string, v: any) => void; unit?: string }) {
   return (
     <div>
-      <label className="block text-xs text-slate-400 mb-1">{label}{unit && <span className="text-slate-500 ml-1">({unit})</span>}</label>
-      <input
-        type={type} step={type === 'number' ? 'any' : undefined}
-        value={value ?? ''}
-        onChange={(e) => onChange(name, type === 'number' ? (e.target.value === '' ? null : parseFloat(e.target.value)) : e.target.value)}
-        className="w-full bg-slate-800 border border-slate-700 rounded px-2 py-1.5 text-white text-sm focus:outline-none focus:border-amber-500"
-      />
+      <label className="block text-xs text-slate-400 mb-0.5">{label}{unit && <span className="ml-1 text-slate-500">({unit})</span>}</label>
+      <input type="number" step="any" value={value ?? ''} onKeyDown={onEnter}
+        onChange={e => set(name, e.target.value === '' ? null : parseFloat(e.target.value))}
+        className="w-full bg-slate-800 border border-slate-700 rounded px-2 py-1.5 text-white text-sm focus:outline-none focus:border-amber-500" />
     </div>
   );
 }
 
-export default function RelevesOperateur() {
-  const qc = useQueryClient();
-  const [selectedDate, setSelectedDate] = useState(format(new Date(), 'yyyy-MM-dd'));
-  const [showModal, setShowModal] = useState(false);
-  const [viewItem, setViewItem] = useState<RelevesOperateur | null>(null);
-  const [tab, setTab] = useState(0);
-  const [form, setForm] = useState<any>({ heure_releve: format(new Date(), "yyyy-MM-dd'T'HH:mm") });
+function Sel({ label, name, value, set, opts }: { label: string; name: string; value: any; set: (n: string, v: any) => void; opts: string[] }) {
+  return (
+    <div>
+      <label className="block text-xs text-slate-400 mb-0.5">{label}</label>
+      <select value={value ?? ''} onKeyDown={onEnter} onChange={e => set(name, e.target.value)}
+        className="w-full bg-slate-800 border border-slate-700 rounded px-2 py-1.5 text-white text-sm focus:outline-none focus:border-amber-500">
+        <option value="">—</option>
+        {opts.map(o => <option key={o}>{o}</option>)}
+      </select>
+    </div>
+  );
+}
 
-  const { data: journees } = useQuery({ queryKey: ['journees'], queryFn: () => journeesApi.list({ from: format(new Date(Date.now() - 30 * 86400000), 'yyyy-MM-dd') }) });
+function Titre({ t }: { t: string }) {
+  return (
+    <div className="col-span-full flex items-center gap-2 mt-3">
+      <span className="text-[11px] font-bold text-amber-400 uppercase tracking-widest whitespace-nowrap">{t}</span>
+      <div className="flex-1 h-px bg-slate-700" />
+    </div>
+  );
+}
+
+const CPT_COL = 'grid grid-cols-[2fr_0.5fr_1fr_1fr_1fr_1fr_1fr] gap-2 items-center';
+const INPUT_CLS = 'bg-slate-800 border border-slate-700 rounded px-2 py-1.5 text-white text-sm focus:outline-none focus:border-amber-500 w-full';
+
+function CptRow({ label, unit, fields, vals, set }: {
+  label: string; unit: string;
+  fields: [string, string, string, string, string];
+  vals: [any, any, any, any, any];
+  set: (n: string, v: any) => void;
+}) {
+  return (
+    <div className={`${CPT_COL} border-b border-slate-800 py-2`}>
+      <div className="text-sm text-slate-300">{label}</div>
+      <div className="text-xs text-slate-500 text-center">{unit}</div>
+      {fields.map((name, i) => (
+        <input key={name} type="number" step="any" value={vals[i] ?? ''} onKeyDown={onEnter}
+          onChange={e => set(name, e.target.value === '' ? null : parseFloat(e.target.value))}
+          className={INPUT_CLS} />
+      ))}
+    </div>
+  );
+}
+
+const EMPTY = (date: string, hour?: number, posteId?: string): any => ({
+  heure_releve: hour !== undefined
+    ? `${date}T${hour.toString().padStart(2, '0')}:00`
+    : format(new Date(), "yyyy-MM-dd'T'HH:mm"),
+  poste_id: posteId || '',
+  detecteurs_gaz: {},
+});
+
+export default function RelevesOperateurPage() {
+  const { user } = useAuth();
+  const { toasts, show: showToast, dismiss } = useToast();
+  const isOperateur = user?.role === 'operateur';
+  const canFill = ['operateur', 'admin', 'chef_exploitation'].includes(user?.role ?? '');
+  const canDelete = ['admin', 'chef_exploitation'].includes(user?.role ?? '');
+  const qc = useQueryClient();
+  const [pageTab, setPageTab] = useState<'saisie' | 'compteurs'>('saisie');
+  const [selectedDate, setSelectedDate] = useState(format(new Date(), 'yyyy-MM-dd'));
+  const [selectedHour, setSelectedHour] = useState<number | null>(null);
+  const [form, setForm] = useState<any>(EMPTY(format(new Date(), 'yyyy-MM-dd')));
+  const [cptForm, setCptForm] = useState<any>({});
+  const [cptLocked, setCptLocked] = useState(false);
+  const [cptConfirm, setCptConfirm] = useState(false);
+
+  const { data: journees } = useQuery({
+    queryKey: ['journees'],
+    queryFn: () => journeesApi.list({ from: format(new Date(Date.now() - 30 * 86400000), 'yyyy-MM-dd') }),
+  });
   const journee = journees?.find((j: any) => format(new Date(j.jour), 'yyyy-MM-dd') === selectedDate);
 
   const { data: postes } = useQuery({
@@ -44,9 +127,62 @@ export default function RelevesOperateur() {
     enabled: !!journee?.id,
   });
 
+  const { data: compteurs } = useQuery({
+    queryKey: ['compteurs', journee?.id],
+    queryFn: () => relevesApi.getCompteurs(journee!.id),
+    enabled: !!journee?.id,
+  });
+
+  useEffect(() => {
+    setCptForm(compteurs ?? {});
+    setCptLocked(!!compteurs?.id);
+  }, [compteurs]);
+
+  const saveCptMut = useMutation({
+    mutationFn: (data: any) => relevesApi.saveCompteurs({ journee_id: journee!.id, ...data }),
+    onSuccess: () => { qc.invalidateQueries({ queryKey: ['compteurs'] }); showToast('Compteurs enregistrés avec succès'); setCptLocked(true); },
+    onError: () => showToast('Erreur lors de l\'enregistrement', 'error'),
+  });
+
+  function cpt(n: string, v: any) { setCptForm((s: any) => ({ ...s, [n]: v })); }
+
+  // Map relevé by hour for fast lookup
+  const releveByHour = useMemo(() => {
+    const map: Record<number, any> = {};
+    releves?.forEach((r: any) => {
+      const h = new Date(r.heure_releve).getHours();
+      map[h] = r;
+    });
+    return map;
+  }, [releves]);
+
+  // When hour slot is selected, populate the form
+  useEffect(() => {
+    if (selectedHour === null || !journee) return;
+    const releve = releveByHour[selectedHour];
+    if (releve) {
+      setForm({
+        ...releve,
+        heure_releve: format(new Date(releve.heure_releve), "yyyy-MM-dd'T'HH:mm"),
+        detecteurs_gaz: releve.detecteurs_gaz || {},
+      });
+    } else {
+      const tranche = hourToTranche(selectedHour);
+      const poste = postes?.find((p: any) => p.tranche === tranche);
+      setForm(EMPTY(selectedDate, selectedHour, poste?.id));
+    }
+  }, [selectedHour]);
+
   const createMut = useMutation({
     mutationFn: (data: any) => relevesApi.createOp(data),
-    onSuccess: () => { qc.invalidateQueries({ queryKey: ['releves-op'] }); setShowModal(false); setForm({ heure_releve: format(new Date(), "yyyy-MM-dd'T'HH:mm") }); setTab(0); },
+    onSuccess: () => { qc.invalidateQueries({ queryKey: ['releves-op'] }); showToast('Relevé enregistré avec succès'); },
+    onError: () => showToast('Erreur lors de l\'enregistrement', 'error'),
+  });
+
+  const updateMut = useMutation({
+    mutationFn: ({ id, data }: { id: string; data: any }) => relevesApi.updateOp(id, data),
+    onSuccess: () => { qc.invalidateQueries({ queryKey: ['releves-op'] }); showToast('Relevé mis à jour'); },
+    onError: () => showToast('Erreur lors de la mise à jour', 'error'),
   });
 
   const deleteMut = useMutation({
@@ -54,198 +190,428 @@ export default function RelevesOperateur() {
     onSuccess: () => qc.invalidateQueries({ queryKey: ['releves-op'] }),
   });
 
-  function setF(n: string, v: any) { setForm((f: any) => ({ ...f, [n]: v })); }
+  // For operators: slots in the future are disabled; already-filled slots are read-only
+  function isSlotFuture(hour: number) {
+    if (!isOperateur) return false;
+    return new Date(`${selectedDate}T${hour.toString().padStart(2, '0')}:00:00`) > new Date();
+  }
+  function isSlotLocked(hour: number) {
+    return !!(releveByHour[hour]?.saisi_par);
+  }
+  const formDisabled = !canFill || (selectedHour !== null &&
+    (isSlotFuture(selectedHour) || isSlotLocked(selectedHour)));
 
-  const TABS = ['Eau Refroid.', 'Skid Gaz/Gasoil', 'Huile/Air', 'Transformateurs', 'Groupe Élect.', 'Compteurs'];
+  function f(n: string, v: any) { setForm((s: any) => ({ ...s, [n]: v })); }
+  function det(n: string, v: any) { setForm((s: any) => ({ ...s, detecteurs_gaz: { ...(s.detecteurs_gaz || {}), [n]: v } })); }
+  const dg = form.detecteurs_gaz || {};
+
+  // ── TEST DATA (remove before production) ──
+  function fillTest() {
+    setForm((s: any) => ({
+      ...s,
+      choix_pompe: 'P1', pression_refoul_pompe_bar: 3.2, nb_ventilateurs_service: 4,
+      temp_entree_ref_wtad1: 29, temp_sortie_ref_wtad2: 42,
+      pression_retour_eau_ref: 2.8, pression_sortie_ref_alt: 2.6, niveau_reservoir_expansion: 80,
+      temp_gaz_ftg_tkg: 38, pression_gaz_fpgi_bar: 18.5, dp_filtre_gaz_bar: 0.12,
+      pression_entree_skid: 5.2, dp_filtre_gasoil_bar: 0.08,
+      niveau_huile_reservoir: 75, choix_filtre_huile: 'F1', choix_refrigerant_huile: 'R1',
+      pression_air_atomisation: 4.8,
+      dp_totale_filtre_kpa: 1.8, dp_pre_filtre_kpa: 0.6, dp_filtre_kpa: 1.2,
+      pression_air_comprime_bar: 6.5,
+      temp_huile_tp: 62, temp_enroulement_tp: 75, niv_conservateur_tp: 70, choix_ventilateur_tp: 'V1',
+      temp_huile_ts: 58, temp_enroulement_ts: 70, niv_conservateur_ts: 68,
+      pression_circuit_incendie: 8.5, niveau_gasoil_ppe_pct: 85, pompe_jockey: 'EN SERVICE',
+      compteur_gasoil_ge_l: 12450, compteur_energie_ge_kwh: 8920, stock_gasoil_l: 45000,
+      temp_huile_graissage_ge: 55, pression_huile_graissage_ge: 3.8,
+      temp_eau_primaire_ge: 72, temp_eau_secondaire_ge: 68,
+      pression_air_demarrage_ge: 22, nb_heures_marche_ge: 18420,
+      energie_active_index_0h: 98450, energie_active_index_24h: 101330,
+      reactif_absorbe_0h: 12400, reactif_absorbe_24h: 13100,
+      reactif_fourni_0h: 8200, reactif_fourni_24h: 8950,
+      conso_aux_ht_tag_0h: 4820, conso_aux_ht_tag_24h: 4950,
+      conso_aux_ht_site_0h: 1240, conso_aux_ht_site_24h: 1290,
+      gasoil_0h_l: 12450, gasoil_24h_l: 12680,
+      consignes_particulieres: 'Test automatique — données fictives.',
+      detecteurs_gaz: {
+        ha_1: 0, ha_2: 0, ha_3: 0, ha_4: 0, ha_5: 0, ha_6: 0,
+        ht_1: 0, ht_2: 0, ht_3: 0, ht_4: 0, ht_5: 0, ht_6: 0,
+        para_r: 1, para_s: 1, para_t: 1, paratonerre: 1,
+      },
+    }));
+  }
+
+  function handleSave() {
+    if (!form.poste_id || !journee) return;
+    const existing = selectedHour !== null ? releveByHour[selectedHour] : null;
+    if (existing) {
+      updateMut.mutate({ id: existing.id, data: form });
+    } else {
+      createMut.mutate({ ...form, journee_id: journee.id });
+    }
+  }
+
+  const isPending = createMut.isPending || updateMut.isPending;
+
+  const SaveBtn = ({ compteurs = false }: { compteurs?: boolean }) => (
+    <div className="flex justify-end gap-3 pt-4 mt-4 border-t border-slate-700">
+      {/* TEST BUTTON — remove before production */}
+      <button onClick={fillTest}
+        className="flex items-center gap-1.5 text-violet-400 hover:text-violet-300 border border-violet-500/30 rounded px-3 py-1.5 text-xs transition-colors">
+        <FlaskConical size={12} /> Remplir test
+      </button>
+      <button onClick={() => { setForm(EMPTY(selectedDate)); setSelectedHour(null); }}
+        className="flex items-center gap-1.5 text-slate-400 hover:text-white text-sm transition-colors">
+        <RotateCcw size={13} /> Réinitialiser
+      </button>
+      <button onClick={handleSave}
+        disabled={isPending || !form.poste_id || selectedHour === null || (compteurs ? !canFill : formDisabled)}
+        className="flex items-center gap-2 bg-amber-500 hover:bg-amber-600 text-slate-900 font-medium px-5 py-2 rounded-lg text-sm disabled:opacity-50 transition-colors">
+        <Save size={14} /> {isPending ? 'Enregistrement...' : 'Enregistrer le relevé'}
+      </button>
+    </div>
+  );
 
   return (
     <div>
-      <PageHeader
-        title="Relevés Opérateur"
-        subtitle="Feuille opérateur — relevés toutes les 2 heures"
+      <PageHeader title="Relevés Opérateur" subtitle="Feuille opérateur — relevés toutes les 2 heures"
         actions={
-          <div className="flex gap-2">
-            <input type="date" value={selectedDate} onChange={(e) => setSelectedDate(e.target.value)}
-              className="bg-slate-800 border border-slate-600 rounded-lg px-3 py-1.5 text-white text-sm focus:outline-none focus:border-amber-500" />
-            {journee && (
-              <button onClick={() => setShowModal(true)}
-                className="flex items-center gap-1.5 bg-amber-500 hover:bg-amber-600 text-slate-900 font-medium px-3 py-1.5 rounded-lg text-sm">
-                <Plus size={14} /> Nouveau relevé
-              </button>
-            )}
-          </div>
-        }
-      />
+          <input type="date" value={selectedDate} onChange={e => { setSelectedDate(e.target.value); setSelectedHour(null); }}
+            className="bg-slate-800 border border-slate-600 rounded-lg px-3 py-1.5 text-white text-sm focus:outline-none focus:border-amber-500" />
+        } />
+
+      {/* Onglets */}
+      <div className="flex border-b border-slate-700 px-6">
+        {([['saisie', 'Saisie Relevé'], ['compteurs', 'Compteurs']] as const).map(([k, lbl]) => (
+          <button key={k} onClick={() => setPageTab(k)}
+            className={`px-4 py-3 text-sm font-medium border-b-2 transition-colors ${pageTab === k ? 'border-amber-500 text-amber-400' : 'border-transparent text-slate-400 hover:text-white'}`}>
+            {lbl}
+          </button>
+        ))}
+      </div>
 
       <div className="p-6">
-        {!journee && <div className="bg-slate-900 border border-slate-700 rounded-lg p-8 text-center text-slate-400">Aucune journée pour cette date</div>}
+        {!journee && (
+          <div className="bg-slate-900 border border-slate-700 rounded-lg p-8 text-center text-slate-400">
+            Aucune journée créée pour le {format(new Date(selectedDate + 'T12:00:00'), 'd MMMM yyyy', { locale: fr })}
+          </div>
+        )}
+
         {journee && (
-          <div className="space-y-3">
-            {(!releves || releves.length === 0) && (
-              <div className="bg-slate-900 border border-slate-700 rounded-lg p-8 text-center text-slate-400">Aucun relevé opérateur pour cette journée</div>
-            )}
-            {releves?.map((r: RelevesOperateur) => (
-              <div key={r.id} className="bg-slate-900 border border-slate-700 rounded-lg px-4 py-3 flex items-center gap-4">
-                <span className="font-mono text-amber-400 text-sm w-14 flex-shrink-0">{format(new Date(r.heure_releve), 'HH:mm')}</span>
-                <div className="flex-1 grid grid-cols-4 gap-4 text-xs">
-                  <span className="text-slate-400">P refoul.: <span className="text-white">{r.pression_refoul_pompe_bar ?? '—'} bar</span></span>
-                  <span className="text-slate-400">P gaz: <span className="text-white">{r.pression_gaz_fpgi_bar ?? '—'} bar</span></span>
-                  <span className="text-slate-400">N. huile: <span className="text-white">{r.niveau_huile_reservoir ?? '—'}</span></span>
-                  <span className="text-slate-400">Air: <span className="text-white">{r.pression_air_comprime_bar ?? '—'} bar</span></span>
-                </div>
-                <span className="text-xs text-slate-500">{r.saiseur?.prenom} {r.saiseur?.nom}</span>
-                <div className="flex gap-2">
-                  <button onClick={() => setViewItem(r)} className="text-slate-500 hover:text-amber-400"><Eye size={14} /></button>
-                  <button onClick={() => deleteMut.mutate(r.id)} className="text-slate-500 hover:text-red-400"><Trash2 size={14} /></button>
+          <>
+            {/* ── Grille des 12 créneaux 2h ── */}
+            <div className="bg-slate-900 border border-slate-700 rounded-lg p-4 mb-4">
+              <p className="text-xs text-slate-500 mb-3 uppercase tracking-wider font-medium">Créneaux du jour — cliquer pour saisir</p>
+              <div className="grid grid-cols-6 sm:grid-cols-12 gap-1.5">
+                {SLOT_HOURS.map(hour => {
+                  const releve = releveByHour[hour];
+                  const isFilled = releve?.saisi_par;
+                  const isSelected = selectedHour === hour;
+                  const future = isSlotFuture(hour);
+                  const unclickable = future || !canFill;
+                  return (
+                    <button key={hour}
+                      onClick={() => { if (unclickable) return; setSelectedHour(hour === selectedHour ? null : hour); }}
+                      className={`py-2 px-1 rounded text-xs font-medium transition-colors text-center ${
+                        unclickable ? 'bg-slate-900 text-slate-600 border border-slate-800 cursor-not-allowed opacity-50' :
+                        isSelected ? 'bg-amber-500 text-slate-900' :
+                        isFilled ? 'bg-green-500/20 text-green-400 border border-green-500/30 hover:bg-green-500/30' :
+                        'bg-amber-500/10 text-amber-400 border border-amber-500/20 hover:bg-amber-500/20'
+                      }`}>
+                      {hour.toString().padStart(2, '0')}h
+                      <div className="text-[9px] mt-0.5 opacity-80">
+                        {future ? '—' : isFilled ? '✓ Rempli' : '◌ Vide'}
+                      </div>
+                    </button>
+                  );
+                })}
+              </div>
+              {selectedHour !== null && (
+                <p className="text-xs text-slate-500 mt-2">
+                  Créneau {selectedHour.toString().padStart(2,'0')}h —{' '}
+                  {releveByHour[selectedHour]?.saisi_par
+                    ? `Rempli par ${releveByHour[selectedHour].saiseur?.prenom || '?'} ${releveByHour[selectedHour].saiseur?.nom || ''}`
+                    : 'En attente de saisie'}
+                </p>
+              )}
+            </div>
+
+            {/* ── Heure + Opérateur : toujours visible ── */}
+            <div className="bg-slate-900 border border-slate-700 rounded-lg p-4 mb-4 grid grid-cols-2 gap-3">
+              <div>
+                <label className="block text-xs text-slate-400 mb-0.5">Heure du relevé</label>
+                <input type="datetime-local" value={form.heure_releve}
+                  onChange={e => f('heure_releve', e.target.value)}
+                  className="w-full bg-slate-800 border border-slate-700 rounded px-2 py-1.5 text-white text-sm focus:outline-none focus:border-amber-500" />
+              </div>
+              <div>
+                <label className="block text-xs text-slate-400 mb-0.5">Opérateur</label>
+                <div className="w-full bg-slate-800 border border-slate-700 rounded px-3 py-1.5 text-white text-sm flex items-center justify-between">
+                  <span>{user?.prenom} {user?.nom}</span>
+                  {form.poste_id && postes && (
+                    <span className="text-xs text-amber-400/70 ml-2">
+                      {TRANCHE_LABELS[postes.find((p: Poste) => p.id === form.poste_id)?.tranche as keyof typeof TRANCHE_LABELS] ?? ''}
+                    </span>
+                  )}
                 </div>
               </div>
-            ))}
+            </div>
+          </>
+        )}
+
+        {/* ═══════════════ ONGLET SAISIE ═══════════════ */}
+        {journee && pageTab === 'saisie' && (
+          <div className="space-y-6">
+            {formDisabled && (
+              <div className={`rounded-lg px-4 py-3 text-sm border ${
+                selectedHour !== null && isSlotLocked(selectedHour)
+                  ? 'bg-green-500/5 border-green-500/20 text-green-400'
+                  : 'bg-slate-800 border-slate-700 text-slate-400'
+              }`}>
+                {selectedHour !== null && isSlotLocked(selectedHour)
+                  ? '✓ Ce relevé a déjà été saisi — lecture seule.'
+                  : '⏳ Ce créneau est dans le futur — saisie impossible.'}
+              </div>
+            )}
+            <div className={`bg-slate-900 border border-slate-700 rounded-lg p-5 ${formDisabled ? 'pointer-events-none opacity-60' : ''}`} data-form>
+
+              <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-3">
+
+                <Titre t="Eau de Refroidissement" />
+                <Sel label="Choix de la pompe" name="choix_pompe" value={form.choix_pompe} set={f} opts={['P1', 'P2', 'P1+P2']} />
+                <F label="Pres. de refoulement pompe" name="pression_refoul_pompe_bar" value={form.pression_refoul_pompe_bar} set={f} unit="bar" />
+                <F label="Nbre de ventilateur en service" name="nb_ventilateurs_service" value={form.nb_ventilateurs_service} set={f} unit="n°" />
+                <F label="Temp. entrée réf. WTAD1" name="temp_entree_ref_wtad1" value={form.temp_entree_ref_wtad1} set={f} unit="°C" />
+                <F label="Temp. sortie réf. WTAD" name="temp_sortie_ref_wtad2" value={form.temp_sortie_ref_wtad2} set={f} unit="°C" />
+                <F label="Pres. retour eau de réf." name="pression_retour_eau_ref" value={form.pression_retour_eau_ref} set={f} unit="bar" />
+                <F label="Pres. sortie eau réf. Alt." name="pression_sortie_ref_alt" value={form.pression_sortie_ref_alt} set={f} unit="bar" />
+                <F label="Niveau réservoir d'expansion" name="niveau_reservoir_expansion" value={form.niveau_reservoir_expansion} set={f} />
+
+                <Titre t="Skid Gaz" />
+                <F label="Température gaz FTG-TKG" name="temp_gaz_ftg_tkg" value={form.temp_gaz_ftg_tkg} set={f} unit="°C" />
+                <F label="Pression gaz FPGI" name="pression_gaz_fpgi_bar" value={form.pression_gaz_fpgi_bar} set={f} unit="bar" />
+                <F label="ΔP filtre" name="dp_filtre_gaz_bar" value={form.dp_filtre_gaz_bar} set={f} unit="bar" />
+
+                <Titre t="Skid Gasoil" />
+                <F label="Pression entrée skid" name="pression_entree_skid" value={form.pression_entree_skid} set={f} unit="bar" />
+                <F label="ΔP filtre" name="dp_filtre_gasoil_bar" value={form.dp_filtre_gasoil_bar} set={f} unit="bar" />
+
+                <Titre t="Huile de Graissage" />
+                <F label="Niveau d'huile du réservoir" name="niveau_huile_reservoir" value={form.niveau_huile_reservoir} set={f} />
+                <Sel label="Choix du filtre à huile" name="choix_filtre_huile" value={form.choix_filtre_huile} set={f} opts={['F1', 'F2']} />
+                <Sel label="Choix du réfrigérant d'huile" name="choix_refrigerant_huile" value={form.choix_refrigerant_huile} set={f} opts={['R1', 'R2']} />
+
+                <Titre t="Air d'Atomisation" />
+                <F label="Pression d'air d'atomisation" name="pression_air_atomisation" value={form.pression_air_atomisation} set={f} unit="bar" />
+
+                <Titre t="Filtre à Air" />
+                <F label="ΔP totale filtre" name="dp_totale_filtre_kpa" value={form.dp_totale_filtre_kpa} set={f} unit="kPa" />
+                <F label="ΔP pré-filtre" name="dp_pre_filtre_kpa" value={form.dp_pre_filtre_kpa} set={f} unit="kPa" />
+                <F label="ΔP filtre" name="dp_filtre_kpa" value={form.dp_filtre_kpa} set={f} unit="kPa" />
+
+                <Titre t="Compresseurs ERVOR" />
+                <F label="Pression Air Comprimée" name="pression_air_comprime_bar" value={form.pression_air_comprime_bar} set={f} unit="bar" />
+
+                <Titre t="Contrôle TP" />
+                <F label="Température huile" name="temp_huile_tp" value={form.temp_huile_tp} set={f} unit="°C" />
+                <F label="Température Enroulement" name="temp_enroulement_tp" value={form.temp_enroulement_tp} set={f} unit="°C" />
+                <F label="Niveau conservateur" name="niv_conservateur_tp" value={form.niv_conservateur_tp} set={f} />
+                <Sel label="Choix de ventilateur" name="choix_ventilateur_tp" value={form.choix_ventilateur_tp} set={f} opts={['V1', 'V2', 'V1+V2']} />
+                <F label="Parafoudres phase R" name="para_r" value={dg.para_r} set={det} unit="UN" />
+                <F label="Parafoudres phase S" name="para_s" value={dg.para_s} set={det} unit="UN" />
+                <F label="Parafoudres phase T" name="para_t" value={dg.para_t} set={det} unit="UN" />
+
+                <Titre t="Contrôle TS" />
+                <F label="Température huile" name="temp_huile_ts" value={form.temp_huile_ts} set={f} unit="°C" />
+                <F label="Température enroulement" name="temp_enroulement_ts" value={form.temp_enroulement_ts} set={f} unit="°C" />
+                <F label="Niveau conservateur" name="niv_conservateur_ts" value={form.niv_conservateur_ts} set={f} />
+
+                <Titre t="Sécurité Incendie et Autres" />
+                <F label="Pression du circuit" name="pression_circuit_incendie" value={form.pression_circuit_incendie} set={f} unit="bar" />
+                <F label="Niveau gasoil PPE thermique" name="niveau_gasoil_ppe_pct" value={form.niveau_gasoil_ppe_pct} set={f} unit="%" />
+                <Sel label="Pompe jockey" name="pompe_jockey" value={form.pompe_jockey} set={f} opts={['EN SERVICE', 'ARRET']} />
+                <F label="Paratonerre réservoir gasoil" name="paratonerre" value={dg.paratonerre} set={det} unit="UN" />
+
+                <Titre t="Groupe Électrogène" />
+                <F label="Compteur gasoil" name="compteur_gasoil_ge_l" value={form.compteur_gasoil_ge_l} set={f} unit="L" />
+                <F label="Compteur énergie" name="compteur_energie_ge_kwh" value={form.compteur_energie_ge_kwh} set={f} unit="kWh" />
+                <F label="Stock gasoil" name="stock_gasoil_l" value={form.stock_gasoil_l} set={f} unit="L" />
+                <F label="T° huile de graissage" name="temp_huile_graissage_ge" value={form.temp_huile_graissage_ge} set={f} unit="°C" />
+                <F label="Pression huile de graissage" name="pression_huile_graissage_ge" value={form.pression_huile_graissage_ge} set={f} unit="bar" />
+                <F label="Température eau primaire" name="temp_eau_primaire_ge" value={form.temp_eau_primaire_ge} set={f} unit="°C" />
+                <F label="Température eau secondaire" name="temp_eau_secondaire_ge" value={form.temp_eau_secondaire_ge} set={f} unit="°C" />
+                <F label="Pression air de démarrage" name="pression_air_demarrage_ge" value={form.pression_air_demarrage_ge} set={f} unit="bar" />
+                <F label="Nombre heure de marche" name="nb_heures_marche_ge" value={form.nb_heures_marche_ge} set={f} unit="h" />
+
+                <Titre t="Détecteurs Gaz" />
+                {(['ha_1','ha_2','ha_3','ha_4','ha_5','ha_6'] as const).map(k => (
+                  <F key={k} label={`45 HA ${k.split('_')[1]}`} name={k} value={dg[k]} set={det} />
+                ))}
+                {(['ht_1','ht_2','ht_3','ht_4','ht_5','ht_6'] as const).map(k => (
+                  <F key={k} label={`45 HT ${k.split('_')[1]}`} name={k} value={dg[k]} set={det} />
+                ))}
+
+                <Titre t="Consignes Particulières" />
+                <div className="col-span-full">
+                  <textarea value={form.consignes_particulieres || ''}
+                    onChange={e => f('consignes_particulieres', e.target.value)}
+                    onKeyDown={e => { if (e.key === 'Enter' && !e.shiftKey) onEnter(e as any); }}
+                    rows={3}
+                    placeholder="Saisir les consignes particulières..."
+                    className="w-full bg-slate-800 border border-slate-700 rounded px-2 py-1.5 text-white text-sm focus:outline-none focus:border-amber-500 resize-none" />
+                </div>
+
+              </div>
+
+              <SaveBtn />
+            </div>
+
+            {/* Liste des relevés enregistrés */}
+            {releves && releves.length > 0 && (
+              <div className="bg-slate-900 border border-slate-700 rounded-lg">
+                <div className="px-4 py-3 border-b border-slate-700">
+                  <h3 className="text-sm font-medium text-white">Relevés enregistrés — {releves.filter((r: any) => r.saisi_par).length} / {SLOT_HOURS.length}</h3>
+                </div>
+                <div className="divide-y divide-slate-800">
+                  {releves.map((r: any) => (
+                    <div key={r.id} className={`flex items-center gap-4 px-4 py-3 cursor-pointer transition-colors ${
+                      selectedHour === new Date(r.heure_releve).getHours() ? 'bg-amber-500/5' : 'hover:bg-slate-800/50'
+                    }`} onClick={() => setSelectedHour(new Date(r.heure_releve).getHours())}>
+                      <span className="font-mono text-amber-400 text-sm w-14 flex-shrink-0">
+                        {format(new Date(r.heure_releve), 'HH:mm')}
+                      </span>
+                      {r.saisi_par ? (
+                        <div className="flex-1 grid grid-cols-4 gap-4 text-xs">
+                          <span className="text-slate-400">P refoul.: <span className="text-white">{r.pression_refoul_pompe_bar ?? '—'} bar</span></span>
+                          <span className="text-slate-400">P gaz: <span className="text-white">{r.pression_gaz_fpgi_bar ?? '—'} bar</span></span>
+                          <span className="text-slate-400">N. huile: <span className="text-white">{r.niveau_huile_reservoir ?? '—'}</span></span>
+                          <span className="text-slate-400">Air cprimé: <span className="text-white">{r.pression_air_comprime_bar ?? '—'} bar</span></span>
+                        </div>
+                      ) : (
+                        <span className="flex-1 text-xs text-amber-400/60 italic">En attente de saisie</span>
+                      )}
+                      <span className="text-xs text-slate-500 flex-shrink-0">
+                        {r.saiseur ? `${r.saiseur.prenom} ${r.saiseur.nom}` : '—'}
+                      </span>
+                      {canDelete && (
+                        <button onClick={e => { e.stopPropagation(); deleteMut.mutate(r.id); }}
+                          className="text-slate-600 hover:text-red-400 transition-colors flex-shrink-0">
+                          <Trash2 size={13} />
+                        </button>
+                      )}
+                    </div>
+                  ))}
+                </div>
+              </div>
+            )}
+          </div>
+        )}
+
+        {/* ═══════════════ ONGLET COMPTEURS ═══════════════ */}
+        {journee && pageTab === 'compteurs' && (
+          <div className={`bg-slate-900 border border-slate-700 rounded-lg p-5 ${!canFill ? 'pointer-events-none opacity-60' : ''}`} data-form>
+            <div className="mb-4 flex items-center justify-between">
+              <div>
+                <p className="text-sm text-slate-300 font-medium">Compteurs journaliers — Opérateur</p>
+                <p className="text-xs text-slate-500 mt-0.5">Relevés indépendants — saisie à 00h, 07h, 18h, 22h et 24h.</p>
+              </div>
+              {cptLocked && (
+                <span className="text-xs text-green-400 border border-green-500/30 bg-green-500/10 rounded px-2 py-1">
+                  ✓ Enregistré
+                </span>
+              )}
+            </div>
+
+            <div className={`${CPT_COL} mb-1`}>
+              <span className="text-xs text-slate-500">Désignation</span>
+              <span className="text-xs text-slate-500 text-center">Unité</span>
+              {['00h', '07h', '18h', '22h', '24h'].map(t => (
+                <span key={t} className="text-xs text-slate-500 text-center">{t}</span>
+              ))}
+            </div>
+
+            <div className={cptLocked ? 'pointer-events-none opacity-50' : ''}>
+              <CptRow label="Énergie Active" unit="MWh"
+                fields={['energie_active_00h','energie_active_07h','energie_active_18h','energie_active_22h','energie_active_24h']}
+                vals={[cptForm.energie_active_00h,cptForm.energie_active_07h,cptForm.energie_active_18h,cptForm.energie_active_22h,cptForm.energie_active_24h]}
+                set={cpt} />
+              <CptRow label="Réactif Fourni" unit="MVARh"
+                fields={['reactif_fourni_00h','reactif_fourni_07h','reactif_fourni_18h','reactif_fourni_22h','reactif_fourni_24h']}
+                vals={[cptForm.reactif_fourni_00h,cptForm.reactif_fourni_07h,cptForm.reactif_fourni_18h,cptForm.reactif_fourni_22h,cptForm.reactif_fourni_24h]}
+                set={cpt} />
+              <CptRow label="Réactif Absorbé" unit="MVARh"
+                fields={['reactif_absorbe_00h','reactif_absorbe_07h','reactif_absorbe_18h','reactif_absorbe_22h','reactif_absorbe_24h']}
+                vals={[cptForm.reactif_absorbe_00h,cptForm.reactif_absorbe_07h,cptForm.reactif_absorbe_18h,cptForm.reactif_absorbe_22h,cptForm.reactif_absorbe_24h]}
+                set={cpt} />
+              <CptRow label="Auxiliaires" unit="MWh"
+                fields={['auxiliaires_00h','auxiliaires_07h','auxiliaires_18h','auxiliaires_22h','auxiliaires_24h']}
+                vals={[cptForm.auxiliaires_00h,cptForm.auxiliaires_07h,cptForm.auxiliaires_18h,cptForm.auxiliaires_22h,cptForm.auxiliaires_24h]}
+                set={cpt} />
+              <CptRow label="Gasoil" unit="L"
+                fields={['gasoil_00h_l','gasoil_07h_l','gasoil_18h_l','gasoil_22h_l','gasoil_24h_l']}
+                vals={[cptForm.gasoil_00h_l,cptForm.gasoil_07h_l,cptForm.gasoil_18h_l,cptForm.gasoil_22h_l,cptForm.gasoil_24h_l]}
+                set={cpt} />
+            </div>
+
+            <div className="flex justify-end gap-3 pt-4 mt-4 border-t border-slate-700">
+              {cptLocked ? (
+                /* ── Mode lecture : bouton Modifier ── */
+                <button onClick={() => setCptConfirm(true)}
+                  className="flex items-center gap-2 bg-slate-700 hover:bg-slate-600 text-white font-medium px-5 py-2 rounded-lg text-sm transition-colors">
+                  <Pencil size={14} /> Modifier les compteurs
+                </button>
+              ) : (
+                /* ── Mode édition : test + reset + enregistrer ── */
+                <>
+                  {/* TEST BUTTON — remove before production */}
+                  <button onClick={() => setCptForm({
+                    energie_active_00h: 98450, energie_active_07h: 99120, energie_active_18h: 100540, energie_active_22h: 101100, energie_active_24h: 101330,
+                    reactif_fourni_00h: 8200, reactif_fourni_07h: 8380, reactif_fourni_18h: 8750, reactif_fourni_22h: 8900, reactif_fourni_24h: 8950,
+                    reactif_absorbe_00h: 12400, reactif_absorbe_07h: 12580, reactif_absorbe_18h: 12900, reactif_absorbe_22h: 13050, reactif_absorbe_24h: 13100,
+                    auxiliaires_00h: 4820, auxiliaires_07h: 4860, auxiliaires_18h: 4920, auxiliaires_22h: 4940, auxiliaires_24h: 4950,
+                    gasoil_00h_l: 12450, gasoil_07h_l: 12520, gasoil_18h_l: 12620, gasoil_22h_l: 12660, gasoil_24h_l: 12680,
+                  })}
+                    className="flex items-center gap-1.5 text-violet-400 hover:text-violet-300 border border-violet-500/30 rounded px-3 py-1.5 text-xs transition-colors">
+                    <FlaskConical size={12} /> Remplir test
+                  </button>
+                  <button onClick={() => { setCptForm(compteurs ?? {}); if (compteurs?.id) setCptLocked(true); }}
+                    className="flex items-center gap-1.5 text-slate-400 hover:text-white text-sm transition-colors">
+                    <RotateCcw size={13} /> Annuler
+                  </button>
+                  <button onClick={() => saveCptMut.mutate(cptForm)} disabled={saveCptMut.isPending}
+                    className="flex items-center gap-2 bg-amber-500 hover:bg-amber-600 text-slate-900 font-medium px-5 py-2 rounded-lg text-sm disabled:opacity-50 transition-colors">
+                    <Save size={14} /> {saveCptMut.isPending ? 'Enregistrement...' : 'Enregistrer les compteurs'}
+                  </button>
+                </>
+              )}
+            </div>
           </div>
         )}
       </div>
 
-      <Modal open={showModal} onClose={() => setShowModal(false)} title="Nouveau relevé Opérateur" size="xl">
-        <div className="space-y-4">
-          <div className="grid grid-cols-2 gap-3">
-            <div>
-              <label className="block text-sm text-slate-400 mb-1">Heure du relevé</label>
-              <input type="datetime-local" value={form.heure_releve} onChange={(e) => setF('heure_releve', e.target.value)}
-                className="w-full bg-slate-800 border border-slate-600 rounded-lg px-3 py-2 text-white text-sm focus:outline-none focus:border-amber-500" />
-            </div>
-            <div>
-              <label className="block text-sm text-slate-400 mb-1">Poste</label>
-              <select value={form.poste_id || ''} onChange={(e) => setF('poste_id', e.target.value)}
-                className="w-full bg-slate-800 border border-slate-600 rounded-lg px-3 py-2 text-white text-sm focus:outline-none focus:border-amber-500">
-                <option value="">— Sélectionner —</option>
-                {postes?.map((p: Poste) => <option key={p.id} value={p.id}>{p.tranche}</option>)}
-              </select>
-            </div>
-          </div>
-
-          <div className="flex gap-1 border-b border-slate-700 flex-wrap">
-            {TABS.map((t, i) => (
-              <button key={t} onClick={() => setTab(i)}
-                className={`px-3 py-1.5 text-xs font-medium transition-colors border-b-2 -mb-px ${tab === i ? 'border-amber-500 text-amber-400' : 'border-transparent text-slate-400 hover:text-white'}`}>
-                {t}
+      {/* ── Dialogue de confirmation modification compteurs ── */}
+      {cptConfirm && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
+          <div className="absolute inset-0 bg-black/60" onClick={() => setCptConfirm(false)} />
+          <div className="relative bg-slate-900 border border-slate-700 rounded-xl w-full max-w-sm p-6 shadow-xl">
+            <p className="text-white font-semibold text-base mb-2">Modifier les compteurs ?</p>
+            <p className="text-slate-400 text-sm mb-6">
+              Les compteurs ont déjà été enregistrés. Voulez-vous les modifier ?
+            </p>
+            <div className="flex justify-end gap-3">
+              <button onClick={() => setCptConfirm(false)}
+                className="px-4 py-2 rounded-lg text-sm text-slate-400 hover:text-white border border-slate-700 hover:border-slate-500 transition-colors">
+                Non, annuler
               </button>
-            ))}
-          </div>
-
-          {tab === 0 && (
-            <div className="grid grid-cols-3 gap-3">
-              <div>
-                <label className="block text-xs text-slate-400 mb-1">Choix pompe</label>
-                <select value={form.choix_pompe || ''} onChange={(e) => setF('choix_pompe', e.target.value)}
-                  className="w-full bg-slate-800 border border-slate-700 rounded px-2 py-1.5 text-white text-sm focus:outline-none focus:border-amber-500">
-                  <option value="">—</option><option>P1</option><option>P2</option><option>P1+P2</option>
-                </select>
-              </div>
-              <Field label="Pression refoulement pompe" name="pression_refoul_pompe_bar" value={form.pression_refoul_pompe_bar} onChange={setF} unit="bar" />
-              <Field label="Nb ventilateurs en service" name="nb_ventilateurs_service" value={form.nb_ventilateurs_service} onChange={setF} />
-              <Field label="Temp. entrée réfrigération WTAD1" name="temp_entree_ref_wtad1" value={form.temp_entree_ref_wtad1} onChange={setF} unit="°C" />
-              <Field label="Temp. sortie réfrigération WTAD2" name="temp_sortie_ref_wtad2" value={form.temp_sortie_ref_wtad2} onChange={setF} unit="°C" />
-              <Field label="Pression retour eau réf." name="pression_retour_eau_ref" value={form.pression_retour_eau_ref} onChange={setF} unit="bar" />
-              <Field label="Niveau réservoir expansion" name="niveau_reservoir_expansion" value={form.niveau_reservoir_expansion} onChange={setF} />
+              <button onClick={() => { setCptLocked(false); setCptConfirm(false); }}
+                className="px-4 py-2 rounded-lg text-sm font-medium bg-amber-500 hover:bg-amber-600 text-slate-900 transition-colors">
+                Oui, modifier
+              </button>
             </div>
-          )}
-
-          {tab === 1 && (
-            <div className="grid grid-cols-3 gap-3">
-              <Field label="Temp. gaz FTG TKG" name="temp_gaz_ftg_tkg" value={form.temp_gaz_ftg_tkg} onChange={setF} unit="°C" />
-              <Field label="Pression gaz FPGI" name="pression_gaz_fpgi_bar" value={form.pression_gaz_fpgi_bar} onChange={setF} unit="bar" />
-              <Field label="ΔP filtre gaz" name="dp_filtre_gaz_bar" value={form.dp_filtre_gaz_bar} onChange={setF} unit="bar" />
-              <Field label="Pression entrée skid gasoil" name="pression_entree_skid" value={form.pression_entree_skid} onChange={setF} unit="bar" />
-              <Field label="ΔP filtre gasoil" name="dp_filtre_gasoil_bar" value={form.dp_filtre_gasoil_bar} onChange={setF} unit="bar" />
-            </div>
-          )}
-
-          {tab === 2 && (
-            <div className="grid grid-cols-3 gap-3">
-              <Field label="Niveau huile réservoir" name="niveau_huile_reservoir" value={form.niveau_huile_reservoir} onChange={setF} />
-              <div>
-                <label className="block text-xs text-slate-400 mb-1">Choix filtre huile</label>
-                <select value={form.choix_filtre_huile || ''} onChange={(e) => setF('choix_filtre_huile', e.target.value)}
-                  className="w-full bg-slate-800 border border-slate-700 rounded px-2 py-1.5 text-white text-sm">
-                  <option value="">—</option><option>F1</option><option>F2</option>
-                </select>
-              </div>
-              <Field label="Pression air atomisation" name="pression_air_atomisation" value={form.pression_air_atomisation} onChange={setF} unit="bar" />
-              <Field label="ΔP totale filtre air" name="dp_totale_filtre_kpa" value={form.dp_totale_filtre_kpa} onChange={setF} unit="kPa" />
-              <Field label="ΔP filtre" name="dp_filtre_kpa" value={form.dp_filtre_kpa} onChange={setF} unit="kPa" />
-              <Field label="Pression air comprimé" name="pression_air_comprime_bar" value={form.pression_air_comprime_bar} onChange={setF} unit="bar" />
-            </div>
-          )}
-
-          {tab === 3 && (
-            <div className="grid grid-cols-3 gap-3">
-              <Field label="Temp. huile TP" name="temp_huile_tp" value={form.temp_huile_tp} onChange={setF} unit="°C" />
-              <Field label="Temp. enroulement TP" name="temp_enroulement_tp" value={form.temp_enroulement_tp} onChange={setF} unit="°C" />
-              <Field label="Niv. conservateur TP" name="niv_conservateur_tp" value={form.niv_conservateur_tp} onChange={setF} />
-              <Field label="Temp. huile TS" name="temp_huile_ts" value={form.temp_huile_ts} onChange={setF} unit="°C" />
-              <Field label="Temp. enroulement TS" name="temp_enroulement_ts" value={form.temp_enroulement_ts} onChange={setF} unit="°C" />
-              <Field label="Niv. conservateur TS" name="niv_conservateur_ts" value={form.niv_conservateur_ts} onChange={setF} />
-              <Field label="Pression circuit incendie" name="pression_circuit_incendie" value={form.pression_circuit_incendie} onChange={setF} unit="bar" />
-              <Field label="Niveau gasoil PPE" name="niveau_gasoil_ppe_pct" value={form.niveau_gasoil_ppe_pct} onChange={setF} unit="%" />
-            </div>
-          )}
-
-          {tab === 4 && (
-            <div className="grid grid-cols-3 gap-3">
-              <Field label="Compteur gasoil GE" name="compteur_gasoil_ge_l" value={form.compteur_gasoil_ge_l} onChange={setF} unit="L" />
-              <Field label="Compteur énergie GE" name="compteur_energie_ge_kwh" value={form.compteur_energie_ge_kwh} onChange={setF} unit="kWh" />
-              <Field label="Stock gasoil" name="stock_gasoil_l" value={form.stock_gasoil_l} onChange={setF} unit="L" />
-              <Field label="Temp. huile graissage GE" name="temp_huile_graissage_ge" value={form.temp_huile_graissage_ge} onChange={setF} unit="°C" />
-              <Field label="Pression huile graissage GE" name="pression_huile_graissage_ge" value={form.pression_huile_graissage_ge} onChange={setF} unit="bar" />
-              <Field label="Temp. eau primaire GE" name="temp_eau_primaire_ge" value={form.temp_eau_primaire_ge} onChange={setF} unit="°C" />
-              <Field label="Nb heures marche GE" name="nb_heures_marche_ge" value={form.nb_heures_marche_ge} onChange={setF} unit="h" />
-            </div>
-          )}
-
-          {tab === 5 && (
-            <div className="grid grid-cols-3 gap-3">
-              <Field label="Énergie active index 0h" name="energie_active_index_0h" value={form.energie_active_index_0h} onChange={setF} unit="MWh" />
-              <Field label="Énergie active index 24h" name="energie_active_index_24h" value={form.energie_active_index_24h} onChange={setF} unit="MWh" />
-              <Field label="Réactif absorbé 0h" name="reactif_absorbe_0h" value={form.reactif_absorbe_0h} onChange={setF} unit="MVArh" />
-              <Field label="Réactif absorbé 24h" name="reactif_absorbe_24h" value={form.reactif_absorbe_24h} onChange={setF} unit="MVArh" />
-              <Field label="Gasoil 0h" name="gasoil_0h_l" value={form.gasoil_0h_l} onChange={setF} unit="L" />
-              <Field label="Gasoil 24h" name="gasoil_24h_l" value={form.gasoil_24h_l} onChange={setF} unit="L" />
-              <div className="col-span-3">
-                <label className="block text-xs text-slate-400 mb-1">Consignes particulières</label>
-                <textarea value={form.consignes_particulieres || ''} onChange={(e) => setF('consignes_particulieres', e.target.value)}
-                  rows={2} className="w-full bg-slate-800 border border-slate-700 rounded px-2 py-1.5 text-white text-sm focus:outline-none focus:border-amber-500 resize-none" />
-              </div>
-            </div>
-          )}
-
-          <div className="flex gap-3 pt-2">
-            <button onClick={() => setShowModal(false)} className="flex-1 bg-slate-800 hover:bg-slate-700 text-slate-300 py-2 rounded-lg text-sm">Annuler</button>
-            <button
-              onClick={() => createMut.mutate({ ...form, journee_id: journee!.id })}
-              disabled={createMut.isPending || !form.poste_id}
-              className="flex-1 bg-amber-500 hover:bg-amber-600 text-slate-900 font-medium py-2 rounded-lg text-sm disabled:opacity-50">
-              {createMut.isPending ? 'Enregistrement...' : 'Enregistrer'}
-            </button>
           </div>
         </div>
-      </Modal>
+      )}
 
-      <Modal open={!!viewItem} onClose={() => setViewItem(null)} title={`Relevé Opérateur ${viewItem ? format(new Date(viewItem.heure_releve), 'HH:mm') : ''}`} size="lg">
-        {viewItem && (
-          <div className="grid grid-cols-2 gap-3 text-sm">
-            {[
-              ['Pression refoulement', viewItem.pression_refoul_pompe_bar, 'bar'],
-              ['Pression gaz', viewItem.pression_gaz_fpgi_bar, 'bar'],
-              ['Niveau huile', viewItem.niveau_huile_reservoir, ''],
-              ['Pression air comprimé', viewItem.pression_air_comprime_bar, 'bar'],
-            ].map(([l, v, u]) => (
-              <div key={l as string} className="bg-slate-800 rounded-lg p-3">
-                <p className="text-xs text-slate-400">{l}</p>
-                <p className="text-lg font-bold text-amber-400">{v ?? '—'}<span className="text-xs text-slate-400 ml-1">{u}</span></p>
-              </div>
-            ))}
-          </div>
-        )}
-      </Modal>
+      <ToastContainer toasts={toasts} dismiss={dismiss} />
     </div>
   );
 }

@@ -383,7 +383,7 @@ model RelevesOperateur {
   id                          String   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
   journee_id                  String   @db.Uuid
   poste_id                    String   @db.Uuid
-  saisi_par                   String   @db.Uuid
+  saisi_par                   String?  @db.Uuid
   heure_releve                DateTime @db.Timestamptz(6)
   choix_pompe                 String?  @db.VarChar(10)
   pression_refoul_pompe_bar   Decimal? @db.Decimal(6, 3)
@@ -442,11 +442,11 @@ model RelevesOperateur {
   synced                      Boolean  @default(false)
   cree_le                     DateTime @default(now()) @db.Timestamptz(6)
 
-  journee Journee     @relation(fields: [journee_id], references: [id], onDelete: Cascade)
-  poste   Poste       @relation(fields: [poste_id], references: [id])
-  saiseur Utilisateur @relation(fields: [saisi_par], references: [id])
+  journee Journee      @relation(fields: [journee_id], references: [id], onDelete: Cascade)
+  poste   Poste        @relation(fields: [poste_id], references: [id])
+  saiseur Utilisateur? @relation(fields: [saisi_par], references: [id])
 
-  @@unique([journee_id, heure_releve, saisi_par])
+  @@unique([journee_id, heure_releve])
   @@map("releves_operateur")
 }
 
@@ -459,8 +459,14 @@ model CompteursJournaliers {
   energie_active_22h   Decimal?        @db.Decimal(12, 3)
   energie_active_24h   Decimal?        @db.Decimal(12, 3)
   reactif_fourni_00h   Decimal?        @db.Decimal(12, 3)
+  reactif_fourni_07h   Decimal?        @db.Decimal(12, 3)
+  reactif_fourni_18h   Decimal?        @db.Decimal(12, 3)
+  reactif_fourni_22h   Decimal?        @db.Decimal(12, 3)
   reactif_fourni_24h   Decimal?        @db.Decimal(12, 3)
   reactif_absorbe_00h  Decimal?        @db.Decimal(12, 3)
+  reactif_absorbe_07h  Decimal?        @db.Decimal(12, 3)
+  reactif_absorbe_18h  Decimal?        @db.Decimal(12, 3)
+  reactif_absorbe_22h  Decimal?        @db.Decimal(12, 3)
   reactif_absorbe_24h  Decimal?        @db.Decimal(12, 3)
   auxiliaires_00h      Decimal?        @db.Decimal(12, 3)
   auxiliaires_07h      Decimal?        @db.Decimal(12, 3)
@@ -470,6 +476,9 @@ model CompteursJournaliers {
   gaz_00h_nm3          Decimal?        @db.Decimal(14, 2)
   gaz_24h_nm3          Decimal?        @db.Decimal(14, 2)
   gasoil_00h_l         Decimal?        @db.Decimal(10, 2)
+  gasoil_07h_l         Decimal?        @db.Decimal(10, 2)
+  gasoil_18h_l         Decimal?        @db.Decimal(10, 2)
+  gasoil_22h_l         Decimal?        @db.Decimal(10, 2)
   gasoil_24h_l         Decimal?        @db.Decimal(10, 2)
   h_flamme_00h         Decimal?        @db.Decimal(8, 1)
   h_flamme_24h         Decimal?        @db.Decimal(8, 1)

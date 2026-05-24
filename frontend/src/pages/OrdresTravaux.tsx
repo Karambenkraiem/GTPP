@@ -1,6 +1,7 @@
 import { useState } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { otApi, journeesApi } from '../lib/api';
+import { useAuth } from '../contexts/AuthContext';
 import PageHeader from '../components/PageHeader';
 import Modal from '../components/Modal';
 import { Plus, Pencil, Trash2 } from 'lucide-react';
@@ -19,6 +20,8 @@ const ETAT_COLORS: Record<EtatOT, string> = {
 const EMPTY_FORM = { type_maintenance: 'curatif', etat: 'en_cours', discipline: '' };
 
 export default function OrdresTravaux() {
+  const { user } = useAuth();
+  const canEdit = user?.role !== 'operateur';
   const qc = useQueryClient();
   const today = format(new Date(), 'yyyy-MM-dd');
   const [selectedDate, setSelectedDate] = useState(today);
@@ -60,7 +63,7 @@ export default function OrdresTravaux() {
           <div className="flex gap-2">
             <input type="date" value={selectedDate} onChange={(e) => setSelectedDate(e.target.value)}
               className="bg-slate-800 border border-slate-600 rounded-lg px-3 py-1.5 text-white text-sm focus:outline-none focus:border-amber-500" />
-            {journee && (
+            {journee && canEdit && (
               <button onClick={() => { setEditItem(null); setForm(EMPTY_FORM); setShowModal(true); }}
                 className="flex items-center gap-1.5 bg-amber-500 hover:bg-amber-600 text-slate-900 font-medium px-3 py-1.5 rounded-lg text-sm">
                 <Plus size={14} /> Créer OT
@@ -101,10 +104,12 @@ export default function OrdresTravaux() {
                       <span className={`text-xs px-2 py-0.5 rounded-full ${ETAT_COLORS[ot.etat]}`}>{ETAT_OT_LABELS[ot.etat]}</span>
                     </td>
                     <td className="px-4 py-3">
-                      <div className="flex gap-2">
-                        <button onClick={() => openEdit(ot)} className="text-slate-500 hover:text-amber-400 transition-colors"><Pencil size={13} /></button>
-                        <button onClick={() => deleteMut.mutate(ot.id)} className="text-slate-500 hover:text-red-400 transition-colors"><Trash2 size={13} /></button>
-                      </div>
+                      {canEdit && (
+                        <div className="flex gap-2">
+                          <button onClick={() => openEdit(ot)} className="text-slate-500 hover:text-amber-400 transition-colors"><Pencil size={13} /></button>
+                          <button onClick={() => deleteMut.mutate(ot.id)} className="text-slate-500 hover:text-red-400 transition-colors"><Trash2 size={13} /></button>
+                        </div>
+                      )}
                     </td>
                   </tr>
                 ))}
