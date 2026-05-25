@@ -20,6 +20,44 @@ const DISCIPLINE_LABELS: Record<string, string> = {
 
 const fmt = (v: any, d = 1) => (v != null ? Number(v).toFixed(d) : '—');
 
+function safeDate(val: any, pattern: string, fallback = '—') {
+  if (!val) return fallback;
+  try {
+    const d = new Date(val);
+    if (isNaN(d.getTime())) return fallback;
+    return format(d, pattern);
+  } catch {
+    return fallback;
+  }
+}
+
+function DefautTable({ rows }: { rows: any[] }) {
+  return (
+    <table className="w-full text-sm">
+      <thead>
+        <tr className="bg-slate-800 border-b border-slate-700 text-slate-400 text-xs">
+          <th className="text-left px-4 py-2 font-medium w-32">KKS Équipement</th>
+          <th className="text-left px-4 py-2 font-medium">Description</th>
+          <th className="text-left px-4 py-2 font-medium w-28">Date déclaration</th>
+          <th className="text-left px-4 py-2 font-medium w-28">Date clôture</th>
+          <th className="text-left px-4 py-2 font-medium">Commentaires</th>
+        </tr>
+      </thead>
+      <tbody className="divide-y divide-slate-800">
+        {rows.map((d: any) => (
+          <tr key={d.id} className="hover:bg-slate-800/30">
+            <td className="px-4 py-2.5 text-amber-400 font-mono text-xs align-top whitespace-pre-line">{d.kks_equipement}</td>
+            <td className="px-4 py-2.5 text-slate-300 text-sm align-top whitespace-pre-wrap">{d.description}</td>
+            <td className="px-4 py-2.5 text-slate-400 text-xs align-top">{safeDate(d.date_declaration, 'dd/MM/yyyy')}</td>
+            <td className="px-4 py-2.5 text-slate-400 text-xs align-top">{safeDate(d.date_cloture, 'dd/MM/yyyy')}</td>
+            <td className="px-4 py-2.5 text-slate-400 text-xs align-top whitespace-pre-wrap">{d.commentaires || '—'}</td>
+          </tr>
+        ))}
+      </tbody>
+    </table>
+  );
+}
+
 function OTTable({ rows }: { rows: any[] }) {
   return (
     <table className="w-full text-sm">
@@ -158,13 +196,13 @@ export default function Rapport() {
                 {journee.valide_bloc_le && (
                   <div>
                     <p className="text-slate-500 text-xs mb-1">Validé Bloc</p>
-                    <p className="text-white">{format(new Date(journee.valide_bloc_le), 'dd/MM HH:mm')}</p>
+                    <p className="text-white">{safeDate(journee.valide_bloc_le, 'dd/MM HH:mm')}</p>
                   </div>
                 )}
                 {journee.valide_quart_le && (
                   <div>
                     <p className="text-slate-500 text-xs mb-1">Validé Quart</p>
-                    <p className="text-white">{format(new Date(journee.valide_quart_le), 'dd/MM HH:mm')}</p>
+                    <p className="text-white">{safeDate(journee.valide_quart_le, 'dd/MM HH:mm')}</p>
                   </div>
                 )}
               </div>
@@ -289,7 +327,7 @@ export default function Rapport() {
                         return (
                           <tr key={r.id} className="hover:bg-slate-800/30">
                             <td className="px-3 py-2 text-amber-400 font-medium border-r border-slate-800">
-                              {format(new Date(r.heure_releve), 'HH:mm')}
+                              {safeDate(r.heure_releve, 'HH:mm')}
                             </td>
                             <td className="text-center px-3 py-2 text-white border-r border-slate-800">{fmt(r.generateur?.puissance_active_mw)}</td>
                             <td className="text-center px-3 py-2 text-white border-r border-slate-800">{fmt(r.generateur?.frequence_hz, 3)}</td>
@@ -332,7 +370,7 @@ export default function Rapport() {
                     {manouvres.map((m: any) => (
                       <tr key={m.id} className="hover:bg-slate-800/30">
                         <td className="px-4 py-2.5 text-amber-400 font-medium text-xs">
-                          {format(new Date(m.heure_manouvre), 'HH:mm')}
+                          {safeDate(m.heure_manouvre, 'HH:mm')}
                         </td>
                         <td className="px-4 py-2.5">
                           <span className={`text-xs px-2 py-0.5 rounded-full ${
@@ -374,7 +412,7 @@ export default function Rapport() {
                     {alarmes.map((a: any) => (
                       <tr key={a.id} className="hover:bg-slate-800/30">
                         <td className="px-4 py-2.5 text-amber-400 font-medium text-xs">
-                          {a.heure ? format(new Date(a.heure), 'HH:mm') : '—'}
+                          {safeDate(a.heure, 'HH:mm')}
                         </td>
                         <td className="px-4 py-2.5 text-slate-300 font-mono text-xs">{a.tag ?? '—'}</td>
                         <td className="px-4 py-2.5 text-slate-300">{a.designation}</td>
@@ -421,48 +459,44 @@ export default function Rapport() {
               );
             })()}
 
-            {/* ── 8. Matériels Défectueux ── */}
-            <div className="bg-slate-900 border border-slate-700 rounded-lg overflow-hidden">
-              <SectionTitle icon={AlertTriangle} title="Matériels Défectueux — Actifs à cette date" count={defauts.length} />
-              {defauts.length === 0 ? (
-                <p className="text-slate-600 text-sm text-center py-5">Aucun défaut actif</p>
-              ) : (
-                <table className="w-full text-sm">
-                  <thead>
-                    <tr className="bg-slate-800 border-b border-slate-700 text-slate-400 text-xs">
-                      <th className="text-left px-4 py-2 font-medium w-32">KKS</th>
-                      <th className="text-left px-4 py-2 font-medium">Description</th>
-                      <th className="text-left px-4 py-2 font-medium w-32">Zone</th>
-                      <th className="text-left px-4 py-2 font-medium w-28">Déclaré le</th>
-                      <th className="text-left px-4 py-2 font-medium w-24">Statut</th>
-                    </tr>
-                  </thead>
-                  <tbody className="divide-y divide-slate-800">
-                    {defauts.map((d: any) => (
-                      <tr key={d.id} className="hover:bg-slate-800/30">
-                        <td className="px-4 py-2.5 text-amber-400 font-mono text-xs">{d.kks_equipement}</td>
-                        <td className="px-4 py-2.5 text-slate-300">{d.description}</td>
-                        <td className="px-4 py-2.5 text-slate-400 text-xs">
-                          {ZONE_LABELS[d.zone as keyof typeof ZONE_LABELS] ?? d.zone}
-                        </td>
-                        <td className="px-4 py-2.5 text-slate-400 text-xs">
-                          {format(new Date(d.date_declaration + 'T12:00:00'), 'dd/MM/yyyy')}
-                        </td>
-                        <td className="px-4 py-2.5">
-                          <span className={`text-xs px-2 py-0.5 rounded-full ${
-                            d.statut === 'ouvert'   ? 'bg-red-500/10 text-red-400'     :
-                            d.statut === 'en_cours' ? 'bg-orange-500/10 text-orange-400' :
-                            'bg-green-500/10 text-green-400'
-                          }`}>
-                            {d.statut === 'ouvert' ? 'Ouvert' : d.statut === 'en_cours' ? 'En cours' : 'Clôturé'}
-                          </span>
-                        </td>
-                      </tr>
-                    ))}
-                  </tbody>
-                </table>
-              )}
-            </div>
+            {/* ── 8a. Défauts — TG ── */}
+            {(() => {
+              const rows = defauts.filter((d: any) => d.zone === 'tg');
+              return (
+                <div className="bg-slate-900 border border-slate-700 rounded-lg overflow-hidden">
+                  <SectionTitle icon={AlertTriangle} title="Matériels Défectueux — TG" count={rows.length} />
+                  {rows.length === 0
+                    ? <p className="text-slate-600 text-sm text-center py-5">Aucun défaut TG actif</p>
+                    : <DefautTable rows={rows} />}
+                </div>
+              );
+            })()}
+
+            {/* ── 8b. Défauts — SITE ── */}
+            {(() => {
+              const rows = defauts.filter((d: any) => d.zone === 'site');
+              return (
+                <div className="bg-slate-900 border border-slate-700 rounded-lg overflow-hidden">
+                  <SectionTitle icon={AlertTriangle} title="Matériels Défectueux — SITE" count={rows.length} />
+                  {rows.length === 0
+                    ? <p className="text-slate-600 text-sm text-center py-5">Aucun défaut SITE actif</p>
+                    : <DefautTable rows={rows} />}
+                </div>
+              );
+            })()}
+
+            {/* ── 8c. Défauts — Points de Réserve ── */}
+            {(() => {
+              const rows = defauts.filter((d: any) => d.zone === 'auxiliaires');
+              return (
+                <div className="bg-slate-900 border border-slate-700 rounded-lg overflow-hidden">
+                  <SectionTitle icon={AlertTriangle} title="Points de Réserve Retenus" count={rows.length} />
+                  {rows.length === 0
+                    ? <p className="text-slate-600 text-sm text-center py-5">Aucun point de réserve actif</p>
+                    : <DefautTable rows={rows} />}
+                </div>
+              );
+            })()}
           </>
         )}
       </div>

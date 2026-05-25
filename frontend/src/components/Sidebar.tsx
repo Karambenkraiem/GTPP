@@ -15,7 +15,7 @@ const navItems: NavItem[] = [
   { to: '/manouvres', icon: Zap, label: 'Manœuvres' },
   { to: '/alarmes', icon: Bell, label: 'Alarmes Répétitives' },
   { to: '/ordres-travaux', icon: Wrench, label: 'Ordres de Travaux' },
-  { to: '/defauts', icon: AlertTriangle, label: 'Matériels Défect.' },
+  { to: '/defauts', icon: AlertTriangle, label: 'Matériels Défectueux' },
   { to: '/releves-jour', icon: CalendarDays, label: 'Visualisation' },
   { to: '/rapport', icon: FileText, label: 'Rapport Journalier' },
 ];
