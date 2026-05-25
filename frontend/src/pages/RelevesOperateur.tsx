@@ -86,6 +86,27 @@ function CptRow({ label, unit, fields, vals, set }: {
   );
 }
 
+function CptRow2({ label, unit, f00h, f24h, v00h, v24h, set }: {
+  label: string; unit: string;
+  f00h: string; f24h: string;
+  v00h: any; v24h: any;
+  set: (n: string, v: any) => void;
+}) {
+  return (
+    <div className={`${CPT_COL} border-b border-slate-800 py-2`}>
+      <div className="text-sm text-slate-300">{label}</div>
+      <div className="text-xs text-slate-500 text-center">{unit}</div>
+      <input type="number" step="any" value={v00h ?? ''} onKeyDown={onEnter}
+        onChange={e => set(f00h, e.target.value === '' ? null : parseFloat(e.target.value))}
+        className={INPUT_CLS} />
+      <div /><div /><div />
+      <input type="number" step="any" value={v24h ?? ''} onKeyDown={onEnter}
+        onChange={e => set(f24h, e.target.value === '' ? null : parseFloat(e.target.value))}
+        className={INPUT_CLS} />
+    </div>
+  );
+}
+
 const EMPTY = (date: string, hour?: number, posteId?: string): any => ({
   heure_releve: hour !== undefined
     ? `${date}T${hour.toString().padStart(2, '0')}:00`
@@ -241,12 +262,13 @@ export default function RelevesOperateurPage() {
   }
 
   function handleSave() {
-    if (!form.poste_id || !journee) return;
-    const existing = selectedHour !== null ? releveByHour[selectedHour] : null;
+    if (!journee || selectedHour === null) return;
+    const existing = releveByHour[selectedHour];
+    const payload = { ...form, poste_id: form.poste_id || null };
     if (existing) {
-      updateMut.mutate({ id: existing.id, data: form });
+      updateMut.mutate({ id: existing.id, data: payload });
     } else {
-      createMut.mutate({ ...form, journee_id: journee.id });
+      createMut.mutate({ ...payload, journee_id: journee.id });
     }
   }
 
@@ -264,7 +286,7 @@ export default function RelevesOperateurPage() {
         <RotateCcw size={13} /> Réinitialiser
       </button>
       <button onClick={handleSave}
-        disabled={isPending || !form.poste_id || selectedHour === null || (compteurs ? !canFill : formDisabled)}
+        disabled={isPending || selectedHour === null || (compteurs ? !canFill : formDisabled)}
         className="flex items-center gap-2 bg-amber-500 hover:bg-amber-600 text-slate-900 font-medium px-5 py-2 rounded-lg text-sm disabled:opacity-50 transition-colors">
         <Save size={14} /> {isPending ? 'Enregistrement...' : 'Enregistrer le relevé'}
       </button>
@@ -304,15 +326,16 @@ export default function RelevesOperateurPage() {
               <div className="grid grid-cols-6 sm:grid-cols-12 gap-1.5">
                 {SLOT_HOURS.map(hour => {
                   const releve = releveByHour[hour];
-                  const isFilled = releve?.saisi_par;
+                  const isFilled = !!(releve?.saisi_par);
                   const isSelected = selectedHour === hour;
                   const future = isSlotFuture(hour);
-                  const unclickable = future || !canFill;
+                  const locked = isFilled;
+                  const disabled = future || locked || !canFill;
                   return (
                     <button key={hour}
-                      onClick={() => { if (unclickable) return; setSelectedHour(hour === selectedHour ? null : hour); }}
+                      onClick={() => { if (disabled) return; setSelectedHour(hour === selectedHour ? null : hour); }}
                       className={`py-2 px-1 rounded text-xs font-medium transition-colors text-center ${
-                        unclickable ? 'bg-slate-900 text-slate-600 border border-slate-800 cursor-not-allowed opacity-50' :
+                        disabled ? 'bg-slate-900 text-slate-600 border border-slate-800 cursor-not-allowed opacity-50' :
                         isSelected ? 'bg-amber-500 text-slate-900' :
                         isFilled ? 'bg-green-500/20 text-green-400 border border-green-500/30 hover:bg-green-500/30' :
                         'bg-amber-500/10 text-amber-400 border border-amber-500/20 hover:bg-amber-500/20'
@@ -534,22 +557,51 @@ export default function RelevesOperateurPage() {
                 fields={['energie_active_00h','energie_active_07h','energie_active_18h','energie_active_22h','energie_active_24h']}
                 vals={[cptForm.energie_active_00h,cptForm.energie_active_07h,cptForm.energie_active_18h,cptForm.energie_active_22h,cptForm.energie_active_24h]}
                 set={cpt} />
-              <CptRow label="Réactif Fourni" unit="MVARh"
-                fields={['reactif_fourni_00h','reactif_fourni_07h','reactif_fourni_18h','reactif_fourni_22h','reactif_fourni_24h']}
-                vals={[cptForm.reactif_fourni_00h,cptForm.reactif_fourni_07h,cptForm.reactif_fourni_18h,cptForm.reactif_fourni_22h,cptForm.reactif_fourni_24h]}
+              <CptRow2 label="Réactif Fourni" unit="MVARh"
+                f00h="reactif_fourni_00h" f24h="reactif_fourni_24h"
+                v00h={cptForm.reactif_fourni_00h} v24h={cptForm.reactif_fourni_24h}
                 set={cpt} />
-              <CptRow label="Réactif Absorbé" unit="MVARh"
-                fields={['reactif_absorbe_00h','reactif_absorbe_07h','reactif_absorbe_18h','reactif_absorbe_22h','reactif_absorbe_24h']}
-                vals={[cptForm.reactif_absorbe_00h,cptForm.reactif_absorbe_07h,cptForm.reactif_absorbe_18h,cptForm.reactif_absorbe_22h,cptForm.reactif_absorbe_24h]}
+              <CptRow2 label="Réactif Absorbé" unit="MVARh"
+                f00h="reactif_absorbe_00h" f24h="reactif_absorbe_24h"
+                v00h={cptForm.reactif_absorbe_00h} v24h={cptForm.reactif_absorbe_24h}
                 set={cpt} />
               <CptRow label="Auxiliaires" unit="MWh"
                 fields={['auxiliaires_00h','auxiliaires_07h','auxiliaires_18h','auxiliaires_22h','auxiliaires_24h']}
                 vals={[cptForm.auxiliaires_00h,cptForm.auxiliaires_07h,cptForm.auxiliaires_18h,cptForm.auxiliaires_22h,cptForm.auxiliaires_24h]}
                 set={cpt} />
-              <CptRow label="Gasoil" unit="L"
-                fields={['gasoil_00h_l','gasoil_07h_l','gasoil_18h_l','gasoil_22h_l','gasoil_24h_l']}
-                vals={[cptForm.gasoil_00h_l,cptForm.gasoil_07h_l,cptForm.gasoil_18h_l,cptForm.gasoil_22h_l,cptForm.gasoil_24h_l]}
+              <CptRow2 label="Gasoil" unit="L"
+                f00h="gasoil_00h_l" f24h="gasoil_24h_l"
+                v00h={cptForm.gasoil_00h_l} v24h={cptForm.gasoil_24h_l}
                 set={cpt} />
+            </div>
+
+            {/* Consommation Auxiliaire en Charge */}
+            <div className={`mt-4 border border-slate-700 rounded-lg overflow-hidden ${cptLocked ? 'pointer-events-none opacity-50' : ''}`}>
+              <div className="bg-slate-800 px-4 py-2 text-xs font-bold text-slate-300 uppercase tracking-wider border-b border-slate-700">
+                Consommation Auxiliaire en Charge (MWh)
+              </div>
+              <div className="p-3 grid grid-cols-3 gap-3 items-end">
+                <div>
+                  <label className="block text-xs text-slate-500 mb-0.5">Compteur au couplage</label>
+                  <input type="number" step="any" value={cptForm.conso_aux_couplage ?? ''} onKeyDown={onEnter}
+                    onChange={e => cpt('conso_aux_couplage', e.target.value === '' ? null : parseFloat(e.target.value))}
+                    className={INPUT_CLS} />
+                </div>
+                <div>
+                  <label className="block text-xs text-slate-500 mb-0.5">Compteur au découplage</label>
+                  <input type="number" step="any" value={cptForm.conso_aux_decouplage ?? ''} onKeyDown={onEnter}
+                    onChange={e => cpt('conso_aux_decouplage', e.target.value === '' ? null : parseFloat(e.target.value))}
+                    className={INPUT_CLS} />
+                </div>
+                <div>
+                  <label className="block text-xs text-slate-500 mb-0.5">Consommation en charge (calculée)</label>
+                  <div className="bg-slate-800/50 border border-slate-700 rounded px-2 py-1.5 text-amber-400 text-sm font-bold text-center">
+                    {cptForm.conso_aux_couplage != null && cptForm.conso_aux_decouplage != null
+                      ? Math.abs(Number(cptForm.conso_aux_decouplage) - Number(cptForm.conso_aux_couplage)).toFixed(3)
+                      : '—'}
+                  </div>
+                </div>
+              </div>
             </div>
 
             <div className="flex justify-end gap-3 pt-4 mt-4 border-t border-slate-700">
@@ -569,6 +621,7 @@ export default function RelevesOperateurPage() {
                     reactif_absorbe_00h: 12400, reactif_absorbe_07h: 12580, reactif_absorbe_18h: 12900, reactif_absorbe_22h: 13050, reactif_absorbe_24h: 13100,
                     auxiliaires_00h: 4820, auxiliaires_07h: 4860, auxiliaires_18h: 4920, auxiliaires_22h: 4940, auxiliaires_24h: 4950,
                     gasoil_00h_l: 12450, gasoil_07h_l: 12520, gasoil_18h_l: 12620, gasoil_22h_l: 12660, gasoil_24h_l: 12680,
+                    conso_aux_couplage: 4820.250, conso_aux_decouplage: 4950.750,
                   })}
                     className="flex items-center gap-1.5 text-violet-400 hover:text-violet-300 border border-violet-500/30 rounded px-3 py-1.5 text-xs transition-colors">
                     <FlaskConical size={12} /> Remplir test

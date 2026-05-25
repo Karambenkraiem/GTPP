@@ -1,23 +1,22 @@
-import { useState } from 'react';
+import { useState, useRef } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { otApi, journeesApi } from '../lib/api';
 import { useAuth } from '../contexts/AuthContext';
 import PageHeader from '../components/PageHeader';
-import Modal from '../components/Modal';
-import { Plus, Pencil, Trash2 } from 'lucide-react';
+import { Trash2 } from 'lucide-react';
 import { format } from 'date-fns';
 import { fr } from 'date-fns/locale';
-import { ETAT_OT_LABELS } from '../types';
-import type { OrdreTravaux, EtatOT, DisciplineOT, TypeMaintenance } from '../types';
 
-const ETAT_COLORS: Record<EtatOT, string> = {
-  en_cours: 'bg-blue-400/10 text-blue-400',
-  termine: 'bg-green-400/10 text-green-400',
-  reporte: 'bg-yellow-400/10 text-yellow-400',
-  annule: 'bg-slate-600 text-slate-400',
-};
+const DISCIPLINES = [
+  { value: 'mec',  label: 'Mécanique' },
+  { value: 'elec', label: 'Électrique' },
+  { value: 'inst', label: 'Instrumentation' },
+  { value: 'autre', label: 'Prestation' },
+];
 
-const EMPTY_FORM = { type_maintenance: 'curatif', etat: 'en_cours', discipline: '' };
+type TabType = 'curatif' | 'preventif';
+type RowState = { numero_ot: string; kks_equipement: string; description: string; discipline: string };
+const EMPTY_ROW: RowState = { numero_ot: '', kks_equipement: '', description: '', discipline: '' };
 
 export default function OrdresTravaux() {
   const { user } = useAuth();
@@ -25,11 +24,26 @@ export default function OrdresTravaux() {
   const qc = useQueryClient();
   const today = format(new Date(), 'yyyy-MM-dd');
   const [selectedDate, setSelectedDate] = useState(today);
-  const [showModal, setShowModal] = useState(false);
-  const [editItem, setEditItem] = useState<OrdreTravaux | null>(null);
-  const [form, setForm] = useState<any>(EMPTY_FORM);
+  const [activeTab, setActiveTab] = useState<TabType>('curatif');
+  const [newRow, setNewRow] = useState<RowState>(EMPTY_ROW);
+  const [editingId, setEditingId] = useState<string | null>(null);
+  const [editRow, setEditRow] = useState<RowState>(EMPTY_ROW);
 
-  const { data: journees } = useQuery({ queryKey: ['journees'], queryFn: () => journeesApi.list({ from: format(new Date(Date.now() - 30 * 86400000), 'yyyy-MM-dd') }) });
+  /* refs — new row */
+  const newNumRef  = useRef<HTMLInputElement>(null);
+  const newKksRef  = useRef<HTMLInputElement>(null);
+  const newDescRef = useRef<HTMLInputElement>(null);
+  const newDiscRef = useRef<HTMLSelectElement>(null);
+
+  /* refs — edit row */
+  const editKksRef  = useRef<HTMLInputElement>(null);
+  const editDescRef = useRef<HTMLInputElement>(null);
+  const editDiscRef = useRef<HTMLSelectElement>(null);
+
+  const { data: journees } = useQuery({
+    queryKey: ['journees'],
+    queryFn: () => journeesApi.list({ from: format(new Date(Date.now() - 30 * 86400000), 'yyyy-MM-dd') }),
+  });
   const journee = journees?.find((j: any) => format(new Date(j.jour), 'yyyy-MM-dd') === selectedDate);
 
   const { data: ots, isLoading } = useQuery({
@@ -38,9 +52,25 @@ export default function OrdresTravaux() {
     enabled: !!journee?.id,
   });
 
+  const filtered = (ots ?? []).filter((ot: any) => ot.type_maintenance === activeTab);
+
   const createMut = useMutation({
-    mutationFn: (data: any) => editItem ? otApi.update(editItem.id, data) : otApi.create(data),
-    onSuccess: () => { qc.invalidateQueries({ queryKey: ['ots'] }); setShowModal(false); setEditItem(null); setForm(EMPTY_FORM); },
+    mutationFn: (data: any) => otApi.create(data),
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ['ots'] });
+      setNewRow(EMPTY_ROW);
+      setTimeout(() => newNumRef.current?.focus(), 50);
+    },
+  });
+
+  const updateMut = useMutation({
+    mutationFn: ({ id, data }: { id: string; data: any }) => otApi.update(id, data),
+    onSuccess: () => { qc.invalidateQueries({ queryKey: ['ots'] }); setEditingId(null); },
+  });
+
+  const etatMut = useMutation({
+    mutationFn: ({ id, etat }: { id: string; etat: string }) => otApi.update(id, { etat }),
+    onSuccess: () => qc.invalidateQueries({ queryKey: ['ots'] }),
   });
 
   const deleteMut = useMutation({
@@ -48,11 +78,48 @@ export default function OrdresTravaux() {
     onSuccess: () => qc.invalidateQueries({ queryKey: ['ots'] }),
   });
 
-  function openEdit(ot: OrdreTravaux) {
-    setEditItem(ot);
-    setForm({ ...ot, date_debut: ot.date_debut?.split('T')[0], date_fin: ot.date_fin?.split('T')[0] });
-    setShowModal(true);
+  function handleAdd() {
+    if (!journee || !newRow.description.trim()) return;
+    createMut.mutate({
+      journee_id: journee.id,
+      type_maintenance: activeTab,
+      etat: 'en_cours',
+      numero_ot: newRow.numero_ot.trim() || null,
+      kks_equipement: newRow.kks_equipement.trim() || null,
+      description: newRow.description.trim(),
+      discipline: newRow.discipline || null,
+    });
   }
+
+  function startEdit(ot: any) {
+    if (!canEdit) return;
+    setEditingId(ot.id);
+    setEditRow({
+      numero_ot: ot.numero_ot ?? '',
+      kks_equipement: ot.kks_equipement ?? '',
+      description: ot.description ?? '',
+      discipline: ot.discipline ?? '',
+    });
+  }
+
+  function handleUpdate(id: string) {
+    if (!editRow.description.trim()) return;
+    const currentOt = (ots ?? []).find((o: any) => o.id === id);
+    updateMut.mutate({
+      id,
+      data: {
+        type_maintenance: activeTab,
+        etat: currentOt?.etat ?? 'en_cours',
+        numero_ot: editRow.numero_ot.trim() || null,
+        kks_equipement: editRow.kks_equipement.trim() || null,
+        description: editRow.description.trim(),
+        discipline: editRow.discipline || null,
+      },
+    });
+  }
+
+  const inputCls = 'w-full bg-slate-800 border border-amber-500/60 rounded px-2 py-1 text-white text-sm focus:outline-none focus:border-amber-400';
+  const newInputCls = 'w-full bg-slate-800 border border-slate-600 rounded px-2 py-1.5 text-white text-sm focus:outline-none focus:border-amber-500 placeholder:text-slate-600';
 
   return (
     <div>
@@ -60,125 +127,233 @@ export default function OrdresTravaux() {
         title="Ordres de Travaux"
         subtitle="Suivi des interventions de maintenance"
         actions={
-          <div className="flex gap-2">
-            <input type="date" value={selectedDate} onChange={(e) => setSelectedDate(e.target.value)}
-              className="bg-slate-800 border border-slate-600 rounded-lg px-3 py-1.5 text-white text-sm focus:outline-none focus:border-amber-500" />
-            {journee && canEdit && (
-              <button onClick={() => { setEditItem(null); setForm(EMPTY_FORM); setShowModal(true); }}
-                className="flex items-center gap-1.5 bg-amber-500 hover:bg-amber-600 text-slate-900 font-medium px-3 py-1.5 rounded-lg text-sm">
-                <Plus size={14} /> Créer OT
-              </button>
-            )}
-          </div>
+          <input type="date" value={selectedDate} onChange={e => setSelectedDate(e.target.value)}
+            className="bg-slate-800 border border-slate-600 rounded-lg px-3 py-1.5 text-white text-sm focus:outline-none focus:border-amber-500" />
         }
       />
 
       <div className="p-6">
-        {!journee && <div className="bg-slate-900 border border-slate-700 rounded-lg p-8 text-center text-slate-400">Aucune journée pour cette date</div>}
+        {!journee && (
+          <div className="bg-slate-900 border border-slate-700 rounded-lg p-8 text-center text-slate-400">
+            Aucune journée pour le {format(new Date(selectedDate + 'T12:00:00'), 'd MMMM yyyy', { locale: fr })}
+          </div>
+        )}
+
         {journee && (
-          <div className="bg-slate-900 border border-slate-700 rounded-lg overflow-hidden">
-            <table className="w-full text-sm">
+          <div className="bg-slate-900 border border-slate-700 rounded-lg overflow-visible">
+
+            {/* ── Onglets ── */}
+            <div className="flex border-b border-slate-700">
+              {([
+                { key: 'curatif',   label: 'Maintenance Curative' },
+                { key: 'preventif', label: 'Maintenance Préventive' },
+              ] as { key: TabType; label: string }[]).map(({ key, label }) => (
+                <button key={key}
+                  onClick={() => { setActiveTab(key); setEditingId(null); setNewRow(EMPTY_ROW); }}
+                  className={`px-5 py-3 text-sm font-semibold transition-colors border-b-2 -mb-px ${
+                    activeTab === key
+                      ? 'border-amber-500 text-amber-400'
+                      : 'border-transparent text-slate-400 hover:text-slate-200'
+                  }`}>
+                  {label}
+                </button>
+              ))}
+            </div>
+
+            {/* ── En-tête cyan ── */}
+            <div className="bg-cyan-500 px-4 py-2.5">
+              <h3 className="text-slate-900 font-bold text-sm uppercase tracking-wide italic">
+                {activeTab === 'curatif' ? '4 — Maintenance Curative' : '5 — Maintenance Préventive'}
+              </h3>
+            </div>
+
+            {canEdit && (
+              <p className="text-[11px] text-slate-500 px-4 py-1.5 border-b border-slate-800 italic">
+                Cliquer sur une ligne pour modifier · Entrée pour naviguer entre les champs · Entrée sur Discipline pour valider
+              </p>
+            )}
+
+            <table className="w-full text-sm border-collapse">
               <thead>
-                <tr className="border-b border-slate-700">
-                  {['N° OT', 'KKS', 'Description', 'Discipline', 'Type', 'Période', 'État', ''].map((h) => (
-                    <th key={h} className="px-4 py-3 text-left text-xs text-slate-400 font-medium">{h}</th>
-                  ))}
+                <tr className="bg-cyan-500/15 border-b border-cyan-500/30">
+                  <th className="text-center px-3 py-2 text-cyan-300 font-semibold w-28">N° OT</th>
+                  <th className="text-center px-3 py-2 text-cyan-300 font-semibold w-36">KKS Équipement</th>
+                  <th className="text-left   px-3 py-2 text-cyan-300 font-semibold">Description de l'intervention</th>
+                  <th className="text-center px-3 py-2 text-cyan-300 font-semibold w-40">Discipline</th>
+                  <th className="text-center px-3 py-2 text-cyan-300 font-semibold w-32">État</th>
+                  <th className="w-10" />
                 </tr>
               </thead>
-              <tbody className="divide-y divide-slate-800">
-                {(!ots || ots.length === 0) && (
-                  <tr><td colSpan={8} className="px-4 py-8 text-center text-slate-500">Aucun OT</td></tr>
+              <tbody>
+                {isLoading && (
+                  <tr><td colSpan={5} className="text-center text-slate-500 py-6 text-xs">Chargement...</td></tr>
                 )}
-                {ots?.map((ot: OrdreTravaux) => (
-                  <tr key={ot.id} className="hover:bg-slate-800/50 transition-colors">
-                    <td className="px-4 py-3 font-mono text-xs text-amber-400">{ot.numero_ot || '—'}</td>
-                    <td className="px-4 py-3 text-xs text-slate-300">{ot.kks_equipement || '—'}</td>
-                    <td className="px-4 py-3 text-slate-200 max-w-xs truncate">{ot.description}</td>
-                    <td className="px-4 py-3 text-xs text-slate-400 uppercase">{ot.discipline || '—'}</td>
-                    <td className="px-4 py-3 text-xs text-slate-400">{ot.type_maintenance}</td>
-                    <td className="px-4 py-3 text-xs text-slate-400">
-                      {ot.date_debut ? format(new Date(ot.date_debut), 'dd/MM') : '—'}
-                      {ot.date_fin ? ` → ${format(new Date(ot.date_fin), 'dd/MM')}` : ''}
-                    </td>
-                    <td className="px-4 py-3">
-                      <span className={`text-xs px-2 py-0.5 rounded-full ${ETAT_COLORS[ot.etat]}`}>{ETAT_OT_LABELS[ot.etat]}</span>
-                    </td>
-                    <td className="px-4 py-3">
-                      {canEdit && (
-                        <div className="flex gap-2">
-                          <button onClick={() => openEdit(ot)} className="text-slate-500 hover:text-amber-400 transition-colors"><Pencil size={13} /></button>
-                          <button onClick={() => deleteMut.mutate(ot.id)} className="text-slate-500 hover:text-red-400 transition-colors"><Trash2 size={13} /></button>
-                        </div>
-                      )}
+                {!isLoading && filtered.length === 0 && (
+                  <tr>
+                    <td colSpan={5} className="text-center text-slate-600 py-8 text-xs italic">
+                      Aucun OT enregistré pour cette journée
                     </td>
                   </tr>
-                ))}
+                )}
+
+                {filtered.map((ot: any) =>
+                  editingId === ot.id ? (
+                    <tr key={ot.id} className="border-b border-amber-500/40 bg-amber-500/5">
+                      <td className="px-2 py-1.5 w-28">
+                        <input type="text" value={editRow.numero_ot} autoFocus
+                          placeholder="N° OT"
+                          onChange={e => setEditRow(r => ({ ...r, numero_ot: e.target.value }))}
+                          onKeyDown={e => {
+                            if (e.key === 'Enter')  { e.preventDefault(); editKksRef.current?.focus(); }
+                            if (e.key === 'Escape') setEditingId(null);
+                          }}
+                          className={`${inputCls} text-amber-400 font-mono text-center`} />
+                      </td>
+                      <td className="px-2 py-1.5 w-36">
+                        <input ref={editKksRef} type="text" value={editRow.kks_equipement}
+                          placeholder="KKS"
+                          onChange={e => setEditRow(r => ({ ...r, kks_equipement: e.target.value }))}
+                          onKeyDown={e => {
+                            if (e.key === 'Enter')  { e.preventDefault(); editDescRef.current?.focus(); }
+                            if (e.key === 'Escape') setEditingId(null);
+                          }}
+                          className={inputCls} />
+                      </td>
+                      <td className="px-2 py-1.5">
+                        <input ref={editDescRef} type="text" value={editRow.description}
+                          placeholder="Description..."
+                          onChange={e => setEditRow(r => ({ ...r, description: e.target.value }))}
+                          onKeyDown={e => {
+                            if (e.key === 'Enter')  { e.preventDefault(); editDiscRef.current?.focus(); }
+                            if (e.key === 'Escape') setEditingId(null);
+                          }}
+                          className={inputCls} />
+                      </td>
+                      <td className="px-2 py-1.5 w-40">
+                        <select ref={editDiscRef} value={editRow.discipline}
+                          onChange={e => setEditRow(r => ({ ...r, discipline: e.target.value }))}
+                          onKeyDown={e => {
+                            if (e.key === 'Enter')  { e.preventDefault(); handleUpdate(ot.id); }
+                            if (e.key === 'Escape') setEditingId(null);
+                          }}
+                          className={inputCls}>
+                          <option value="">—</option>
+                          {DISCIPLINES.map(d => <option key={d.value} value={d.value}>{d.label}</option>)}
+                        </select>
+                      </td>
+                      <td className="px-2 py-1.5 text-center">
+                        <span className={`text-xs px-2 py-1 rounded-full font-semibold ${
+                          (ots ?? []).find((o: any) => o.id === ot.id)?.etat === 'termine'
+                            ? 'bg-green-500/15 text-green-400'
+                            : 'bg-blue-500/15 text-blue-400'
+                        }`}>
+                          {(ots ?? []).find((o: any) => o.id === ot.id)?.etat === 'termine' ? 'FIN TRAVAUX' : 'EN COURS'}
+                        </span>
+                      </td>
+                      <td className="px-2 py-1.5 text-center">
+                        <button onClick={() => setEditingId(null)}
+                          className="text-slate-500 hover:text-slate-300 text-xs transition-colors">✕</button>
+                      </td>
+                    </tr>
+                  ) : (
+                    <tr key={ot.id}
+                      onClick={() => startEdit(ot)}
+                      className={`border-b border-slate-800 transition-colors ${canEdit ? 'cursor-pointer hover:bg-slate-800/50' : ''}`}>
+                      <td className="text-center px-3 py-3 font-mono text-amber-400 font-bold text-xs">{ot.numero_ot || '—'}</td>
+                      <td className="text-center px-3 py-3 text-slate-300 text-xs">{ot.kks_equipement || '—'}</td>
+                      <td className="px-3 py-3 text-slate-200">{ot.description}</td>
+                      <td className="text-center px-3 py-3 text-slate-300 text-xs">
+                        {DISCIPLINES.find(d => d.value === ot.discipline)?.label || '—'}
+                      </td>
+                      <td className="px-2 py-3 text-center" onClick={e => e.stopPropagation()}>
+                        {canEdit ? (
+                          <button
+                            onClick={() => etatMut.mutate({
+                              id: ot.id,
+                              etat: ot.etat === 'termine' ? 'en_cours' : 'termine',
+                            })}
+                            disabled={etatMut.isPending}
+                            className={`text-xs px-2 py-1 rounded-full font-semibold transition-colors disabled:opacity-40 ${
+                              ot.etat === 'termine'
+                                ? 'bg-green-500/15 text-green-400 hover:bg-green-500/30'
+                                : 'bg-blue-500/15 text-blue-400 hover:bg-blue-500/30'
+                            }`}>
+                            {ot.etat === 'termine' ? 'FIN TRAVAUX' : 'EN COURS'}
+                          </button>
+                        ) : (
+                          <span className={`text-xs px-2 py-1 rounded-full font-semibold ${
+                            ot.etat === 'termine'
+                              ? 'bg-green-500/15 text-green-400'
+                              : 'bg-blue-500/15 text-blue-400'
+                          }`}>
+                            {ot.etat === 'termine' ? 'FIN TRAVAUX' : 'EN COURS'}
+                          </span>
+                        )}
+                      </td>
+                      <td className="px-2 py-3 text-center" onClick={e => e.stopPropagation()}>
+                        {canEdit && (
+                          <button onClick={() => deleteMut.mutate(ot.id)} disabled={deleteMut.isPending}
+                            className="text-slate-600 hover:text-red-400 transition-colors disabled:opacity-40">
+                            <Trash2 size={13} />
+                          </button>
+                        )}
+                      </td>
+                    </tr>
+                  )
+                )}
+
+                {/* ── Nouvelle ligne ── */}
+                {canEdit && (
+                  <tr className="border-t-2 border-amber-500/30 bg-slate-800/40">
+                    <td className="px-2 py-2 w-28">
+                      <input ref={newNumRef} type="text" value={newRow.numero_ot}
+                        placeholder="N° OT"
+                        onChange={e => setNewRow(r => ({ ...r, numero_ot: e.target.value }))}
+                        onKeyDown={e => { if (e.key === 'Enter') { e.preventDefault(); newKksRef.current?.focus(); } }}
+                        className={`${newInputCls} text-amber-400 font-mono text-center`} />
+                    </td>
+                    <td className="px-2 py-2 w-36">
+                      <input ref={newKksRef} type="text" value={newRow.kks_equipement}
+                        placeholder="KKS"
+                        onChange={e => setNewRow(r => ({ ...r, kks_equipement: e.target.value }))}
+                        onKeyDown={e => { if (e.key === 'Enter') { e.preventDefault(); newDescRef.current?.focus(); } }}
+                        className={newInputCls} />
+                    </td>
+                    <td className="px-2 py-2">
+                      <input ref={newDescRef} type="text" value={newRow.description}
+                        placeholder="Description de l'intervention..."
+                        onChange={e => setNewRow(r => ({ ...r, description: e.target.value }))}
+                        onKeyDown={e => { if (e.key === 'Enter') { e.preventDefault(); newDiscRef.current?.focus(); } }}
+                        className={newInputCls} />
+                    </td>
+                    <td className="px-2 py-2 w-40">
+                      <select ref={newDiscRef} value={newRow.discipline}
+                        onChange={e => setNewRow(r => ({ ...r, discipline: e.target.value }))}
+                        onKeyDown={e => { if (e.key === 'Enter') { e.preventDefault(); handleAdd(); } }}
+                        className="w-full bg-slate-800 border border-slate-600 rounded px-2 py-1.5 text-white text-sm focus:outline-none focus:border-amber-500">
+                        <option value="">— Discipline —</option>
+                        {DISCIPLINES.map(d => <option key={d.value} value={d.value}>{d.label}</option>)}
+                      </select>
+                    </td>
+                    <td className="px-2 py-2 text-center">
+                      <span className="text-xs px-2 py-1 rounded-full font-semibold bg-blue-500/15 text-blue-400">
+                        EN COURS
+                      </span>
+                    </td>
+                    <td className="px-2 py-2 text-center">
+                      <button onClick={handleAdd}
+                        disabled={!newRow.description.trim() || createMut.isPending}
+                        className="bg-amber-500 hover:bg-amber-600 disabled:opacity-40 text-slate-900 font-bold px-3 py-1.5 rounded text-xs transition-colors">
+                        {createMut.isPending ? '...' : '+'}
+                      </button>
+                    </td>
+                  </tr>
+                )}
               </tbody>
             </table>
           </div>
         )}
       </div>
-
-      <Modal open={showModal} onClose={() => { setShowModal(false); setEditItem(null); }} title={editItem ? 'Modifier OT' : 'Créer OT'} size="lg">
-        <div className="grid grid-cols-2 gap-4">
-          <div>
-            <label className="block text-sm text-slate-400 mb-1">N° OT</label>
-            <input value={form.numero_ot || ''} onChange={(e) => setForm({ ...form, numero_ot: e.target.value })}
-              className="w-full bg-slate-800 border border-slate-600 rounded-lg px-3 py-2 text-white text-sm focus:outline-none focus:border-amber-500" />
-          </div>
-          <div>
-            <label className="block text-sm text-slate-400 mb-1">KKS Équipement</label>
-            <input value={form.kks_equipement || ''} onChange={(e) => setForm({ ...form, kks_equipement: e.target.value })}
-              className="w-full bg-slate-800 border border-slate-600 rounded-lg px-3 py-2 text-white text-sm focus:outline-none focus:border-amber-500" />
-          </div>
-          <div className="col-span-2">
-            <label className="block text-sm text-slate-400 mb-1">Description *</label>
-            <textarea value={form.description || ''} onChange={(e) => setForm({ ...form, description: e.target.value })}
-              rows={2} className="w-full bg-slate-800 border border-slate-600 rounded-lg px-3 py-2 text-white text-sm focus:outline-none focus:border-amber-500 resize-none" />
-          </div>
-          <div>
-            <label className="block text-sm text-slate-400 mb-1">Discipline</label>
-            <select value={form.discipline || ''} onChange={(e) => setForm({ ...form, discipline: e.target.value })}
-              className="w-full bg-slate-800 border border-slate-600 rounded-lg px-3 py-2 text-white text-sm focus:outline-none focus:border-amber-500">
-              <option value="">— Aucune —</option>
-              {(['mec', 'elec', 'inst', 'civil', 'autre'] as DisciplineOT[]).map((d) => <option key={d} value={d}>{d.toUpperCase()}</option>)}
-            </select>
-          </div>
-          <div>
-            <label className="block text-sm text-slate-400 mb-1">Type maintenance *</label>
-            <select value={form.type_maintenance} onChange={(e) => setForm({ ...form, type_maintenance: e.target.value })}
-              className="w-full bg-slate-800 border border-slate-600 rounded-lg px-3 py-2 text-white text-sm focus:outline-none focus:border-amber-500">
-              {(['curatif', 'systematique', 'preventif'] as TypeMaintenance[]).map((t) => <option key={t} value={t}>{t}</option>)}
-            </select>
-          </div>
-          <div>
-            <label className="block text-sm text-slate-400 mb-1">Date début</label>
-            <input type="date" value={form.date_debut || ''} onChange={(e) => setForm({ ...form, date_debut: e.target.value })}
-              className="w-full bg-slate-800 border border-slate-600 rounded-lg px-3 py-2 text-white text-sm focus:outline-none focus:border-amber-500" />
-          </div>
-          <div>
-            <label className="block text-sm text-slate-400 mb-1">Date fin</label>
-            <input type="date" value={form.date_fin || ''} onChange={(e) => setForm({ ...form, date_fin: e.target.value })}
-              className="w-full bg-slate-800 border border-slate-600 rounded-lg px-3 py-2 text-white text-sm focus:outline-none focus:border-amber-500" />
-          </div>
-          <div>
-            <label className="block text-sm text-slate-400 mb-1">État</label>
-            <select value={form.etat} onChange={(e) => setForm({ ...form, etat: e.target.value })}
-              className="w-full bg-slate-800 border border-slate-600 rounded-lg px-3 py-2 text-white text-sm focus:outline-none focus:border-amber-500">
-              {(['en_cours', 'termine', 'reporte', 'annule'] as EtatOT[]).map((e) => <option key={e} value={e}>{ETAT_OT_LABELS[e]}</option>)}
-            </select>
-          </div>
-        </div>
-        <div className="flex gap-3 pt-4">
-          <button onClick={() => { setShowModal(false); setEditItem(null); }} className="flex-1 bg-slate-800 hover:bg-slate-700 text-slate-300 py-2 rounded-lg text-sm">Annuler</button>
-          <button
-            onClick={() => createMut.mutate({ ...form, journee_id: journee!.id })}
-            disabled={createMut.isPending || !form.description}
-            className="flex-1 bg-amber-500 hover:bg-amber-600 text-slate-900 font-medium py-2 rounded-lg text-sm disabled:opacity-50">
-            {createMut.isPending ? 'Enregistrement...' : 'Enregistrer'}
-          </button>
-        </div>
-      </Modal>
     </div>
   );
 }

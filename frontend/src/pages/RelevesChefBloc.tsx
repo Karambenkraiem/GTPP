@@ -2,7 +2,7 @@ import { useState, useEffect, useMemo } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { relevesApi, journeesApi, postesApi } from '../lib/api';
 import PageHeader from '../components/PageHeader';
-import { Save, RotateCcw, FlaskConical } from 'lucide-react';
+import { Save, RotateCcw, FlaskConical, Gauge, Pencil } from 'lucide-react';
 import { useToast, ToastContainer } from '../components/Toast';
 import { format } from 'date-fns';
 import { fr } from 'date-fns/locale';
@@ -49,6 +49,47 @@ function Titre({ t }: { t: string }) {
   );
 }
 
+type CptRowProps = { label: string; nameA: string; nameB: string; a: any; b: any; set: (n: string, v: any) => void; unit?: string; isInt?: boolean; readOnly?: boolean };
+function CptRow({ label, nameA, nameB, a, b, set, unit, isInt = false, readOnly = false }: CptRowProps) {
+  const diff = (a != null && b != null) ? Number(b) - Number(a) : null;
+  const parse = (v: string) => v === '' ? null : isInt ? parseInt(v) : parseFloat(v);
+  const cellCls = 'bg-slate-800/50 border border-slate-700 rounded px-2 py-1 text-slate-300 text-xs text-center w-full';
+  return (
+    <tr className="border-b border-slate-800 hover:bg-slate-800/20">
+      <td className="px-3 py-1.5 text-xs text-slate-300">
+        {label}{unit && <span className="text-slate-500 ml-1">({unit})</span>}
+        {readOnly && <span className="ml-1.5 text-[9px] text-slate-600 italic">opérateur</span>}
+      </td>
+      <td className="px-1.5 py-1">
+        {readOnly
+          ? <div className={cellCls}>{a != null ? Number(a).toFixed(isInt ? 0 : 1) : '—'}</div>
+          : <input type="number" step={isInt ? '1' : 'any'} value={a ?? ''}
+              onChange={e => set(nameA, parse(e.target.value))}
+              className="w-full bg-slate-800 border border-slate-700 rounded px-2 py-1 text-white text-xs focus:outline-none focus:border-amber-500 text-center" />}
+      </td>
+      <td className="px-1.5 py-1">
+        {readOnly
+          ? <div className={cellCls}>{b != null ? Number(b).toFixed(isInt ? 0 : 1) : '—'}</div>
+          : <input type="number" step={isInt ? '1' : 'any'} value={b ?? ''}
+              onChange={e => set(nameB, parse(e.target.value))}
+              className="w-full bg-slate-800 border border-slate-700 rounded px-2 py-1 text-white text-xs focus:outline-none focus:border-amber-500 text-center" />}
+      </td>
+      <td className={`px-3 py-1.5 text-center text-xs font-bold ${diff == null ? 'text-slate-600' : diff < 0 ? 'text-red-400' : 'text-amber-400'}`}>
+        {diff != null ? diff.toFixed(isInt ? 0 : 1) : '—'}
+      </td>
+    </tr>
+  );
+}
+function CptSectionRow({ title }: { title: string }) {
+  return (
+    <tr>
+      <td colSpan={4} className="px-3 py-1.5 text-[10px] font-bold text-amber-400 uppercase tracking-widest bg-slate-800/60 border-y border-slate-700">
+        {title}
+      </td>
+    </tr>
+  );
+}
+
 const EMPTY = (date: string, hour?: number, posteId?: string): any => ({
   heure_releve: hour !== undefined
     ? `${date}T${hour.toString().padStart(2, '0')}:00`
@@ -66,7 +107,11 @@ export default function RelevesChefBloc() {
   const qc = useQueryClient();
   const [selectedDate, setSelectedDate] = useState(format(new Date(), 'yyyy-MM-dd'));
   const [selectedHour, setSelectedHour] = useState<number | null>(null);
+  const [pageTab, setPageTab] = useState<'saisie' | 'compteurs'>('saisie');
   const [form, setForm] = useState<any>(EMPTY(format(new Date(), 'yyyy-MM-dd')));
+  const [cptForm, setCptForm] = useState<any>({});
+  const [cptLocked, setCptLocked] = useState(false);
+  const [cptConfirm, setCptConfirm] = useState<'save' | 'modify' | null>(null);
 
   const { data: journees } = useQuery({
     queryKey: ['journees'],
@@ -83,6 +128,12 @@ export default function RelevesChefBloc() {
   const { data: releves } = useQuery({
     queryKey: ['releves-bloc', journee?.id],
     queryFn: () => relevesApi.listBloc(journee!.id),
+    enabled: !!journee?.id,
+  });
+
+  const { data: compteursData } = useQuery({
+    queryKey: ['compteurs', journee?.id],
+    queryFn: () => relevesApi.getCompteurs(journee!.id),
     enabled: !!journee?.id,
   });
 
@@ -112,6 +163,23 @@ export default function RelevesChefBloc() {
     }
   }, [selectedHour]);
 
+  useEffect(() => { setCptForm(compteursData ?? {}); setCptLocked(!!compteursData?.id); }, [compteursData]);
+
+  const energieCalc = useMemo(() => {
+    const n = (v: any) => v != null ? Number(v) : null;
+    const ea00 = n(cptForm.energie_active_00h);
+    const ea07 = n(cptForm.energie_active_07h);
+    const ea18 = n(cptForm.energie_active_18h);
+    const ea22 = n(cptForm.energie_active_22h);
+    const ea24 = n(cptForm.energie_active_24h);
+    const jour   = ea07 != null && ea18 != null ? ea18 - ea07 : null;
+    const pointe = ea18 != null && ea22 != null ? ea22 - ea18 : null;
+    const nuit   = ea22 != null && ea24 != null && ea00 != null && ea07 != null
+      ? (ea24 - ea22) + (ea07 - ea00) : null;
+    const total  = jour != null && pointe != null && nuit != null ? jour + pointe + nuit : null;
+    return { jour, pointe, nuit, total };
+  }, [cptForm.energie_active_00h, cptForm.energie_active_07h, cptForm.energie_active_18h, cptForm.energie_active_22h, cptForm.energie_active_24h]);
+
   const createMut = useMutation({
     mutationFn: (data: any) => relevesApi.createBloc(data),
     onSuccess: () => { qc.invalidateQueries({ queryKey: ['releves-bloc'] }); showToast('Relevé enregistré avec succès'); },
@@ -124,6 +192,12 @@ export default function RelevesChefBloc() {
     onError: () => showToast('Erreur lors de la mise à jour', 'error'),
   });
 
+  const saveCptMut = useMutation({
+    mutationFn: (data: any) => relevesApi.saveCompteurs(data),
+    onSuccess: () => { qc.invalidateQueries({ queryKey: ['compteurs'] }); showToast('Compteurs enregistrés'); setCptLocked(true); setCptConfirm(null); },
+    onError: () => showToast('Erreur lors de l\'enregistrement des compteurs', 'error'),
+  });
+
   function isSlotFuture(hour: number) {
     if (!isChefBloc) return false;
     return new Date(`${selectedDate}T${hour.toString().padStart(2, '0')}:00:00`) > new Date();
@@ -133,14 +207,26 @@ export default function RelevesChefBloc() {
 
   function f(n: string, v: any) { setForm((s: any) => ({ ...s, [n]: v })); }
   function g(sub: string, n: string, v: any) { setForm((s: any) => ({ ...s, [sub]: { ...(s[sub] || {}), [n]: v } })); }
+  const fc = (n: string, v: any) => setCptForm((s: any) => ({ ...s, [n]: v }));
+  function handleSaveCpt() {
+    if (!journee) return;
+    saveCptMut.mutate({
+      ...cptForm,
+      journee_id: journee.id,
+      energie_jour_mwh: energieCalc.jour,
+      energie_pointe_mwh: energieCalc.pointe,
+      energie_nuit_mwh: energieCalc.nuit,
+    });
+  }
 
   function handleSave() {
-    if (!form.poste_id || !journee) return;
-    const existing = selectedHour !== null ? releveByHour[selectedHour] : null;
+    if (!journee || selectedHour === null) return;
+    const existing = releveByHour[selectedHour];
+    const payload = { ...form, poste_id: form.poste_id || null };
     if (existing) {
-      updateMut.mutate({ id: existing.id, data: form });
+      updateMut.mutate({ id: existing.id, data: payload });
     } else {
-      createMut.mutate({ ...form, journee_id: journee.id });
+      createMut.mutate({ ...payload, journee_id: journee.id });
     }
   }
 
@@ -217,7 +303,7 @@ export default function RelevesChefBloc() {
         className="flex items-center gap-1.5 text-slate-400 hover:text-white text-sm transition-colors">
         <RotateCcw size={13} /> Réinitialiser
       </button>
-      <button onClick={handleSave} disabled={isPending || !form.poste_id || selectedHour === null || formDisabled}
+      <button onClick={handleSave} disabled={isPending || selectedHour === null || formDisabled}
         className="flex items-center gap-2 bg-amber-500 hover:bg-amber-600 text-slate-900 font-medium px-5 py-2 rounded-lg text-sm disabled:opacity-50 transition-colors">
         <Save size={14} /> {isPending ? 'Enregistrement...' : 'Enregistrer le relevé'}
       </button>
@@ -231,6 +317,16 @@ export default function RelevesChefBloc() {
           <input type="date" value={selectedDate} onChange={e => { setSelectedDate(e.target.value); setSelectedHour(null); }}
             className="bg-slate-800 border border-slate-600 rounded-lg px-3 py-1.5 text-white text-sm focus:outline-none focus:border-amber-500" />
         } />
+
+      {/* Onglets */}
+      <div className="flex border-b border-slate-700 px-6">
+        {([['saisie', 'Saisie Relevé'], ['compteurs', 'Compteurs']] as const).map(([k, lbl]) => (
+          <button key={k} onClick={() => setPageTab(k)}
+            className={`px-4 py-3 text-sm font-medium border-b-2 transition-colors ${pageTab === k ? 'border-amber-500 text-amber-400' : 'border-transparent text-slate-400 hover:text-white'}`}>
+            {lbl}
+          </button>
+        ))}
+      </div>
 
       <div className="p-6 space-y-4">
         {!journee && (
@@ -278,7 +374,183 @@ export default function RelevesChefBloc() {
                 </p>
               )}
             </div>
+          </>
+        )}
 
+        {journee && pageTab === 'compteurs' && (
+          <>
+            {/* ── Compteurs Journaliers ── */}
+            <div className="bg-slate-900 border border-slate-700 rounded-lg overflow-hidden">
+              <div className="flex items-center justify-between px-4 py-3 border-b border-slate-700">
+                <div className="flex items-center gap-2">
+                  <Gauge size={14} className="text-amber-400" />
+                  <h3 className="text-sm font-semibold text-white">Compteurs Journaliers</h3>
+                  <span className="text-xs text-slate-500">— saisie une fois par jour</span>
+                </div>
+                {cptLocked && (
+                  <span className="text-xs text-green-400 border border-green-500/30 bg-green-500/10 rounded px-2 py-1">
+                    ✓ Enregistré
+                  </span>
+                )}
+              </div>
+
+              <div className={`p-4 space-y-4${cptLocked ? ' pointer-events-none opacity-50' : ''}`}>
+                {/* Energie Brute + Puissance Max */}
+                <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
+                  {/* Energie Brute — calculée depuis les index opérateur */}
+                  <div className="border border-slate-700 rounded-lg overflow-hidden">
+                    <div className="bg-slate-800 text-center text-xs font-bold text-slate-300 uppercase tracking-wider py-2 border-b border-slate-700">
+                      Répartition Horaire Energie Brute (MWh)
+                    </div>
+                    <div className="grid grid-cols-4 border-b border-slate-800 text-center text-xs text-slate-500 py-1.5">
+                      {['Jour', 'Pointe', 'Nuit', 'Total'].map(h => <span key={h}>{h}</span>)}
+                    </div>
+                    <div className="grid grid-cols-4 gap-1 p-2">
+                      {[energieCalc.jour, energieCalc.pointe, energieCalc.nuit, energieCalc.total].map((v, i) => (
+                        <div key={i} className={`flex items-center justify-center rounded py-1.5 text-xs font-bold text-center ${
+                          v != null ? (v < 0 ? 'text-red-400' : 'text-amber-400') : 'text-slate-600'
+                        }`}>
+                          {v != null ? v.toFixed(1) : '—'}
+                        </div>
+                      ))}
+                    </div>
+                    <p className="text-[10px] text-slate-600 text-center pb-2 px-2">
+                      Calculé : Jour = E18h−E07h · Pointe = E22h−E18h · Nuit = (E24h−E22h)+(E07h−E00h)
+                    </p>
+                  </div>
+
+                  {/* Puissance Max */}
+                  <div className="border border-slate-700 rounded-lg overflow-hidden">
+                    <div className="bg-slate-800 text-center text-xs font-bold text-slate-300 uppercase tracking-wider py-2 border-b border-slate-700">
+                      Puissance Maximale
+                    </div>
+                    <div className="p-3 grid grid-cols-2 gap-2">
+                      <div>
+                        <label className="block text-xs text-slate-500 mb-0.5">Puissance max (MW)</label>
+                        <input type="number" step="any" value={cptForm.puissance_max_mw ?? ''}
+                          onChange={e => fc('puissance_max_mw', e.target.value === '' ? null : parseFloat(e.target.value))}
+                          className="w-full bg-slate-800 border border-slate-700 rounded px-2 py-1.5 text-white text-xs focus:outline-none focus:border-amber-500" />
+                      </div>
+                      <div>
+                        <label className="block text-xs text-slate-500 mb-0.5">T° ambiante (°C)</label>
+                        <input type="number" step="any" value={cptForm.temp_amb_puissance_max ?? ''}
+                          onChange={e => fc('temp_amb_puissance_max', e.target.value === '' ? null : parseFloat(e.target.value))}
+                          className="w-full bg-slate-800 border border-slate-700 rounded px-2 py-1.5 text-white text-xs focus:outline-none focus:border-amber-500" />
+                      </div>
+                      <div>
+                        <label className="block text-xs text-slate-500 mb-0.5">Heure</label>
+                        <input type="time" value={cptForm.heure_puissance_max ?? ''}
+                          onChange={e => fc('heure_puissance_max', e.target.value || null)}
+                          className="w-full bg-slate-800 border border-slate-700 rounded px-2 py-1.5 text-white text-xs focus:outline-none focus:border-amber-500" />
+                      </div>
+                      <div>
+                        <label className="block text-xs text-slate-500 mb-0.5">Nature</label>
+                        <select value={cptForm.nature_puissance_max ?? ''}
+                          onChange={e => fc('nature_puissance_max', e.target.value || null)}
+                          className="w-full bg-slate-800 border border-slate-700 rounded px-2 py-1.5 text-white text-xs focus:outline-none focus:border-amber-500">
+                          <option value="">—</option>
+                          {['PMC', 'AGC', 'PMS', 'PRESELECT', 'BASE'].map(n => <option key={n} value={n}>{n}</option>)}
+                        </select>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+
+                {/* Consommation Auxiliaire — lecture seule (saisie par l'opérateur) */}
+                <div className="border border-slate-700 rounded-lg overflow-hidden">
+                  <div className="bg-slate-800 text-center text-xs font-bold text-slate-300 uppercase tracking-wider py-2 border-b border-slate-700">
+                    Consommation Auxiliaire en Charge (MWh)
+                  </div>
+                  <div className="p-3 grid grid-cols-3 gap-3 items-end">
+                    <div>
+                      <label className="block text-xs text-slate-500 mb-0.5">Compteur au couplage</label>
+                      <div className="bg-slate-800/50 border border-slate-700 rounded px-2 py-1.5 text-white text-xs text-center">
+                        {cptForm.conso_aux_couplage != null ? Number(cptForm.conso_aux_couplage).toFixed(3) : '—'}
+                      </div>
+                    </div>
+                    <div>
+                      <label className="block text-xs text-slate-500 mb-0.5">Compteur au découplage</label>
+                      <div className="bg-slate-800/50 border border-slate-700 rounded px-2 py-1.5 text-white text-xs text-center">
+                        {cptForm.conso_aux_decouplage != null ? Number(cptForm.conso_aux_decouplage).toFixed(3) : '—'}
+                      </div>
+                    </div>
+                    <div>
+                      <label className="block text-xs text-slate-500 mb-0.5">Consommation en charge (calculée)</label>
+                      <div className="bg-slate-800/50 border border-slate-700 rounded px-2 py-1.5 text-amber-400 text-xs font-bold text-center">
+                        {cptForm.conso_aux_couplage != null && cptForm.conso_aux_decouplage != null
+                          ? Math.abs(Number(cptForm.conso_aux_decouplage) - Number(cptForm.conso_aux_couplage)).toFixed(3)
+                          : '—'}
+                      </div>
+                    </div>
+                  </div>
+                  <p className="text-[10px] text-slate-600 text-center pb-2">Saisi par l'opérateur</p>
+                </div>
+
+                {/* Table 00h / 24h */}
+                <div className="border border-slate-700 rounded-lg overflow-hidden">
+                  <table className="w-full text-xs border-collapse">
+                    <thead>
+                      <tr className="bg-slate-800 border-b border-slate-600">
+                        <th className="text-left px-3 py-2 text-slate-400 font-medium">Désignation</th>
+                        <th className="text-center px-3 py-2 text-slate-400 font-medium w-32">00h00</th>
+                        <th className="text-center px-3 py-2 text-slate-400 font-medium w-32">24h00</th>
+                        <th className="text-center px-3 py-2 text-slate-400 font-medium w-24">Diff.</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      <CptSectionRow title="Compteurs Combustibles" />
+                      <CptRow label="Comp. Gaz"    nameA="gaz_00h_nm3"  nameB="gaz_24h_nm3"  a={cptForm.gaz_00h_nm3}  b={cptForm.gaz_24h_nm3}  set={fc} unit="Nm³" />
+                      <CptRow label="Comp. Gasoil" nameA="gasoil_00h_l" nameB="gasoil_24h_l" a={cptForm.gasoil_00h_l} b={cptForm.gasoil_24h_l} set={fc} unit="L" readOnly />
+
+                      <CptSectionRow title="Démarrages & Déclenchements" />
+                      <CptRow label="Dém. Manuel"   nameA="dem_manuel_00h"    nameB="dem_manuel_24h"    a={cptForm.dem_manuel_00h}    b={cptForm.dem_manuel_24h}    set={fc} isInt />
+                      <CptRow label="Dém. Total"    nameA="dem_total_00h"     nameB="dem_total_24h"     a={cptForm.dem_total_00h}     b={cptForm.dem_total_24h}     set={fc} isInt />
+                      <CptRow label="Dém. Rapide"   nameA="dem_rapide_00h"    nameB="dem_rapide_24h"    a={cptForm.dem_rapide_00h}    b={cptForm.dem_rapide_24h}    set={fc} isInt />
+                      <CptRow label="Allumage"      nameA="allumage_00h"      nameB="allumage_24h"      a={cptForm.allumage_00h}      b={cptForm.allumage_24h}      set={fc} isInt />
+                      <CptRow label="Déclenchement" nameA="declenchement_00h" nameB="declenchement_24h" a={cptForm.declenchement_00h} b={cptForm.declenchement_24h} set={fc} isInt />
+
+                      <CptSectionRow title="Heures de Fonctionnement" />
+                      <CptRow label="H. de flamme"  nameA="h_flamme_00h" nameB="h_flamme_24h" a={cptForm.h_flamme_00h} b={cptForm.h_flamme_24h} set={fc} unit="h" />
+                      <CptRow label="H. PMS"        nameA="h_pms_00h"    nameB="h_pms_24h"    a={cptForm.h_pms_00h}    b={cptForm.h_pms_24h}    set={fc} unit="h" />
+                      <CptRow label="H. fct en Gaz" nameA="h_gaz_00h"    nameB="h_gaz_24h"    a={cptForm.h_gaz_00h}    b={cptForm.h_gaz_24h}    set={fc} unit="h" />
+                      <CptRow label="H. fct Gasoil" nameA="h_gasoil_00h" nameB="h_gasoil_24h" a={cptForm.h_gasoil_00h} b={cptForm.h_gasoil_24h} set={fc} unit="h" />
+
+                      <CptSectionRow title="Énergie Active & Réactive" />
+                      <CptRow label="Énergie active"  nameA="energie_active_00h"  nameB="energie_active_24h"  a={cptForm.energie_active_00h}  b={cptForm.energie_active_24h}  set={fc} unit="MWh" />
+                      <CptRow label="Réactif fourni"  nameA="reactif_fourni_00h"  nameB="reactif_fourni_24h"  a={cptForm.reactif_fourni_00h}  b={cptForm.reactif_fourni_24h}  set={fc} unit="MVArh" />
+                      <CptRow label="Réactif absorbé" nameA="reactif_absorbe_00h" nameB="reactif_absorbe_24h" a={cptForm.reactif_absorbe_00h} b={cptForm.reactif_absorbe_24h} set={fc} unit="MVArh" />
+                      <CptRow label="Auxiliaires"     nameA="auxiliaires_00h"     nameB="auxiliaires_24h"     a={cptForm.auxiliaires_00h}     b={cptForm.auxiliaires_24h}     set={fc} unit="MWh" />
+                    </tbody>
+                  </table>
+                </div>
+              </div>
+
+              {/* Footer save / modify */}
+              <div className="flex justify-end gap-3 px-4 py-3 border-t border-slate-700">
+                {cptLocked ? (
+                  <button onClick={() => setCptConfirm('modify')}
+                    className="flex items-center gap-2 bg-slate-700 hover:bg-slate-600 text-white font-medium px-5 py-2 rounded-lg text-sm transition-colors">
+                    <Pencil size={14} /> Modifier les compteurs
+                  </button>
+                ) : (
+                  <>
+                    <button onClick={() => { setCptForm(compteursData ?? {}); if (compteursData?.id) setCptLocked(true); }}
+                      className="flex items-center gap-1.5 text-slate-400 hover:text-white text-sm transition-colors">
+                      <RotateCcw size={13} /> Annuler
+                    </button>
+                    <button onClick={() => setCptConfirm('save')} disabled={saveCptMut.isPending || !canCreate}
+                      className="flex items-center gap-2 bg-amber-500 hover:bg-amber-600 disabled:opacity-50 text-slate-900 font-medium px-5 py-2 rounded-lg text-sm transition-colors">
+                      <Save size={14} /> {saveCptMut.isPending ? 'Enregistrement...' : 'Enregistrer les compteurs'}
+                    </button>
+                  </>
+                )}
+              </div>
+            </div>
+          </>
+        )}
+
+        {journee && pageTab === 'saisie' && (
+          <>
             {/* Heure + Chef de Bloc */}
             <div className="bg-slate-900 border border-slate-700 rounded-lg p-4 grid grid-cols-2 gap-3">
               <div>
@@ -475,6 +747,52 @@ export default function RelevesChefBloc() {
           </>
         )}
       </div>
+      {/* ── Dialogue de confirmation enregistrement compteurs ── */}
+      {cptConfirm === 'save' && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
+          <div className="absolute inset-0 bg-black/60" onClick={() => setCptConfirm(null)} />
+          <div className="relative bg-slate-900 border border-slate-700 rounded-xl w-full max-w-sm p-6 shadow-xl">
+            <p className="text-white font-semibold text-base mb-2">Enregistrer les compteurs ?</p>
+            <p className="text-slate-400 text-sm mb-6">
+              Confirmez-vous l'enregistrement des compteurs journaliers ?
+            </p>
+            <div className="flex justify-end gap-3">
+              <button onClick={() => setCptConfirm(null)}
+                className="px-4 py-2 rounded-lg text-sm text-slate-400 hover:text-white border border-slate-700 hover:border-slate-500 transition-colors">
+                Non, annuler
+              </button>
+              <button onClick={handleSaveCpt}
+                className="px-4 py-2 rounded-lg text-sm font-medium bg-amber-500 hover:bg-amber-600 text-slate-900 transition-colors">
+                Oui, enregistrer
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* ── Dialogue de confirmation modification compteurs ── */}
+      {cptConfirm === 'modify' && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
+          <div className="absolute inset-0 bg-black/60" onClick={() => setCptConfirm(null)} />
+          <div className="relative bg-slate-900 border border-slate-700 rounded-xl w-full max-w-sm p-6 shadow-xl">
+            <p className="text-white font-semibold text-base mb-2">Modifier les compteurs ?</p>
+            <p className="text-slate-400 text-sm mb-6">
+              Les compteurs ont déjà été enregistrés. Voulez-vous les modifier ?
+            </p>
+            <div className="flex justify-end gap-3">
+              <button onClick={() => setCptConfirm(null)}
+                className="px-4 py-2 rounded-lg text-sm text-slate-400 hover:text-white border border-slate-700 hover:border-slate-500 transition-colors">
+                Non, annuler
+              </button>
+              <button onClick={() => { setCptLocked(false); setCptConfirm(null); }}
+                className="px-4 py-2 rounded-lg text-sm font-medium bg-amber-500 hover:bg-amber-600 text-slate-900 transition-colors">
+                Oui, modifier
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
       <ToastContainer toasts={toasts} dismiss={dismiss} />
     </div>
   );

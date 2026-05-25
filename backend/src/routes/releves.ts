@@ -245,6 +245,45 @@ router.post('/compteurs', async (req, res) => {
       create: { journee_id, ...data },
       update: data,
     });
+
+    // Reporter les valeurs 24h → 00h de la journée suivante
+    const journee = await prisma.journee.findUnique({ where: { id: journee_id } });
+    if (journee) {
+      const nextDay = new Date(journee.jour);
+      nextDay.setUTCDate(nextDay.getUTCDate() + 1);
+      const nextJournee = await prisma.journee.findUnique({ where: { jour: nextDay } });
+      if (nextJournee) {
+        const CARRY: [string, string][] = [
+          ['energie_active_24h',  'energie_active_00h'],
+          ['reactif_fourni_24h',  'reactif_fourni_00h'],
+          ['reactif_absorbe_24h', 'reactif_absorbe_00h'],
+          ['auxiliaires_24h',     'auxiliaires_00h'],
+          ['gaz_24h_nm3',         'gaz_00h_nm3'],
+          ['gasoil_24h_l',        'gasoil_00h_l'],
+          ['h_flamme_24h',        'h_flamme_00h'],
+          ['h_pms_24h',           'h_pms_00h'],
+          ['h_gaz_24h',           'h_gaz_00h'],
+          ['h_gasoil_24h',        'h_gasoil_00h'],
+          ['dem_manuel_24h',      'dem_manuel_00h'],
+          ['dem_total_24h',       'dem_total_00h'],
+          ['dem_rapide_24h',      'dem_rapide_00h'],
+          ['allumage_24h',        'allumage_00h'],
+          ['declenchement_24h',   'declenchement_00h'],
+        ];
+        const carry: Record<string, any> = {};
+        for (const [from, to] of CARRY) {
+          if (data[from] != null) carry[to] = data[from];
+        }
+        if (Object.keys(carry).length > 0) {
+          await prisma.compteursJournaliers.upsert({
+            where: { journee_id: nextJournee.id },
+            create: { journee_id: nextJournee.id, ...carry },
+            update: carry,
+          });
+        }
+      }
+    }
+
     res.json(compteurs);
   } catch (err: any) {
     console.error('[POST /compteurs]', err);

@@ -9,6 +9,7 @@ import { fr } from 'date-fns/locale';
 import { STATUT_JOURNEE_LABELS, TRANCHE_LABELS } from '../types';
 import type { TrancheHoraire } from '../types';
 import { useAuth } from '../contexts/AuthContext';
+import { useToast, ToastContainer } from '../components/Toast';
 
 const TRANCHES: TrancheHoraire[] = ['h00_07h', 'h07_14h', 'h14_20h', 'h20_00h'];
 
@@ -21,10 +22,12 @@ const TRANCHE_TIMES: Record<TrancheHoraire, { debut: string; fin: string }> = {
 
 export default function Journee() {
   const { user } = useAuth();
+  const { toasts, show: showToast, dismiss } = useToast();
   const qc = useQueryClient();
   const [selectedDate, setSelectedDate] = useState(format(new Date(), 'yyyy-MM-dd'));
   const [showPosteModal, setShowPosteModal] = useState(false);
   const [posteForm, setPosteForm] = useState<any>({ tranche: 'h07_14h' });
+  const [showValiderConfirm, setShowValiderConfirm] = useState(false);
 
   const { data: journees } = useQuery({ queryKey: ['journees'], queryFn: () => journeesApi.list({ from: format(new Date(Date.now() - 30 * 86400000), 'yyyy-MM-dd') }) });
   const { data: users } = useQuery({ queryKey: ['users'], queryFn: usersApi.list });
@@ -47,17 +50,45 @@ export default function Journee() {
     onSuccess: () => { qc.invalidateQueries({ queryKey: ['journee'] }); setShowPosteModal(false); },
   });
 
-  const validerBlocMut = useMutation({
-    mutationFn: (id: string) => journeesApi.validerBloc(id),
-    onSuccess: () => qc.invalidateQueries({ queryKey: ['journee'] }),
-  });
   const validerQuartMut = useMutation({
     mutationFn: (id: string) => journeesApi.validerQuart(id),
-    onSuccess: () => qc.invalidateQueries({ queryKey: ['journee'] }),
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ['journee'] });
+      qc.invalidateQueries({ queryKey: ['journees'] });
+      setShowValiderConfirm(false);
+      showToast('Journée Validée Merci Beaucoup', 'success');
+    },
   });
 
-  const canValiderBloc = ['chef_bloc', 'admin'].includes(user?.role || '');
   const canValiderQuart = ['chef_quart', 'chef_exploitation', 'admin'].includes(user?.role || '');
+
+  const cpt = journeeDetail?.compteurs;
+  const REQUIS_OP = [
+    'energie_active_00h', 'energie_active_24h',
+    'conso_aux_couplage', 'conso_aux_decouplage',
+    'gasoil_00h_l', 'gasoil_24h_l',
+  ];
+  const REQUIS_BLOC = [
+    'gaz_00h_nm3', 'gaz_24h_nm3',
+    'h_flamme_00h', 'h_flamme_24h',
+    'puissance_max_mw',
+  ];
+  const manquantsOp   = REQUIS_OP.filter(f => !cpt || cpt[f] == null);
+  const manquantsBloc = REQUIS_BLOC.filter(f => !cpt || cpt[f] == null);
+  const compteursOk   = manquantsOp.length === 0 && manquantsBloc.length === 0;
+
+  const LABELS: Record<string, string> = {
+    energie_active_00h: 'Énergie active 00h', energie_active_24h: 'Énergie active 24h',
+    conso_aux_couplage: 'Conso. aux. couplage', conso_aux_decouplage: 'Conso. aux. découplage',
+    gasoil_00h_l: 'Gasoil 00h', gasoil_24h_l: 'Gasoil 24h',
+    gaz_00h_nm3: 'Gaz 00h', gaz_24h_nm3: 'Gaz 24h',
+    h_flamme_00h: 'H. flamme 00h', h_flamme_24h: 'H. flamme 24h',
+    puissance_max_mw: 'Puissance max',
+  };
+  const tooltipValidation = compteursOk ? '' : [
+    ...(manquantsOp.length   ? [`Opérateur : ${manquantsOp.map(f => LABELS[f]).join(', ')}`]   : []),
+    ...(manquantsBloc.length ? [`Chef Bloc : ${manquantsBloc.map(f => LABELS[f]).join(', ')}`] : []),
+  ].join('\n');
   const canManageJournee = ['chef_quart', 'chef_exploitation', 'admin'].includes(user?.role || '');
 
   function handleAddPoste() {
@@ -120,21 +151,26 @@ export default function Journee() {
                   </span>
                 </div>
                 <div className="flex gap-2">
-                  {canValiderBloc && selectedJournee.statut === 'en_cours' && (
-                    <button
-                      onClick={() => validerBlocMut.mutate(selectedJournee.id)}
-                      className="flex items-center gap-1.5 bg-amber-500/10 hover:bg-amber-500/20 border border-amber-500/30 text-amber-400 text-sm px-3 py-1.5 rounded-lg transition-colors"
-                    >
-                      <CheckCircle size={14} /> Valider Bloc
-                    </button>
-                  )}
-                  {canValiderQuart && selectedJournee.statut === 'valide_bloc' && (
-                    <button
-                      onClick={() => validerQuartMut.mutate(selectedJournee.id)}
-                      className="flex items-center gap-1.5 bg-blue-500/10 hover:bg-blue-500/20 border border-blue-500/30 text-blue-400 text-sm px-3 py-1.5 rounded-lg transition-colors"
-                    >
-                      <CheckCircle size={14} /> Valider Quart
-                    </button>
+                  {canValiderQuart && ['en_cours', 'valide_bloc'].includes(selectedJournee.statut) && (
+                    <div className="relative group">
+                      <button
+                        onClick={() => compteursOk && setShowValiderConfirm(true)}
+                        disabled={!compteursOk || validerQuartMut.isPending}
+                        className={`flex items-center gap-1.5 text-sm px-3 py-1.5 rounded-lg transition-colors ${
+                          compteursOk
+                            ? 'bg-blue-500/10 hover:bg-blue-500/20 border border-blue-500/30 text-blue-400 cursor-pointer'
+                            : 'bg-slate-800 border border-slate-700 text-slate-500 cursor-not-allowed'
+                        }`}
+                      >
+                        <CheckCircle size={14} /> Valider la journée
+                      </button>
+                      {!compteursOk && (
+                        <div className="absolute right-0 top-full mt-1.5 z-10 hidden group-hover:block w-72 bg-slate-800 border border-slate-600 rounded-lg p-3 shadow-xl text-xs text-slate-300 whitespace-pre-line">
+                          <p className="font-semibold text-red-400 mb-1">Compteurs incomplets :</p>
+                          {tooltipValidation}
+                        </div>
+                      )}
+                    </div>
                   )}
                 </div>
               </div>
@@ -240,6 +276,36 @@ export default function Journee() {
           </div>
         </div>
       </Modal>
+
+      {/* ── Dialogue de confirmation validation journée ── */}
+      {showValiderConfirm && selectedJournee && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
+          <div className="absolute inset-0 bg-black/60" onClick={() => setShowValiderConfirm(false)} />
+          <div className="relative bg-slate-900 border border-slate-700 rounded-xl w-full max-w-sm p-6 shadow-xl">
+            <p className="text-white font-semibold text-base mb-2">Valider la journée ?</p>
+            <p className="text-slate-400 text-sm mb-6">
+              Confirmez-vous la validation de la journée du{' '}
+              <span className="text-white font-medium">
+                {format(new Date(selectedJournee.jour.split('T')[0] + 'T12:00:00'), "d MMMM yyyy", { locale: fr })}
+              </span> ?
+            </p>
+            <div className="flex justify-end gap-3">
+              <button onClick={() => setShowValiderConfirm(false)}
+                className="px-4 py-2 rounded-lg text-sm text-slate-400 hover:text-white border border-slate-700 hover:border-slate-500 transition-colors">
+                Non, annuler
+              </button>
+              <button
+                onClick={() => validerQuartMut.mutate(selectedJournee.id)}
+                disabled={validerQuartMut.isPending}
+                className="px-4 py-2 rounded-lg text-sm font-medium bg-blue-500 hover:bg-blue-600 disabled:opacity-50 text-white transition-colors">
+                {validerQuartMut.isPending ? 'Validation...' : 'Oui, valider'}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      <ToastContainer toasts={toasts} dismiss={dismiss} />
     </div>
   );
 }

@@ -28,6 +28,7 @@ import Alarmes from './pages/Alarmes';
 import OrdresTravaux from './pages/OrdresTravaux';
 import MaterielsDefectueux from './pages/MaterielsDefectueux';
 import RelevesDuJour from './pages/RelevesDuJour';
+import Rapport from './pages/Rapport';
 import Users from './pages/admin/Users';
 import Seuils from './pages/admin/Seuils';
 
@@ -72,6 +73,7 @@ export default function App() {
               <Route path="ordres-travaux" element={<OrdresTravaux />} />
               <Route path="defauts" element={<MaterielsDefectueux />} />
               <Route path="releves-jour" element={<RelevesDuJour />} />
+              <Route path="rapport" element={<Rapport />} />
               <Route path="admin/users" element={<AdminRoute><Users /></AdminRoute>} />
               <Route path="admin/seuils" element={<AdminRoute><Seuils /></AdminRoute>} />
             </Route>

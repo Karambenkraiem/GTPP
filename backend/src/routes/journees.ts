@@ -5,6 +5,44 @@ import { authenticate, requireRole } from '../middleware/auth';
 const router = Router();
 router.use(authenticate);
 
+const CARRY_MAP: [string, string][] = [
+  ['energie_active_24h',  'energie_active_00h'],
+  ['reactif_fourni_24h',  'reactif_fourni_00h'],
+  ['reactif_absorbe_24h', 'reactif_absorbe_00h'],
+  ['auxiliaires_24h',     'auxiliaires_00h'],
+  ['gaz_24h_nm3',         'gaz_00h_nm3'],
+  ['gasoil_24h_l',        'gasoil_00h_l'],
+  ['h_flamme_24h',        'h_flamme_00h'],
+  ['h_pms_24h',           'h_pms_00h'],
+  ['h_gaz_24h',           'h_gaz_00h'],
+  ['h_gasoil_24h',        'h_gasoil_00h'],
+  ['dem_manuel_24h',      'dem_manuel_00h'],
+  ['dem_total_24h',       'dem_total_00h'],
+  ['dem_rapide_24h',      'dem_rapide_00h'],
+  ['allumage_24h',        'allumage_00h'],
+  ['declenchement_24h',   'declenchement_00h'],
+];
+
+async function carryPreviousCompteurs(journeeId: string, jourDate: Date) {
+  const prevDay = new Date(jourDate);
+  prevDay.setUTCDate(prevDay.getUTCDate() - 1);
+  const prevJournee = await prisma.journee.findUnique({
+    where: { jour: prevDay },
+    include: { compteurs: true },
+  });
+  if (!prevJournee?.compteurs) return;
+  const prev = prevJournee.compteurs as any;
+  const carry: Record<string, any> = {};
+  for (const [from, to] of CARRY_MAP) {
+    if (prev[from] != null) carry[to] = prev[from];
+  }
+  if (Object.keys(carry).length > 0) {
+    await prisma.compteursJournaliers.create({
+      data: { journee_id: journeeId, ...carry },
+    });
+  }
+}
+
 router.get('/', async (req, res) => {
   try {
     const { from, to } = req.query;
@@ -58,6 +96,7 @@ router.get('/today', async (req, res) => {
           _count: { select: { releves_bloc: true, manouvres: true, alarmes: true, ordres_travaux: true } },
         },
       });
+      await carryPreviousCompteurs(journee.id, today).catch(() => {});
     }
     res.json(journee);
   } catch {
@@ -92,9 +131,11 @@ router.get('/:id', async (req, res) => {
 router.post('/', async (req, res) => {
   try {
     const { jour, consignes_permanentes } = req.body;
+    const jourDate = new Date(jour);
     const journee = await prisma.journee.create({
-      data: { jour: new Date(jour), consignes_permanentes },
+      data: { jour: jourDate, consignes_permanentes },
     });
+    await carryPreviousCompteurs(journee.id, jourDate).catch(() => {});
     res.status(201).json(journee);
   } catch (err: any) {
     if (err.code === 'P2002') return res.status(409).json({ error: 'Journée déjà existante pour cette date' });

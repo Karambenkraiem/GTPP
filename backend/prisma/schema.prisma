@@ -188,7 +188,7 @@ model Poste {
 model RelevesChefBloc {
   id                        String    @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
   journee_id                String    @db.Uuid
-  poste_id                  String    @db.Uuid
+  poste_id                  String?   @db.Uuid
   saisi_par                 String    @db.Uuid
   heure_releve              DateTime  @db.Timestamptz(6)
   temp_ambiante_ctim        Decimal?  @db.Decimal(6, 2)
@@ -221,7 +221,7 @@ model RelevesChefBloc {
   cree_le                   DateTime  @default(now()) @db.Timestamptz(6)
 
   journee     Journee              @relation(fields: [journee_id], references: [id], onDelete: Cascade)
-  poste       Poste                @relation(fields: [poste_id], references: [id])
+  poste       Poste?               @relation(fields: [poste_id], references: [id])
   saiseur     Utilisateur          @relation(fields: [saisi_par], references: [id])
   generateur  RelevesGenerateur?
   huile       RelevesHuile?
@@ -382,7 +382,7 @@ model RelevesMetalBlanc {
 model RelevesOperateur {
   id                          String   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
   journee_id                  String   @db.Uuid
-  poste_id                    String   @db.Uuid
+  poste_id                    String?  @db.Uuid
   saisi_par                   String?  @db.Uuid
   heure_releve                DateTime @db.Timestamptz(6)
   choix_pompe                 String?  @db.VarChar(10)
@@ -443,7 +443,7 @@ model RelevesOperateur {
   cree_le                     DateTime @default(now()) @db.Timestamptz(6)
 
   journee Journee      @relation(fields: [journee_id], references: [id], onDelete: Cascade)
-  poste   Poste        @relation(fields: [poste_id], references: [id])
+  poste   Poste?       @relation(fields: [poste_id], references: [id])
   saiseur Utilisateur? @relation(fields: [saisi_par], references: [id])
 
   @@unique([journee_id, heure_releve])

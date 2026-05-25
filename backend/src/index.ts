@@ -14,6 +14,7 @@ import alarmesRouter from './routes/alarmes';
 import otRouter from './routes/ot';
 import defautsRouter from './routes/defauts';
 import dashboardRouter from './routes/dashboard';
+import rapportRouter from './routes/rapport';
 import { startReleveCron } from './cron';
 
 const app = express();
@@ -33,6 +34,7 @@ app.use('/api/alarmes', alarmesRouter);
 app.use('/api/ot', otRouter);
 app.use('/api/defauts', defautsRouter);
 app.use('/api/dashboard', dashboardRouter);
+app.use('/api/rapport', rapportRouter);
 
 app.get('/api/health', (_, res) => res.json({ status: 'ok', time: new Date() }));
 

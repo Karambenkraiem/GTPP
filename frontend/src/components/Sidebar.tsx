@@ -1,7 +1,7 @@
 import { NavLink } from 'react-router-dom';
 import {
   LayoutDashboard, BookOpen, ClipboardList, Activity,
-  Wrench, Bell, AlertTriangle, Users, Settings, Zap, LogOut, CalendarDays
+  Wrench, Bell, AlertTriangle, Users, Settings, Zap, LogOut, CalendarDays, FileText
 } from 'lucide-react';
 import { useAuth } from '../contexts/AuthContext';
 
@@ -13,10 +13,11 @@ const navItems: NavItem[] = [
   { to: '/releves-bloc', icon: Activity, label: 'Relevés Chef Bloc', roles: ['chef_bloc', 'chef_quart', 'admin', 'chef_exploitation'] },
   { to: '/releves-op', icon: ClipboardList, label: 'Saisie Relevés Op.', roles: ['operateur', 'chef_quart', 'admin', 'chef_exploitation'] },
   { to: '/manouvres', icon: Zap, label: 'Manœuvres' },
-  { to: '/alarmes', icon: Bell, label: 'Alarmes' },
+  { to: '/alarmes', icon: Bell, label: 'Alarmes Répétitives' },
   { to: '/ordres-travaux', icon: Wrench, label: 'Ordres de Travaux' },
   { to: '/defauts', icon: AlertTriangle, label: 'Matériels Défect.' },
   { to: '/releves-jour', icon: CalendarDays, label: 'Visualisation' },
+  { to: '/rapport', icon: FileText, label: 'Rapport Journalier' },
 ];
 
 const adminItems = [
@@ -28,7 +29,7 @@ export default function Sidebar() {
   const { user, logout } = useAuth();
 
   return (
-    <aside className="w-60 flex-shrink-0 bg-slate-900 border-r border-slate-700 flex flex-col h-screen sticky top-0">
+    <aside className="w-60 flex-shrink-0 bg-slate-900 border-r border-slate-700 flex flex-col h-screen sticky top-0 print:hidden">
       {/* Logo */}
       <div className="px-4 py-5 border-b border-slate-700">
         <div className="flex items-center gap-2">
