@@ -117,7 +117,7 @@ export default function RelevesChefBloc() {
     queryKey: ['journees'],
     queryFn: () => journeesApi.list({ from: format(new Date(Date.now() - 30 * 86400000), 'yyyy-MM-dd') }),
   });
-  const journee = journees?.find((j: any) => format(new Date(j.jour), 'yyyy-MM-dd') === selectedDate);
+  const journee = journees?.find((j: any) => (j.jour as string).slice(0, 10) === selectedDate);
 
   const { data: postes } = useQuery({
     queryKey: ['postes', journee?.id],

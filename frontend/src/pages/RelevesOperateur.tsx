@@ -134,7 +134,7 @@ export default function RelevesOperateurPage() {
     queryKey: ['journees'],
     queryFn: () => journeesApi.list({ from: format(new Date(Date.now() - 30 * 86400000), 'yyyy-MM-dd') }),
   });
-  const journee = journees?.find((j: any) => format(new Date(j.jour), 'yyyy-MM-dd') === selectedDate);
+  const journee = journees?.find((j: any) => (j.jour as string).slice(0, 10) === selectedDate);
 
   const { data: postes } = useQuery({
     queryKey: ['postes', journee?.id],
@@ -569,6 +569,26 @@ export default function RelevesOperateurPage() {
                 fields={['auxiliaires_00h','auxiliaires_07h','auxiliaires_18h','auxiliaires_22h','auxiliaires_24h']}
                 vals={[cptForm.auxiliaires_00h,cptForm.auxiliaires_07h,cptForm.auxiliaires_18h,cptForm.auxiliaires_22h,cptForm.auxiliaires_24h]}
                 set={cpt} />
+
+              {/* ── Auxiliaire Sur GRE (HT Site) ── */}
+              <div className={`${CPT_COL} border-b border-slate-800 py-2`}>
+                <div className="text-sm text-slate-300">Aux. Sur GRE <span className="text-xs text-slate-500">(HT Site)</span></div>
+                <div className="text-xs text-slate-500 text-center">MWh</div>
+                <div className="relative">
+                  <div className="text-[9px] text-slate-600 mb-0.5 truncate">couplage GRE</div>
+                  <input type="number" step="any" value={cptForm.aux_gre_couplage ?? ''} onKeyDown={onEnter}
+                    onChange={e => cpt('aux_gre_couplage', e.target.value === '' ? null : parseFloat(e.target.value))}
+                    className={INPUT_CLS} />
+                </div>
+                <div /><div /><div />
+                <div className="relative">
+                  <div className="text-[9px] text-slate-600 mb-0.5 truncate">av. découplage GRE</div>
+                  <input type="number" step="any" value={cptForm.aux_gre_decouplage ?? ''} onKeyDown={onEnter}
+                    onChange={e => cpt('aux_gre_decouplage', e.target.value === '' ? null : parseFloat(e.target.value))}
+                    className={INPUT_CLS} />
+                </div>
+              </div>
+
               <CptRow2 label="Gasoil" unit="L"
                 f00h="gasoil_00h_l" f24h="gasoil_24h_l"
                 v00h={cptForm.gasoil_00h_l} v24h={cptForm.gasoil_24h_l}

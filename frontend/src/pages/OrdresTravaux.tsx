@@ -44,7 +44,7 @@ export default function OrdresTravaux() {
     queryKey: ['journees'],
     queryFn: () => journeesApi.list({ from: format(new Date(Date.now() - 30 * 86400000), 'yyyy-MM-dd') }),
   });
-  const journee = journees?.find((j: any) => format(new Date(j.jour), 'yyyy-MM-dd') === selectedDate);
+  const journee = journees?.find((j: any) => (j.jour as string).slice(0, 10) === selectedDate);
 
   const { data: ots, isLoading } = useQuery({
     queryKey: ['ots', journee?.id],
@@ -163,7 +163,7 @@ export default function OrdresTravaux() {
             {/* ── En-tête cyan ── */}
             <div className="bg-cyan-500 px-4 py-2.5">
               <h3 className="text-slate-900 font-bold text-sm uppercase tracking-wide italic">
-                {activeTab === 'curatif' ? '4 — Maintenance Curative' : '5 — Maintenance Préventive'}
+                {activeTab === 'curatif' ? 'Maintenance Curative' : 'Maintenance Préventive'}
               </h3>
             </div>
 

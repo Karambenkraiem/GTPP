@@ -32,7 +32,7 @@ export default function Journee() {
   const { data: journees } = useQuery({ queryKey: ['journees'], queryFn: () => journeesApi.list({ from: format(new Date(Date.now() - 30 * 86400000), 'yyyy-MM-dd') }) });
   const { data: users } = useQuery({ queryKey: ['users'], queryFn: usersApi.list });
 
-  const selectedJournee = journees?.find((j: any) => format(new Date(j.jour), 'yyyy-MM-dd') === selectedDate);
+  const selectedJournee = journees?.find((j: any) => (j.jour as string).slice(0, 10) === selectedDate);
 
   const { data: journeeDetail, isLoading } = useQuery({
     queryKey: ['journee', selectedJournee?.id],

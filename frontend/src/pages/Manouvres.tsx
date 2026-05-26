@@ -126,7 +126,7 @@ export default function Manouvres() {
     queryKey: ['journees'],
     queryFn: () => journeesApi.list({ from: format(new Date(Date.now() - 30 * 86400000), 'yyyy-MM-dd') }),
   });
-  const journee = journees?.find((j: any) => format(new Date(j.jour), 'yyyy-MM-dd') === selectedDate);
+  const journee = journees?.find((j: any) => (j.jour as string).slice(0, 10) === selectedDate);
 
   const { data: manouvres, isLoading } = useQuery({
     queryKey: ['manouvres', journee?.id],
@@ -211,7 +211,7 @@ export default function Manouvres() {
           <div className="bg-slate-900 border border-slate-700 rounded-lg overflow-visible">
             <div className="bg-cyan-500 px-4 py-2.5 rounded-t-lg">
               <h3 className="text-slate-900 font-bold text-sm uppercase tracking-wide italic">
-                3 — Manœuvres d'Exploitation
+                Manœuvres d'Exploitation
               </h3>
             </div>
 

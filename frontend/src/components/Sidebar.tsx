@@ -1,9 +1,11 @@
 import { NavLink } from 'react-router-dom';
 import {
   LayoutDashboard, BookOpen, ClipboardList, Activity,
-  Wrench, Bell, AlertTriangle, Users, Settings, Zap, LogOut, CalendarDays, FileText
+  Wrench, Bell, AlertTriangle, Users, Settings, Zap, LogOut, CalendarDays, FileText,
+  Sun, Moon,
 } from 'lucide-react';
 import { useAuth } from '../contexts/AuthContext';
+import { useTheme } from '../contexts/ThemeContext';
 
 type NavItem = { to: string; icon: any; label: string; roles?: string[] };
 
@@ -27,6 +29,7 @@ const adminItems = [
 
 export default function Sidebar() {
   const { user, logout } = useAuth();
+  const { theme, toggle } = useTheme();
 
   return (
     <aside className="w-60 flex-shrink-0 bg-slate-900 border-r border-slate-700 flex flex-col h-screen sticky top-0 print:hidden">
@@ -52,7 +55,7 @@ export default function Sidebar() {
               className={({ isActive }) =>
                 `flex items-center gap-3 px-3 py-2 rounded text-sm transition-colors ${
                   isActive
-                    ? 'bg-amber-500/10 text-amber-400 font-medium'
+                    ? 'bg-blue-500/15 text-blue-300 font-medium'
                     : 'text-slate-400 hover:text-white hover:bg-slate-800'
                 }`
               }
@@ -74,7 +77,7 @@ export default function Sidebar() {
                   className={({ isActive }) =>
                     `flex items-center gap-3 px-3 py-2 rounded text-sm transition-colors ${
                       isActive
-                        ? 'bg-amber-500/10 text-amber-400 font-medium'
+                        ? 'bg-blue-500/15 text-blue-300 font-medium'
                         : 'text-slate-400 hover:text-white hover:bg-slate-800'
                     }`
                   }
@@ -98,6 +101,16 @@ export default function Sidebar() {
             <p className="text-white text-xs font-medium truncate">{user?.prenom} {user?.nom}</p>
             <p className="text-slate-400 text-xs">{user?.matricule}</p>
           </div>
+        </div>
+        <div className="flex items-center justify-between mb-2">
+          <button
+            onClick={toggle}
+            title={theme === 'dark' ? 'Passer en mode clair' : 'Passer en mode sombre'}
+            className="flex items-center gap-2 text-slate-400 hover:text-amber-400 text-xs transition-colors px-1"
+          >
+            {theme === 'dark' ? <Sun size={13} /> : <Moon size={13} />}
+            {theme === 'dark' ? 'Mode clair' : 'Mode sombre'}
+          </button>
         </div>
         <button
           onClick={logout}

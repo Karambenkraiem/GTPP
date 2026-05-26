@@ -4,7 +4,7 @@ import { alarmesApi, journeesApi } from '../lib/api';
 import { useAuth } from '../contexts/AuthContext';
 import PageHeader from '../components/PageHeader';
 import { Trash2 } from 'lucide-react';
-import { format } from 'date-fns';
+import { format, subDays, parseISO } from 'date-fns';
 import { fr } from 'date-fns/locale';
 
 /* ── Champ texte avec ref externe ── */
@@ -34,17 +34,54 @@ export default function Alarmes() {
   /* refs — ligne en édition */
   const editDescRef = useRef<HTMLInputElement>(null);
 
+  /* ref pour éviter la double-copie */
+  const hasCopied = useRef<string | null>(null);
+
   const { data: journees } = useQuery({
     queryKey: ['journees'],
     queryFn: () => journeesApi.list({ from: format(new Date(Date.now() - 30 * 86400000), 'yyyy-MM-dd') }),
   });
-  const journee = journees?.find((j: any) => format(new Date(j.jour), 'yyyy-MM-dd') === selectedDate);
+  const journee = journees?.find((j: any) => (j.jour as string).slice(0, 10) === selectedDate);
+
+  /* journée précédente */
+  const prevDateStr = format(subDays(parseISO(selectedDate), 1), 'yyyy-MM-dd');
+  const prevJournee = journees?.find((j: any) => (j.jour as string).slice(0, 10) === prevDateStr);
 
   const { data: alarmes, isLoading } = useQuery({
     queryKey: ['alarmes', journee?.id],
     queryFn: () => alarmesApi.list(journee!.id),
     enabled: !!journee?.id,
   });
+
+  /* alarmes de la veille */
+  const { data: prevAlarmes } = useQuery({
+    queryKey: ['alarmes', prevJournee?.id],
+    queryFn: () => alarmesApi.list(prevJournee!.id),
+    enabled: !!prevJournee?.id,
+  });
+
+  /* ── Copie automatique des alarmes de la veille ── */
+  useEffect(() => {
+    if (!journee?.id || !prevJournee?.id) return;
+    if (alarmes === undefined || prevAlarmes === undefined) return;
+    if (alarmes.length > 0) return;
+    if (prevAlarmes.length === 0) return;
+    if (hasCopied.current === journee.id) return;
+    hasCopied.current = journee.id;
+
+    (async () => {
+      for (const a of prevAlarmes) {
+        await alarmesApi.create({
+          journee_id: journee.id,
+          tag: a.tag,
+          designation: a.designation,
+          repetitive: true,
+          origine: a.origine || 'HMI',
+        });
+      }
+      qc.invalidateQueries({ queryKey: ['alarmes', journee.id] });
+    })();
+  }, [journee?.id, prevJournee?.id, alarmes, prevAlarmes]);
 
   const createMut = useMutation({
     mutationFn: (data: any) => alarmesApi.create(data),
@@ -123,7 +160,7 @@ export default function Alarmes() {
             {/* ── En-tête cyan ── */}
             <div className="bg-cyan-500 px-4 py-2.5 rounded-t-lg">
               <h3 className="text-slate-900 font-bold text-sm uppercase tracking-wide italic">
-                6 — Alarmes Répétitives
+                Alarmes Répétitives
               </h3>
             </div>
 
