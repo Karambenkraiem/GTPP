@@ -119,12 +119,6 @@ const OP_SECTIONS: FSection[] = [
       ...[1,2,3,4,5,6].map(n => ({ label: `45 HT ${n}`, unit: '—', get: (r: any) => r?.detecteurs_gaz?.[`ht_${n}`] })),
     ],
   },
-  {
-    title: 'CONSIGNES PARTICULIÈRES',
-    rows: [
-      { label: 'Consignes', unit: '—', get: r => r?.consignes_particulieres },
-    ],
-  },
 ];
 
 // ─── Structure feuille Chef de Bloc ─────────────────────────────────────────
@@ -316,6 +310,7 @@ export default function RelevesDuJour() {
 
         {/* ══ FEUILLE OPÉRATEUR ══ */}
         {journee && !isLoading && activeTab === 'op' && (
+          <>
           <div className="bg-slate-900 border border-slate-700 rounded-lg overflow-hidden">
             {/* En-tête */}
             <div className="px-4 py-3 border-b border-slate-700 flex items-center justify-between">
@@ -409,6 +404,43 @@ export default function RelevesDuJour() {
               </table>
             </div>
           </div>
+
+          {/* ── Consignes Particulières ── */}
+          {SLOT_HOURS.some(h => opByHour[h]?.consignes_particulieres) && (
+            <div className="mt-4 border border-slate-700 rounded-lg overflow-hidden">
+              <div className="bg-slate-700/40 px-3 py-1.5 border-b border-slate-600">
+                <span className="text-[11px] font-bold text-amber-300 uppercase tracking-widest">Consignes Particulières</span>
+              </div>
+              <table className="w-full border-collapse text-xs">
+                <thead>
+                  <tr className="bg-slate-800 border-b border-slate-600">
+                    <th className="text-center px-3 py-2 text-slate-400 font-medium border-r border-slate-700 w-16">Heure</th>
+                    <th className="text-left px-3 py-2 text-slate-400 font-medium">Consigne</th>
+                    <th className="text-center px-3 py-2 text-slate-400 font-medium border-l border-slate-700 w-28">Saisi par</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {SLOT_HOURS.filter(h => opByHour[h]?.consignes_particulieres).map(h => {
+                    const r = opByHour[h];
+                    return (
+                      <tr key={h} className="border-b border-slate-800 hover:bg-slate-800/30">
+                        <td className="text-center px-3 py-2 font-mono text-amber-400 font-bold border-r border-slate-700">
+                          {h.toString().padStart(2, '0')}h00
+                        </td>
+                        <td className="px-3 py-2 text-slate-200 whitespace-pre-wrap leading-relaxed">
+                          {r.consignes_particulieres}
+                        </td>
+                        <td className="text-center px-3 py-2 text-slate-400 border-l border-slate-700">
+                          {r.saiseur ? `${r.saiseur.prenom} ${r.saiseur.nom}` : '—'}
+                        </td>
+                      </tr>
+                    );
+                  })}
+                </tbody>
+              </table>
+            </div>
+          )}
+          </>
         )}
 
         {/* ══ FEUILLE CHEF DE BLOC ══ */}

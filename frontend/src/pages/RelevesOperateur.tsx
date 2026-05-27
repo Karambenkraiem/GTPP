@@ -42,23 +42,67 @@ function F({ label, name, value, set, unit }: { label: string; name: string; val
   );
 }
 
-function Sel({ label, name, value, set, opts }: { label: string; name: string; value: any; set: (n: string, v: any) => void; opts: string[] }) {
+function BtnGroup({ label, name, value, set, opts }: { label: string; name: string; value: any; set: (n: string, v: any) => void; opts: string[] }) {
   return (
     <div>
-      <label className="block text-xs text-slate-400 mb-0.5">{label}</label>
-      <select value={value ?? ''} onKeyDown={onEnter} onChange={e => set(name, e.target.value)}
-        className="w-full bg-slate-800 border border-slate-700 rounded px-2 py-1.5 text-white text-sm focus:outline-none focus:border-amber-500">
-        <option value="">—</option>
-        {opts.map(o => <option key={o}>{o}</option>)}
-      </select>
+      <label className="block text-xs text-slate-400 mb-1">{label}</label>
+      <div className="flex gap-2">
+        {opts.map(o => (
+          <button key={o} type="button" onClick={() => set(name, value === o ? '' : o)}
+            className={`flex-1 py-2 rounded text-sm font-medium border transition-colors text-center ${
+              value === o
+                ? 'bg-amber-500 border-amber-500 text-slate-900'
+                : 'bg-slate-800 border-slate-700 text-slate-300 hover:border-amber-500/50 hover:text-white'
+            }`}>
+            {o}
+          </button>
+        ))}
+      </div>
     </div>
   );
 }
 
-function Titre({ t }: { t: string }) {
+function LevelGauge({ label, name, value, set }: { label: string; name: string; value: any; set: (n: string, v: any) => void }) {
+  const pct = value != null ? Math.min(100, Math.max(0, Number(value))) : null;
+  const fillColor = pct == null ? 'bg-slate-700' : pct <= 20 ? 'bg-red-500' : pct <= 50 ? 'bg-amber-500' : 'bg-green-500';
+  const textColor = pct == null ? 'text-slate-600' : pct <= 20 ? 'text-red-400' : pct <= 50 ? 'text-amber-400' : 'text-green-400';
+  const displayLabel = pct == null ? '—' : pct === 0 ? 'Vide' : pct === 100 ? 'Full' : `${pct}%`;
+  const ticks = [0, 25, 50, 75, 100];
+
   return (
-    <div className="col-span-full flex items-center gap-2 mt-3">
-      <span className="text-[11px] font-bold text-amber-400 uppercase tracking-widest whitespace-nowrap">{t}</span>
+    <div>
+      <div className="flex items-center justify-between mb-1.5">
+        <label className="text-xs text-slate-400">{label}</label>
+        <span className={`text-xs font-bold tabular-nums ${textColor}`}>{displayLabel}</span>
+      </div>
+      <div className="relative h-7">
+        {/* Track */}
+        <div className="absolute inset-0 bg-slate-800 border border-slate-700 rounded-full overflow-hidden">
+          <div className={`h-full rounded-full transition-all duration-150 ${fillColor}`}
+            style={{ width: `${pct ?? 0}%` }} />
+        </div>
+        {/* Tick marks */}
+        {ticks.slice(1, -1).map(t => (
+          <div key={t} className="absolute top-0 bottom-0 w-px bg-slate-600/60 pointer-events-none"
+            style={{ left: `${t}%` }} />
+        ))}
+        {/* Slider (transparent, on top) */}
+        <input type="range" min={0} max={100} step={1}
+          value={pct ?? 0}
+          onChange={e => set(name, parseInt(e.target.value))}
+          className="absolute inset-0 w-full h-full opacity-0 cursor-pointer" />
+      </div>
+      <div className="flex justify-between text-[9px] text-slate-600 mt-0.5 select-none">
+        <span>0</span><span>25%</span><span>50%</span><span>75%</span><span>Full</span>
+      </div>
+    </div>
+  );
+}
+
+function SectHead({ t }: { t: string }) {
+  return (
+    <div className="flex items-center gap-1.5 pt-2 first:pt-0">
+      <span className="text-[10px] font-bold text-amber-400 uppercase tracking-widest whitespace-nowrap">{t}</span>
       <div className="flex-1 h-px bg-slate-700" />
     </div>
   );
@@ -219,8 +263,7 @@ export default function RelevesOperateurPage() {
   function isSlotLocked(hour: number) {
     return !!(releveByHour[hour]?.saisi_par);
   }
-  const formDisabled = !canFill || (selectedHour !== null &&
-    (isSlotFuture(selectedHour) || isSlotLocked(selectedHour)));
+  const formDisabled = !canFill || selectedHour === null || (selectedHour !== null && (isSlotFuture(selectedHour) || isSlotLocked(selectedHour)));
 
   function f(n: string, v: any) { setForm((s: any) => ({ ...s, [n]: v })); }
   function det(n: string, v: any) { setForm((s: any) => ({ ...s, detecteurs_gaz: { ...(s.detecteurs_gaz || {}), [n]: v } })); }
@@ -390,99 +433,98 @@ export default function RelevesOperateurPage() {
                   ? 'bg-green-500/5 border-green-500/20 text-green-400'
                   : 'bg-slate-800 border-slate-700 text-slate-400'
               }`}>
-                {selectedHour !== null && isSlotLocked(selectedHour)
-                  ? '✓ Ce relevé a déjà été saisi — lecture seule.'
-                  : '⏳ Ce créneau est dans le futur — saisie impossible.'}
+                {selectedHour === null
+                  ? '⬆ Sélectionnez un créneau ci-dessus pour saisir un relevé.'
+                  : selectedHour !== null && isSlotLocked(selectedHour)
+                    ? '✓ Ce relevé a déjà été saisi — lecture seule.'
+                    : '⏳ Ce créneau est dans le futur — saisie impossible.'}
               </div>
             )}
             <div className={`bg-slate-900 border border-slate-700 rounded-lg p-5 ${formDisabled ? 'pointer-events-none opacity-60' : ''}`} data-form>
 
-              <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-3">
+              <div className="grid grid-cols-1 lg:grid-cols-2 gap-10 items-start">
 
-                <Titre t="Eau de Refroidissement" />
-                <Sel label="Choix de la pompe" name="choix_pompe" value={form.choix_pompe} set={f} opts={['P1', 'P2', 'P1+P2']} />
-                <F label="Pres. de refoulement pompe" name="pression_refoul_pompe_bar" value={form.pression_refoul_pompe_bar} set={f} unit="bar" />
-                <F label="Nbre de ventilateur en service" name="nb_ventilateurs_service" value={form.nb_ventilateurs_service} set={f} unit="n°" />
-                <F label="Temp. entrée réf. WTAD1" name="temp_entree_ref_wtad1" value={form.temp_entree_ref_wtad1} set={f} unit="°C" />
-                <F label="Temp. sortie réf. WTAD" name="temp_sortie_ref_wtad2" value={form.temp_sortie_ref_wtad2} set={f} unit="°C" />
-                <F label="Pres. retour eau de réf." name="pression_retour_eau_ref" value={form.pression_retour_eau_ref} set={f} unit="bar" />
-                <F label="Pres. sortie eau réf. Alt." name="pression_sortie_ref_alt" value={form.pression_sortie_ref_alt} set={f} unit="bar" />
-                <F label="Niveau réservoir d'expansion" name="niveau_reservoir_expansion" value={form.niveau_reservoir_expansion} set={f} />
-
-                <Titre t="Skid Gaz" />
-                <F label="Température gaz FTG-TKG" name="temp_gaz_ftg_tkg" value={form.temp_gaz_ftg_tkg} set={f} unit="°C" />
-                <F label="Pression gaz FPGI" name="pression_gaz_fpgi_bar" value={form.pression_gaz_fpgi_bar} set={f} unit="bar" />
-                <F label="ΔP filtre" name="dp_filtre_gaz_bar" value={form.dp_filtre_gaz_bar} set={f} unit="bar" />
-
-                <Titre t="Skid Gasoil" />
-                <F label="Pression entrée skid" name="pression_entree_skid" value={form.pression_entree_skid} set={f} unit="bar" />
-                <F label="ΔP filtre" name="dp_filtre_gasoil_bar" value={form.dp_filtre_gasoil_bar} set={f} unit="bar" />
-
-                <Titre t="Huile de Graissage" />
-                <F label="Niveau d'huile du réservoir" name="niveau_huile_reservoir" value={form.niveau_huile_reservoir} set={f} />
-                <Sel label="Choix du filtre à huile" name="choix_filtre_huile" value={form.choix_filtre_huile} set={f} opts={['F1', 'F2']} />
-                <Sel label="Choix du réfrigérant d'huile" name="choix_refrigerant_huile" value={form.choix_refrigerant_huile} set={f} opts={['R1', 'R2']} />
-
-                <Titre t="Air d'Atomisation" />
-                <F label="Pression d'air d'atomisation" name="pression_air_atomisation" value={form.pression_air_atomisation} set={f} unit="bar" />
-
-                <Titre t="Filtre à Air" />
-                <F label="ΔP totale filtre" name="dp_totale_filtre_kpa" value={form.dp_totale_filtre_kpa} set={f} unit="kPa" />
-                <F label="ΔP pré-filtre" name="dp_pre_filtre_kpa" value={form.dp_pre_filtre_kpa} set={f} unit="kPa" />
-                <F label="ΔP filtre" name="dp_filtre_kpa" value={form.dp_filtre_kpa} set={f} unit="kPa" />
-
-                <Titre t="Compresseurs ERVOR" />
-                <F label="Pression Air Comprimée" name="pression_air_comprime_bar" value={form.pression_air_comprime_bar} set={f} unit="bar" />
-
-                <Titre t="Contrôle TP" />
-                <F label="Température huile" name="temp_huile_tp" value={form.temp_huile_tp} set={f} unit="°C" />
-                <F label="Température Enroulement" name="temp_enroulement_tp" value={form.temp_enroulement_tp} set={f} unit="°C" />
-                <F label="Niveau conservateur" name="niv_conservateur_tp" value={form.niv_conservateur_tp} set={f} />
-                <Sel label="Choix de ventilateur" name="choix_ventilateur_tp" value={form.choix_ventilateur_tp} set={f} opts={['V1', 'V2', 'V1+V2']} />
-                <F label="Parafoudres phase R" name="para_r" value={dg.para_r} set={det} unit="UN" />
-                <F label="Parafoudres phase S" name="para_s" value={dg.para_s} set={det} unit="UN" />
-                <F label="Parafoudres phase T" name="para_t" value={dg.para_t} set={det} unit="UN" />
-
-                <Titre t="Contrôle TS" />
-                <F label="Température huile" name="temp_huile_ts" value={form.temp_huile_ts} set={f} unit="°C" />
-                <F label="Température enroulement" name="temp_enroulement_ts" value={form.temp_enroulement_ts} set={f} unit="°C" />
-                <F label="Niveau conservateur" name="niv_conservateur_ts" value={form.niv_conservateur_ts} set={f} />
-
-                <Titre t="Sécurité Incendie et Autres" />
-                <F label="Pression du circuit" name="pression_circuit_incendie" value={form.pression_circuit_incendie} set={f} unit="bar" />
-                <F label="Niveau gasoil PPE thermique" name="niveau_gasoil_ppe_pct" value={form.niveau_gasoil_ppe_pct} set={f} unit="%" />
-                <Sel label="Pompe jockey" name="pompe_jockey" value={form.pompe_jockey} set={f} opts={['EN SERVICE', 'ARRET']} />
-                <F label="Paratonerre réservoir gasoil" name="paratonerre" value={dg.paratonerre} set={det} unit="UN" />
-
-                <Titre t="Groupe Électrogène" />
-                <F label="Compteur gasoil" name="compteur_gasoil_ge_l" value={form.compteur_gasoil_ge_l} set={f} unit="L" />
-                <F label="Compteur énergie" name="compteur_energie_ge_kwh" value={form.compteur_energie_ge_kwh} set={f} unit="kWh" />
-                <F label="Stock gasoil" name="stock_gasoil_l" value={form.stock_gasoil_l} set={f} unit="L" />
-                <F label="T° huile de graissage" name="temp_huile_graissage_ge" value={form.temp_huile_graissage_ge} set={f} unit="°C" />
-                <F label="Pression huile de graissage" name="pression_huile_graissage_ge" value={form.pression_huile_graissage_ge} set={f} unit="bar" />
-                <F label="Température eau primaire" name="temp_eau_primaire_ge" value={form.temp_eau_primaire_ge} set={f} unit="°C" />
-                <F label="Température eau secondaire" name="temp_eau_secondaire_ge" value={form.temp_eau_secondaire_ge} set={f} unit="°C" />
-                <F label="Pression air de démarrage" name="pression_air_demarrage_ge" value={form.pression_air_demarrage_ge} set={f} unit="bar" />
-                <F label="Nombre heure de marche" name="nb_heures_marche_ge" value={form.nb_heures_marche_ge} set={f} unit="h" />
-
-                <Titre t="Détecteurs Gaz" />
-                {(['ha_1','ha_2','ha_3','ha_4','ha_5','ha_6'] as const).map(k => (
-                  <F key={k} label={`45 HA ${k.split('_')[1]}`} name={k} value={dg[k]} set={det} />
-                ))}
-                {(['ht_1','ht_2','ht_3','ht_4','ht_5','ht_6'] as const).map(k => (
-                  <F key={k} label={`45 HT ${k.split('_')[1]}`} name={k} value={dg[k]} set={det} />
-                ))}
-
-                <Titre t="Consignes Particulières" />
-                <div className="col-span-full">
-                  <textarea value={form.consignes_particulieres || ''}
-                    onChange={e => f('consignes_particulieres', e.target.value)}
-                    onKeyDown={e => { if (e.key === 'Enter' && !e.shiftKey) onEnter(e as any); }}
-                    rows={3}
-                    placeholder="Saisir les consignes particulières..."
-                    className="w-full bg-slate-800 border border-slate-700 rounded px-2 py-1.5 text-white text-sm focus:outline-none focus:border-amber-500 resize-none" />
+                {/* ── Colonne 1 : Eau de Réf. → TS (fin : Niveau conservateur TS) ── */}
+                <div className="space-y-2">
+                  <SectHead t="Eau de Refroidissement" />
+                  <BtnGroup label="Choix de la pompe" name="choix_pompe" value={form.choix_pompe} set={f} opts={['P1', 'P2', 'P1+P2']} />
+                  <F label="Pres. de refoulement pompe" name="pression_refoul_pompe_bar" value={form.pression_refoul_pompe_bar} set={f} unit="bar" />
+                  <F label="Nbre de ventilateur en service" name="nb_ventilateurs_service" value={form.nb_ventilateurs_service} set={f} unit="n°" />
+                  <F label="Temp. entrée réf. WTAD1" name="temp_entree_ref_wtad1" value={form.temp_entree_ref_wtad1} set={f} unit="°C" />
+                  <F label="Temp. sortie réf. WTAD" name="temp_sortie_ref_wtad2" value={form.temp_sortie_ref_wtad2} set={f} unit="°C" />
+                  <F label="Pres. retour eau de réf." name="pression_retour_eau_ref" value={form.pression_retour_eau_ref} set={f} unit="bar" />
+                  <F label="Pres. sortie eau réf. Alt." name="pression_sortie_ref_alt" value={form.pression_sortie_ref_alt} set={f} unit="bar" />
+                  <LevelGauge label="Niveau réservoir d'expansion" name="niveau_reservoir_expansion" value={form.niveau_reservoir_expansion} set={f} />
+                  <SectHead t="Skid Gaz" />
+                  <F label="Température gaz FTG-TKG" name="temp_gaz_ftg_tkg" value={form.temp_gaz_ftg_tkg} set={f} unit="°C" />
+                  <F label="Pression gaz FPGI" name="pression_gaz_fpgi_bar" value={form.pression_gaz_fpgi_bar} set={f} unit="bar" />
+                  <F label="ΔP filtre" name="dp_filtre_gaz_bar" value={form.dp_filtre_gaz_bar} set={f} unit="bar" />
+                  <SectHead t="Skid Gasoil" />
+                  <F label="Pression entrée skid" name="pression_entree_skid" value={form.pression_entree_skid} set={f} unit="bar" />
+                  <F label="ΔP filtre" name="dp_filtre_gasoil_bar" value={form.dp_filtre_gasoil_bar} set={f} unit="bar" />
+                  <SectHead t="Huile de Graissage" />
+                  <LevelGauge label="Niveau d'huile du réservoir" name="niveau_huile_reservoir" value={form.niveau_huile_reservoir} set={f} />
+                  <BtnGroup label="Choix du filtre à huile" name="choix_filtre_huile" value={form.choix_filtre_huile} set={f} opts={['F1', 'F2']} />
+                  <BtnGroup label="Choix du réfrigérant d'huile" name="choix_refrigerant_huile" value={form.choix_refrigerant_huile} set={f} opts={['R1', 'R2']} />
+                  <SectHead t="Air d'Atomisation" />
+                  <F label="Pression d'air d'atomisation" name="pression_air_atomisation" value={form.pression_air_atomisation} set={f} unit="bar" />
+                  <SectHead t="Filtre à Air" />
+                  <F label="ΔP totale filtre" name="dp_totale_filtre_kpa" value={form.dp_totale_filtre_kpa} set={f} unit="kPa" />
+                  <F label="ΔP pré-filtre" name="dp_pre_filtre_kpa" value={form.dp_pre_filtre_kpa} set={f} unit="kPa" />
+                  <F label="ΔP filtre" name="dp_filtre_kpa" value={form.dp_filtre_kpa} set={f} unit="kPa" />
+                  <SectHead t="Compresseurs ERVOR" />
+                  <F label="Pression Air Comprimée" name="pression_air_comprime_bar" value={form.pression_air_comprime_bar} set={f} unit="bar" />
+                  <SectHead t="Contrôle TP" />
+                  <F label="Température huile" name="temp_huile_tp" value={form.temp_huile_tp} set={f} unit="°C" />
+                  <F label="Température Enroulement" name="temp_enroulement_tp" value={form.temp_enroulement_tp} set={f} unit="°C" />
+                  <LevelGauge label="Niveau conservateur" name="niv_conservateur_tp" value={form.niv_conservateur_tp} set={f} />
+                  <BtnGroup label="Choix de ventilateur" name="choix_ventilateur_tp" value={form.choix_ventilateur_tp} set={f} opts={['V1', 'V2', 'V1+V2']} />
+                  <F label="Parafoudres phase R" name="para_r" value={dg.para_r} set={det} unit="UN" />
+                  <F label="Parafoudres phase S" name="para_s" value={dg.para_s} set={det} unit="UN" />
+                  <F label="Parafoudres phase T" name="para_t" value={dg.para_t} set={det} unit="UN" />
+                  <SectHead t="Contrôle TS" />
+                  <F label="Température huile" name="temp_huile_ts" value={form.temp_huile_ts} set={f} unit="°C" />
+                  <F label="Température enroulement" name="temp_enroulement_ts" value={form.temp_enroulement_ts} set={f} unit="°C" />
+                  <LevelGauge label="Niveau conservateur de contrôle TS" name="niv_conservateur_ts" value={form.niv_conservateur_ts} set={f} />
                 </div>
 
+                {/* ── Colonne 2 : Incendie + GE + Détecteurs + Consignes ── */}
+                <div className="space-y-2">
+                  <SectHead t="Sécurité Incendie et Autres" />
+                  <F label="Pression du circuit" name="pression_circuit_incendie" value={form.pression_circuit_incendie} set={f} unit="bar" />
+                  <F label="Niveau gasoil PPE thermique" name="niveau_gasoil_ppe_pct" value={form.niveau_gasoil_ppe_pct} set={f} unit="%" />
+                  <BtnGroup label="Pompe jockey" name="pompe_jockey" value={form.pompe_jockey} set={f} opts={['EN SERVICE', 'ARRET']} />
+                  <F label="Paratonerre réservoir gasoil" name="paratonerre" value={dg.paratonerre} set={det} unit="UN" />
+                  <SectHead t="Groupe Électrogène" />
+                  <F label="Compteur gasoil" name="compteur_gasoil_ge_l" value={form.compteur_gasoil_ge_l} set={f} unit="L" />
+                  <F label="Compteur énergie" name="compteur_energie_ge_kwh" value={form.compteur_energie_ge_kwh} set={f} unit="kWh" />
+                  <F label="Stock gasoil" name="stock_gasoil_l" value={form.stock_gasoil_l} set={f} unit="L" />
+                  <F label="T° huile de graissage" name="temp_huile_graissage_ge" value={form.temp_huile_graissage_ge} set={f} unit="°C" />
+                  <F label="Pression huile de graissage" name="pression_huile_graissage_ge" value={form.pression_huile_graissage_ge} set={f} unit="bar" />
+                  <F label="Température eau primaire" name="temp_eau_primaire_ge" value={form.temp_eau_primaire_ge} set={f} unit="°C" />
+                  <F label="Température eau secondaire" name="temp_eau_secondaire_ge" value={form.temp_eau_secondaire_ge} set={f} unit="°C" />
+                  <F label="Pression air de démarrage" name="pression_air_demarrage_ge" value={form.pression_air_demarrage_ge} set={f} unit="bar" />
+                  <F label="Nombre heure de marche" name="nb_heures_marche_ge" value={form.nb_heures_marche_ge} set={f} unit="h" />
+                  <SectHead t="Détecteurs Gaz" />
+                  {(['ha_1','ha_2','ha_3','ha_4','ha_5','ha_6'] as const).map(k => (
+                    <F key={k} label={`45 HA ${k.split('_')[1]}`} name={k} value={dg[k]} set={det} />
+                  ))}
+                  {(['ht_1','ht_2','ht_3','ht_4','ht_5','ht_6'] as const).map(k => (
+                    <F key={k} label={`45 HT ${k.split('_')[1]}`} name={k} value={dg[k]} set={det} />
+                  ))}
+                </div>
+
+              </div>
+
+              {/* ── Consignes Particulières — pleine largeur ── */}
+              <div className="mt-6 space-y-2">
+                <SectHead t="Consignes Particulières" />
+                <textarea value={form.consignes_particulieres || ''}
+                  onChange={e => f('consignes_particulieres', e.target.value)}
+                  onKeyDown={e => { if (e.key === 'Enter' && !e.shiftKey) onEnter(e as any); }}
+                  rows={3}
+                  placeholder="Saisir les consignes particulières..."
+                  className="w-full bg-slate-800 border border-slate-700 rounded px-2 py-1.5 text-white text-sm focus:outline-none focus:border-amber-500 resize-none" />
               </div>
 
               <SaveBtn />

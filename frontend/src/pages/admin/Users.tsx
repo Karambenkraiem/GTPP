@@ -1,22 +1,49 @@
-import { useState } from 'react';
+import { useState, useMemo } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { usersApi } from '../../lib/api';
 import PageHeader from '../../components/PageHeader';
 import Modal from '../../components/Modal';
-import { Plus, Pencil, UserX } from 'lucide-react';
+import { Plus, Pencil, UserX, ChevronUp, ChevronDown, ChevronsUpDown } from 'lucide-react';
 import { ROLE_LABELS } from '../../types';
 import type { User, Role } from '../../types';
 
 const ROLES: Role[] = ['operateur', 'chef_bloc', 'chef_quart', 'chef_exploitation', 'admin'];
+const ROLE_ORDER: Record<Role, number> = { operateur: 0, chef_bloc: 1, chef_quart: 2, chef_exploitation: 3, admin: 4 };
 const EMPTY_FORM = { role: 'operateur' as Role };
+
+type SortCol = 'nom' | 'matricule' | 'role' | 'actif';
 
 export default function Users() {
   const qc = useQueryClient();
   const [showModal, setShowModal] = useState(false);
   const [editUser, setEditUser] = useState<User | null>(null);
   const [form, setForm] = useState<any>(EMPTY_FORM);
+  const [sort, setSort] = useState<{ col: SortCol; dir: 'asc' | 'desc' }>({ col: 'nom', dir: 'asc' });
 
   const { data: users, isLoading } = useQuery({ queryKey: ['users'], queryFn: usersApi.list });
+
+  const sortedUsers = useMemo(() => {
+    if (!users) return [];
+    return [...users].sort((a: User, b: User) => {
+      let cmp = 0;
+      if (sort.col === 'nom') cmp = `${a.nom} ${a.prenom}`.localeCompare(`${b.nom} ${b.prenom}`, 'fr');
+      else if (sort.col === 'matricule') cmp = a.matricule.localeCompare(b.matricule, 'fr');
+      else if (sort.col === 'role') cmp = ROLE_ORDER[a.role] - ROLE_ORDER[b.role];
+      else if (sort.col === 'actif') cmp = (b.actif ? 1 : 0) - (a.actif ? 1 : 0);
+      return sort.dir === 'asc' ? cmp : -cmp;
+    });
+  }, [users, sort]);
+
+  function toggleSort(col: SortCol) {
+    setSort(s => s.col === col ? { col, dir: s.dir === 'asc' ? 'desc' : 'asc' } : { col, dir: 'asc' });
+  }
+
+  function SortIcon({ col }: { col: SortCol }) {
+    if (sort.col !== col) return <ChevronsUpDown size={11} className="text-slate-600 ml-1 inline" />;
+    return sort.dir === 'asc'
+      ? <ChevronUp size={11} className="text-amber-400 ml-1 inline" />
+      : <ChevronDown size={11} className="text-amber-400 ml-1 inline" />;
+  }
 
   const saveMut = useMutation({
     mutationFn: (data: any) => editUser ? usersApi.update(editUser.id, data) : usersApi.create(data),
@@ -60,14 +87,18 @@ export default function Users() {
           <table className="w-full text-sm">
             <thead>
               <tr className="border-b border-slate-700">
-                {['Matricule', 'Nom Prénom', 'Rôle', 'Statut', ''].map((h) => (
-                  <th key={h} className="px-4 py-3 text-left text-xs text-slate-400 font-medium">{h}</th>
+                {([['matricule', 'Matricule'], ['nom', 'Nom Prénom'], ['role', 'Rôle'], ['actif', 'Statut']] as [SortCol, string][]).map(([col, lbl]) => (
+                  <th key={col} onClick={() => toggleSort(col)}
+                    className="px-4 py-3 text-left text-xs text-slate-400 font-medium cursor-pointer hover:text-white select-none whitespace-nowrap">
+                    {lbl}<SortIcon col={col} />
+                  </th>
                 ))}
+                <th className="px-4 py-3 text-xs text-slate-400 font-medium" />
               </tr>
             </thead>
             <tbody className="divide-y divide-slate-800">
               {isLoading && <tr><td colSpan={5} className="px-4 py-6 text-center text-slate-500">Chargement...</td></tr>}
-              {users?.map((u: User) => (
+              {sortedUsers.map((u: User) => (
                 <tr key={u.id} className="hover:bg-slate-800/50 transition-colors">
                   <td className="px-4 py-3 font-mono text-xs text-amber-400">{u.matricule}</td>
                   <td className="px-4 py-3 text-slate-200">{u.prenom} {u.nom}</td>

@@ -49,6 +49,15 @@ function Titre({ t }: { t: string }) {
   );
 }
 
+function SectHead({ t }: { t: string }) {
+  return (
+    <div className="flex items-center gap-1.5 pt-2 first:pt-0">
+      <span className="text-[10px] font-bold text-amber-400 uppercase tracking-widest whitespace-nowrap">{t}</span>
+      <div className="flex-1 h-px bg-slate-700" />
+    </div>
+  );
+}
+
 type CptRowProps = { label: string; nameA: string; nameB: string; a: any; b: any; set: (n: string, v: any) => void; unit?: string; isInt?: boolean; readOnly?: boolean };
 function CptRow({ label, nameA, nameB, a, b, set, unit, isInt = false, readOnly = false }: CptRowProps) {
   const diff = (a != null && b != null) ? Number(b) - Number(a) : null;
@@ -203,7 +212,7 @@ export default function RelevesChefBloc() {
     return new Date(`${selectedDate}T${hour.toString().padStart(2, '0')}:00:00`) > new Date();
   }
   function isSlotLocked(hour: number) { return !!(releveByHour[hour]); }
-  const formDisabled = !canCreate || (selectedHour !== null && (isSlotFuture(selectedHour) || isSlotLocked(selectedHour)));
+  const formDisabled = !canCreate || selectedHour === null || (selectedHour !== null && (isSlotFuture(selectedHour) || isSlotLocked(selectedHour)));
 
   function f(n: string, v: any) { setForm((s: any) => ({ ...s, [n]: v })); }
   function g(sub: string, n: string, v: any) { setForm((s: any) => ({ ...s, [sub]: { ...(s[sub] || {}), [n]: v } })); }
@@ -578,143 +587,139 @@ export default function RelevesChefBloc() {
                   ? 'bg-green-500/5 border-green-500/20 text-green-400'
                   : 'bg-slate-800 border-slate-700 text-slate-400'
               }`}>
-                {selectedHour !== null && isSlotLocked(selectedHour)
-                  ? '✓ Ce relevé a déjà été saisi — lecture seule.'
-                  : '⏳ Ce créneau est dans le futur — saisie impossible.'}
+                {selectedHour === null
+                  ? '⬆ Sélectionnez un créneau ci-dessus pour saisir un relevé.'
+                  : selectedHour !== null && isSlotLocked(selectedHour)
+                    ? '✓ Ce relevé a déjà été saisi — lecture seule.'
+                    : '⏳ Ce créneau est dans le futur — saisie impossible.'}
               </div>
             )}
 
             <div className={`bg-slate-900 border border-slate-700 rounded-lg p-5 ${formDisabled ? 'pointer-events-none opacity-60' : ''}`} data-form>
-              <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-3">
+              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 items-start">
 
-                {/* 1 */}
-                <Titre t="Conditions Ambiantes & TG" />
-                <F label="Temp. ambiante CTIM"        name="temp_ambiante_ctim"    value={form.temp_ambiante_ctim}    set={f} unit="°C" />
-                <F label="Press. atm. AFPAP"           name="pression_atm_afpap"    value={form.pression_atm_afpap}    set={f} unit="mmHg" />
-                <F label="Humidité RHUM"               name="humidite_rhum"          value={form.humidite_rhum}          set={f} unit="%" />
-                <F label="ΔP filtre totale TFDP"       name="dp_filtre_totale_tfdp" value={form.dp_filtre_totale_tfdp} set={f} unit="mmH₂O" />
-                <F label="ΔP admis. comp. CSDP"        name="dp_admis_comp_csdp"    value={form.dp_admis_comp_csdp}    set={f} unit="mmH₂O" />
-                <F label="ΔP admission AFPCS"          name="dp_admission_afpcs"    value={form.dp_admission_afpcs}    set={f} unit="mmH₂O" />
-                <F label="Temp. tunnel TTIB-1"         name="temp_tunnel_ttib1"     value={form.temp_tunnel_ttib1}     set={f} unit="°C" />
-                <F label="Temp. air atomisation"       name="temp_air_atomisation"  value={form.temp_air_atomisation}  set={f} unit="°C" />
-                <F label="Vitesse turbine"             name="vitesse_turbine_rpm"   value={form.vitesse_turbine_rpm}   set={f} unit="RPM" />
-                <F label="Position TMGV"               name="position_tmgv_deg"     value={form.position_tmgv_deg}     set={f} unit="°" />
-                <F label="Position IGV"                name="position_igv_deg"      value={form.position_igv_deg}      set={f} unit="°" />
-                <F label="Tension ligne"               name="tension_ligne_kv"      value={form.tension_ligne_kv}      set={f} unit="kV" />
+                {/* ── Colonne 1 : Conditions + Réfrigération + Huile ── */}
+                <div className="space-y-2">
+                  <SectHead t="Conditions Ambiantes & TG" />
+                  <F label="Temp. ambiante CTIM"        name="temp_ambiante_ctim"    value={form.temp_ambiante_ctim}    set={f} unit="°C" />
+                  <F label="Press. atm. AFPAP"           name="pression_atm_afpap"    value={form.pression_atm_afpap}    set={f} unit="mmHg" />
+                  <F label="Humidité RHUM"               name="humidite_rhum"          value={form.humidite_rhum}          set={f} unit="%" />
+                  <F label="ΔP filtre totale TFDP"       name="dp_filtre_totale_tfdp" value={form.dp_filtre_totale_tfdp} set={f} unit="mmH₂O" />
+                  <F label="ΔP admis. comp. CSDP"        name="dp_admis_comp_csdp"    value={form.dp_admis_comp_csdp}    set={f} unit="mmH₂O" />
+                  <F label="ΔP admission AFPCS"          name="dp_admission_afpcs"    value={form.dp_admission_afpcs}    set={f} unit="mmH₂O" />
+                  <F label="Temp. tunnel TTIB-1"         name="temp_tunnel_ttib1"     value={form.temp_tunnel_ttib1}     set={f} unit="°C" />
+                  <F label="Temp. air atomisation"       name="temp_air_atomisation"  value={form.temp_air_atomisation}  set={f} unit="°C" />
+                  <F label="Vitesse turbine"             name="vitesse_turbine_rpm"   value={form.vitesse_turbine_rpm}   set={f} unit="RPM" />
+                  <F label="Position TMGV"               name="position_tmgv_deg"     value={form.position_tmgv_deg}     set={f} unit="°" />
+                  <F label="Position IGV"                name="position_igv_deg"      value={form.position_igv_deg}      set={f} unit="°" />
+                  <F label="Tension ligne"               name="tension_ligne_kv"      value={form.tension_ligne_kv}      set={f} unit="kV" />
+                  <SectHead t="Circuit Réfrigération" />
+                  <F label="Temp. entrée aéro-réf WTAD"   name="temp_entree_aeroref_wtad"  value={form.temp_entree_aeroref_wtad}  set={f} unit="°C" />
+                  <F label="Temp. sortie aéro-réf WTAD"   name="temp_sortie_aeroref_wtad"  value={form.temp_sortie_aeroref_wtad}  set={f} unit="°C" />
+                  <F label="Temp. patte turbine 1 WTTL-1" name="temp_patte_turbine1_wttl1" value={form.temp_patte_turbine1_wttl1} set={f} unit="°C" />
+                  <F label="Temp. patte turbine 2 WTTL-2" name="temp_patte_turbine2_wttl2" value={form.temp_patte_turbine2_wttl2} set={f} unit="°C" />
+                  <SectHead t="Huile de Graissage" />
+                  <F label="Niveau bac à huile"              name="niveau_bac_huile_mm"      value={hu.niveau_bac_huile_mm}      set={(n,v)=>g('huile',n,v)} unit="mm" />
+                  <F label="Pression QAP 3"                  name="pression_qap3_bar"        value={hu.pression_qap3_bar}        set={(n,v)=>g('huile',n,v)} unit="bar" />
+                  <F label="Pression palier n°5 QGP"         name="pression_palier5_qgp"     value={hu.pression_palier5_qgp}     set={(n,v)=>g('huile',n,v)} unit="bar" />
+                  <F label="Temp. collecteur LTTH"           name="temp_collecteur_ltth"     value={hu.temp_collecteur_ltth}     set={(n,v)=>g('huile',n,v)} unit="°C" />
+                  <F label="Temp. cuve 1 LTOT1"              name="temp_cuve1_ltot1"         value={hu.temp_cuve1_ltot1}         set={(n,v)=>g('huile',n,v)} unit="°C" />
+                  <F label="Temp. cuve 2 LTOT2"              name="temp_cuve2_ltot2"         value={hu.temp_cuve2_ltot2}         set={(n,v)=>g('huile',n,v)} unit="°C" />
+                  <F label="Temp. butée LTBT1-D"             name="temp_butee_ltbt1d"        value={hu.temp_butee_ltbt1d}        set={(n,v)=>g('huile',n,v)} unit="°C" />
+                  <F label="T° retour palier n°1 LTB1-D"     name="temp_palier1_ltb1d"       value={hu.temp_palier1_ltb1d}       set={(n,v)=>g('huile',n,v)} unit="°C" />
+                  <F label="T° retour palier n°2 LTB2-D"     name="temp_palier2_ltb2d"       value={hu.temp_palier2_ltb2d}       set={(n,v)=>g('huile',n,v)} unit="°C" />
+                  <F label="T° retour palier n°3 LTB3-D"     name="temp_palier3_ltb3d"       value={hu.temp_palier3_ltb3d}       set={(n,v)=>g('huile',n,v)} unit="°C" />
+                  <F label="T° retour palier n°4 LTTG1-D"    name="temp_palier4_lttg1d"      value={hu.temp_palier4_lttg1d}      set={(n,v)=>g('huile',n,v)} unit="°C" />
+                  <F label="T° retour palier n°5 LTG2-D"     name="temp_palier5_ltg2d"       value={hu.temp_palier5_ltg2d}       set={(n,v)=>g('huile',n,v)} unit="°C" />
+                  <F label="Press. pompe HP attelée HQP11"   name="press_pompe_hp_attelee"   value={hu.press_pompe_hp_attelee}   set={(n,v)=>g('huile',n,v)} unit="bar" />
+                  <F label="Press. pompe HP électrique HQP12" name="press_pompe_hp_elec"     value={hu.press_pompe_hp_elec}      set={(n,v)=>g('huile',n,v)} unit="bar" />
+                </div>
 
-                {/* 2 */}
-                <Titre t="Circuit Réfrigération" />
-                <F label="Temp. entrée aéro-réf WTAD"   name="temp_entree_aeroref_wtad"  value={form.temp_entree_aeroref_wtad}  set={f} unit="°C" />
-                <F label="Temp. sortie aéro-réf WTAD"   name="temp_sortie_aeroref_wtad"  value={form.temp_sortie_aeroref_wtad}  set={f} unit="°C" />
-                <F label="Temp. patte turbine 1 WTTL-1" name="temp_patte_turbine1_wttl1" value={form.temp_patte_turbine1_wttl1} set={f} unit="°C" />
-                <F label="Temp. patte turbine 2 WTTL-2" name="temp_patte_turbine2_wttl2" value={form.temp_patte_turbine2_wttl2} set={f} unit="°C" />
+                {/* ── Colonne 2 : Générateur + Air Alternateur + Vibration ── */}
+                <div className="space-y-2">
+                  <SectHead t="Générateur" />
+                  <F label="Puissance active"          name="puissance_active_mw"      value={ge.puissance_active_mw}      set={(n,v)=>g('generateur',n,v)} unit="MW" />
+                  <F label="Puissance réactive"        name="puissance_reactive_mvar"  value={ge.puissance_reactive_mvar}  set={(n,v)=>g('generateur',n,v)} unit="MVAr" />
+                  <F label="Fréquence"                 name="frequence_hz"             value={ge.frequence_hz}             set={(n,v)=>g('generateur',n,v)} unit="Hz" />
+                  <F label="Cos φ"                    name="cos_phi"                  value={ge.cos_phi}                  set={(n,v)=>g('generateur',n,v)} />
+                  <F label="Tension alternateur DVX"  name="tension_alt_dvx_kv"       value={ge.tension_alt_dvx_kv}       set={(n,v)=>g('generateur',n,v)} unit="kV" />
+                  <F label="Tension SVLX"             name="tension_svlx_kv"          value={ge.tension_svlx_kv}          set={(n,v)=>g('generateur',n,v)} unit="kV" />
+                  <F label="Tension excitation"       name="tension_excitation_v"     value={ge.tension_excitation_v}     set={(n,v)=>g('generateur',n,v)} unit="V" />
+                  <F label="Courant excitation"       name="courant_excitation_a"     value={ge.courant_excitation_a}     set={(n,v)=>g('generateur',n,v)} unit="A" />
+                  <SectHead t="Air Alternateur" />
+                  <F label="Temp air froid A GCA-1"      name="temp_air_froid_a_gca1"    value={ge.temp_air_froid_a_gca1}    set={(n,v)=>g('generateur',n,v)} unit="°C" />
+                  <F label="Temp air froid B GCA-2"      name="temp_air_froid_b_gca2"    value={ge.temp_air_froid_b_gca2}    set={(n,v)=>g('generateur',n,v)} unit="°C" />
+                  <F label="Temp air chaud C GHA-1"      name="temp_air_chaud_c_gha1"    value={ge.temp_air_chaud_c_gha1}    set={(n,v)=>g('generateur',n,v)} unit="°C" />
+                  <F label="Temp air chaud D GHA-2"      name="temp_air_chaud_d_gha2"    value={ge.temp_air_chaud_d_gha2}    set={(n,v)=>g('generateur',n,v)} unit="°C" />
+                  {[['e_gst1','E GST-1'],['f_gst2','F GST-2'],['g_gst3','G GST-3'],['h_gst4','H GST-4'],
+                    ['i_gst5','I GST-5'],['j_gst6','J GST-6'],['k_gst7','K GST-7'],['l_gst8','L GST-8'],['m_gst9','M GST-9']].map(([k,lbl]) => (
+                    <F key={k} label={`Temp stator ${lbl}`} name={`temp_stator_${k}`} value={ge[`temp_stator_${k}`]} set={(n,v)=>g('generateur',n,v)} unit="°C" />
+                  ))}
+                  <F label="Temp air excitation N GEXT"  name="temp_air_excitation_gext" value={ge.temp_air_excitation_gext} set={(n,v)=>g('generateur',n,v)} unit="°C" />
+                  <SectHead t="Vibration" />
+                  {[['palier1_bb1','Palier n°1 BB-1'],['palier1_bb2','Palier n°1 BB-2'],['palier2_bb3','Palier n°2 BB-3'],
+                    ['palier2_bb4','Palier n°2 BB-4'],['palier3_bb5','Palier n°3 BB-5'],['palier4_bb10','Palier n°4 BB-10'],
+                    ['palier4_bb11','Palier n°4 BB-11'],['palier1_bb12','Palier n°1 BB-12'],['vibration_maxi','Vibration maxi BB max']].map(([k,lbl]) => (
+                    <F key={k} label={lbl} name={k} value={vi[k]} set={(n,v)=>g('vibrations',n,v)} unit="mm/s" />
+                  ))}
+                </div>
 
-                {/* 3 */}
-                <Titre t="Huile de Graissage" />
-                <F label="Niveau bac à huile"              name="niveau_bac_huile_mm"      value={hu.niveau_bac_huile_mm}      set={(n,v)=>g('huile',n,v)} unit="mm" />
-                <F label="Pression QAP 3"                  name="pression_qap3_bar"        value={hu.pression_qap3_bar}        set={(n,v)=>g('huile',n,v)} unit="bar" />
-                <F label="Pression palier n°5 QGP"         name="pression_palier5_qgp"     value={hu.pression_palier5_qgp}     set={(n,v)=>g('huile',n,v)} unit="bar" />
-                <F label="Temp. collecteur LTTH"           name="temp_collecteur_ltth"     value={hu.temp_collecteur_ltth}     set={(n,v)=>g('huile',n,v)} unit="°C" />
-                <F label="Temp. cuve 1 LTOT1"              name="temp_cuve1_ltot1"         value={hu.temp_cuve1_ltot1}         set={(n,v)=>g('huile',n,v)} unit="°C" />
-                <F label="Temp. cuve 2 LTOT2"              name="temp_cuve2_ltot2"         value={hu.temp_cuve2_ltot2}         set={(n,v)=>g('huile',n,v)} unit="°C" />
-                <F label="Temp. butée LTBT1-D"             name="temp_butee_ltbt1d"        value={hu.temp_butee_ltbt1d}        set={(n,v)=>g('huile',n,v)} unit="°C" />
-                <F label="T° retour palier n°1 LTB1-D"     name="temp_palier1_ltb1d"       value={hu.temp_palier1_ltb1d}       set={(n,v)=>g('huile',n,v)} unit="°C" />
-                <F label="T° retour palier n°2 LTB2-D"     name="temp_palier2_ltb2d"       value={hu.temp_palier2_ltb2d}       set={(n,v)=>g('huile',n,v)} unit="°C" />
-                <F label="T° retour palier n°3 LTB3-D"     name="temp_palier3_ltb3d"       value={hu.temp_palier3_ltb3d}       set={(n,v)=>g('huile',n,v)} unit="°C" />
-                <F label="T° retour palier n°4 LTTG1-D"    name="temp_palier4_lttg1d"      value={hu.temp_palier4_lttg1d}      set={(n,v)=>g('huile',n,v)} unit="°C" />
-                <F label="T° retour palier n°5 LTG2-D"     name="temp_palier5_ltg2d"       value={hu.temp_palier5_ltg2d}       set={(n,v)=>g('huile',n,v)} unit="°C" />
-                <F label="Press. pompe HP attelée HQP11"   name="press_pompe_hp_attelee"   value={hu.press_pompe_hp_attelee}   set={(n,v)=>g('huile',n,v)} unit="bar" />
-                <F label="Press. pompe HP électrique HQP12" name="press_pompe_hp_elec"     value={hu.press_pompe_hp_elec}      set={(n,v)=>g('huile',n,v)} unit="bar" />
+                {/* ── Colonne 3 : Métal Blanc + Inter-Roue + Circuit Gaz ── */}
+                <div className="space-y-2">
+                  <SectHead t="Température Métal Blanc" />
+                  <F label="Patin de butée (B) BTTA 1_2"  name="btta1_2"    value={mb.btta1_2}    set={(n,v)=>g('metal_blanc',n,v)} unit="°C" />
+                  <F label="Patin de butée (C) BTTA 1_5"  name="btta1_5"    value={mb.btta1_5}    set={(n,v)=>g('metal_blanc',n,v)} unit="°C" />
+                  <F label="Patin de butée (D) BTTA 1_8"  name="btta1_8"    value={mb.btta1_8}    set={(n,v)=>g('metal_blanc',n,v)} unit="°C" />
+                  <F label="Contre butée (E) BTTI 1_2"    name="btti1_2"    value={mb.btti1_2}    set={(n,v)=>g('metal_blanc',n,v)} unit="°C" />
+                  <F label="Contre butée (F) BTTI 1_5"    name="btti1_5"    value={mb.btti1_5}    set={(n,v)=>g('metal_blanc',n,v)} unit="°C" />
+                  <F label="Contre butée (G) BTTI 1_9"    name="btti1_9"    value={mb.btti1_9}    set={(n,v)=>g('metal_blanc',n,v)} unit="°C" />
+                  <F label="Palier n°1 (H) BTJ 1_1"       name="btj1_1"     value={mb.btj1_1}     set={(n,v)=>g('metal_blanc',n,v)} unit="°C" />
+                  <F label="Palier n°1 (I) BTJ 1_2"       name="btj1_2"     value={mb.btj1_2}     set={(n,v)=>g('metal_blanc',n,v)} unit="°C" />
+                  <F label="Palier n°2 (J) BTJ 2_1"       name="btj2_1"     value={mb.btj2_1}     set={(n,v)=>g('metal_blanc',n,v)} unit="°C" />
+                  <F label="Palier n°2 (K) BTJ 2_2"       name="btj2_2"     value={mb.btj2_2}     set={(n,v)=>g('metal_blanc',n,v)} unit="°C" />
+                  <F label="Palier n°3 (L) BTJ 3_1"       name="btj3_1"     value={mb.btj3_1}     set={(n,v)=>g('metal_blanc',n,v)} unit="°C" />
+                  <F label="Palier n°3 (M) BTJ 3_2"       name="btj3_2"     value={mb.btj3_2}     set={(n,v)=>g('metal_blanc',n,v)} unit="°C" />
+                  <F label="Palier n°4 (N) BTGJ 1_1"      name="btgj1_1_p4" value={mb.btgj1_1_p4} set={(n,v)=>g('metal_blanc',n,v)} unit="°C" />
+                  <F label="Palier n°5 (O) BTGJ 1_1"      name="btgj1_1_p5" value={mb.btgj1_1_p5} set={(n,v)=>g('metal_blanc',n,v)} unit="°C" />
+                  <SectHead t="Température Inter-Roue" />
+                  <F label="Face avant 1ère roue TTWS1FI1"   name="ttws1fi1" value={mb.ttws1fi1} set={(n,v)=>g('metal_blanc',n,v)} unit="°C" />
+                  <F label="Face avant 1ère roue TTWS1FI2"   name="ttws1fi2" value={mb.ttws1fi2} set={(n,v)=>g('metal_blanc',n,v)} unit="°C" />
+                  <F label="Face arrière 1ère roue TTWS101"  name="ttws1_01" value={mb.ttws1_01} set={(n,v)=>g('metal_blanc',n,v)} unit="°C" />
+                  <F label="Face arrière 1ère roue TTWS102"  name="ttws1_02" value={mb.ttws1_02} set={(n,v)=>g('metal_blanc',n,v)} unit="°C" />
+                  <F label="Face avant 2ème roue TTWS2F01"   name="ttws2f01" value={mb.ttws2f01} set={(n,v)=>g('metal_blanc',n,v)} unit="°C" />
+                  <F label="Face avant 2ème roue TTWS2F02"   name="ttws2f02" value={mb.ttws2f02} set={(n,v)=>g('metal_blanc',n,v)} unit="°C" />
+                  <F label="Face arrière 2ème roue TTWS2A01" name="ttws2a01" value={mb.ttws2a01} set={(n,v)=>g('metal_blanc',n,v)} unit="°C" />
+                  <F label="Face arrière 2ème roue TTWS2A02" name="ttws2a02" value={mb.ttws2a02} set={(n,v)=>g('metal_blanc',n,v)} unit="°C" />
+                  <F label="Face avant 3ème roue TTWS3F01"   name="ttws3f01" value={mb.ttws3f01} set={(n,v)=>g('metal_blanc',n,v)} unit="°C" />
+                  <F label="Face avant 3ème roue TTWS3F02"   name="ttws3f02" value={mb.ttws3f02} set={(n,v)=>g('metal_blanc',n,v)} unit="°C" />
+                  <F label="Face arrière 3ème roue TTWS3A01" name="ttws3a01" value={mb.ttws3a01} set={(n,v)=>g('metal_blanc',n,v)} unit="°C" />
+                  <F label="Face arrière 3ème roue TTWS3A02" name="ttws3a02" value={mb.ttws3a02} set={(n,v)=>g('metal_blanc',n,v)} unit="°C" />
+                  <SectHead t="Circuit Gaz" />
+                  <F label="Temp gaz FTG-TKG"        name="temp_gaz_ftg_tkg"       value={form.temp_gaz_ftg_tkg}       set={f} unit="°C" />
+                  <F label="Press skid gaz FPGI"     name="press_skid_gaz_fpgi"    value={form.press_skid_gaz_fpgi}    set={f} unit="bar" />
+                  <F label="Press avant SRV FGUP"    name="press_avant_srv_fgup"   value={form.press_avant_srv_fgup}   set={f} unit="bar" />
+                  <F label="Press inter-vanne FPG2"  name="press_inter_vanne_fpg2" value={form.press_inter_vanne_fpg2} set={f} unit="bar" />
+                  <F label="Débit massique FQGM"     name="debit_massique_fqgm"    value={form.debit_massique_fqgm}    set={f} unit="kg/s" />
+                  <F label="Signal de référence FSR" name="signal_reference_fsr"   value={form.signal_reference_fsr}   set={f} unit="%" />
+                </div>
 
-                {/* 4 */}
-                <Titre t="Générateur" />
-                <F label="Puissance active"          name="puissance_active_mw"      value={ge.puissance_active_mw}      set={(n,v)=>g('generateur',n,v)} unit="MW" />
-                <F label="Puissance réactive"        name="puissance_reactive_mvar"  value={ge.puissance_reactive_mvar}  set={(n,v)=>g('generateur',n,v)} unit="MVAr" />
-                <F label="Fréquence"                 name="frequence_hz"             value={ge.frequence_hz}             set={(n,v)=>g('generateur',n,v)} unit="Hz" />
-                <F label="Cos φ"                    name="cos_phi"                  value={ge.cos_phi}                  set={(n,v)=>g('generateur',n,v)} />
-                <F label="Tension alternateur DVX"  name="tension_alt_dvx_kv"       value={ge.tension_alt_dvx_kv}       set={(n,v)=>g('generateur',n,v)} unit="kV" />
-                <F label="Tension SVLX"             name="tension_svlx_kv"          value={ge.tension_svlx_kv}          set={(n,v)=>g('generateur',n,v)} unit="kV" />
-                <F label="Tension excitation"       name="tension_excitation_v"     value={ge.tension_excitation_v}     set={(n,v)=>g('generateur',n,v)} unit="V" />
-                <F label="Courant excitation"       name="courant_excitation_a"     value={ge.courant_excitation_a}     set={(n,v)=>g('generateur',n,v)} unit="A" />
-
-                {/* 5 */}
-                <Titre t="Air Alternateur" />
-                <F label="Temp air froid A GCA-1"      name="temp_air_froid_a_gca1"    value={ge.temp_air_froid_a_gca1}    set={(n,v)=>g('generateur',n,v)} unit="°C" />
-                <F label="Temp air froid B GCA-2"      name="temp_air_froid_b_gca2"    value={ge.temp_air_froid_b_gca2}    set={(n,v)=>g('generateur',n,v)} unit="°C" />
-                <F label="Temp air chaud C GHA-1"      name="temp_air_chaud_c_gha1"    value={ge.temp_air_chaud_c_gha1}    set={(n,v)=>g('generateur',n,v)} unit="°C" />
-                <F label="Temp air chaud D GHA-2"      name="temp_air_chaud_d_gha2"    value={ge.temp_air_chaud_d_gha2}    set={(n,v)=>g('generateur',n,v)} unit="°C" />
-                {[['e_gst1','E GST-1'],['f_gst2','F GST-2'],['g_gst3','G GST-3'],['h_gst4','H GST-4'],
-                  ['i_gst5','I GST-5'],['j_gst6','J GST-6'],['k_gst7','K GST-7'],['l_gst8','L GST-8'],['m_gst9','M GST-9']].map(([k,lbl]) => (
-                  <F key={k} label={`Temp stator ${lbl}`} name={`temp_stator_${k}`} value={ge[`temp_stator_${k}`]} set={(n,v)=>g('generateur',n,v)} unit="°C" />
-                ))}
-                <F label="Temp air excitation N GEXT"  name="temp_air_excitation_gext" value={ge.temp_air_excitation_gext} set={(n,v)=>g('generateur',n,v)} unit="°C" />
-
-                {/* 6 */}
-                <Titre t="Vibration" />
-                {[['palier1_bb1','Palier n°1 BB-1'],['palier1_bb2','Palier n°1 BB-2'],['palier2_bb3','Palier n°2 BB-3'],
-                  ['palier2_bb4','Palier n°2 BB-4'],['palier3_bb5','Palier n°3 BB-5'],['palier4_bb10','Palier n°4 BB-10'],
-                  ['palier4_bb11','Palier n°4 BB-11'],['palier1_bb12','Palier n°1 BB-12'],['vibration_maxi','Vibration maxi BB max']].map(([k,lbl]) => (
-                  <F key={k} label={lbl} name={k} value={vi[k]} set={(n,v)=>g('vibrations',n,v)} unit="mm/s" />
-                ))}
-
-                {/* 7 */}
-                <Titre t="Température Métal Blanc" />
-                <F label="Patin de butée (B) BTTA 1_2"  name="btta1_2"    value={mb.btta1_2}    set={(n,v)=>g('metal_blanc',n,v)} unit="°C" />
-                <F label="Patin de butée (C) BTTA 1_5"  name="btta1_5"    value={mb.btta1_5}    set={(n,v)=>g('metal_blanc',n,v)} unit="°C" />
-                <F label="Patin de butée (D) BTTA 1_8"  name="btta1_8"    value={mb.btta1_8}    set={(n,v)=>g('metal_blanc',n,v)} unit="°C" />
-                <F label="Contre butée (E) BTTI 1_2"    name="btti1_2"    value={mb.btti1_2}    set={(n,v)=>g('metal_blanc',n,v)} unit="°C" />
-                <F label="Contre butée (F) BTTI 1_5"    name="btti1_5"    value={mb.btti1_5}    set={(n,v)=>g('metal_blanc',n,v)} unit="°C" />
-                <F label="Contre butée (G) BTTI 1_9"    name="btti1_9"    value={mb.btti1_9}    set={(n,v)=>g('metal_blanc',n,v)} unit="°C" />
-                <F label="Palier n°1 (H) BTJ 1_1"       name="btj1_1"     value={mb.btj1_1}     set={(n,v)=>g('metal_blanc',n,v)} unit="°C" />
-                <F label="Palier n°1 (I) BTJ 1_2"       name="btj1_2"     value={mb.btj1_2}     set={(n,v)=>g('metal_blanc',n,v)} unit="°C" />
-                <F label="Palier n°2 (J) BTJ 2_1"       name="btj2_1"     value={mb.btj2_1}     set={(n,v)=>g('metal_blanc',n,v)} unit="°C" />
-                <F label="Palier n°2 (K) BTJ 2_2"       name="btj2_2"     value={mb.btj2_2}     set={(n,v)=>g('metal_blanc',n,v)} unit="°C" />
-                <F label="Palier n°3 (L) BTJ 3_1"       name="btj3_1"     value={mb.btj3_1}     set={(n,v)=>g('metal_blanc',n,v)} unit="°C" />
-                <F label="Palier n°3 (M) BTJ 3_2"       name="btj3_2"     value={mb.btj3_2}     set={(n,v)=>g('metal_blanc',n,v)} unit="°C" />
-                <F label="Palier n°4 (N) BTGJ 1_1"      name="btgj1_1_p4" value={mb.btgj1_1_p4} set={(n,v)=>g('metal_blanc',n,v)} unit="°C" />
-                <F label="Palier n°5 (O) BTGJ 1_1"      name="btgj1_1_p5" value={mb.btgj1_1_p5} set={(n,v)=>g('metal_blanc',n,v)} unit="°C" />
-
-                {/* 8 */}
-                <Titre t="Température Inter-Roue" />
-                <F label="Face avant 1ère roue TTWS1FI1"   name="ttws1fi1" value={mb.ttws1fi1} set={(n,v)=>g('metal_blanc',n,v)} unit="°C" />
-                <F label="Face avant 1ère roue TTWS1FI2"   name="ttws1fi2" value={mb.ttws1fi2} set={(n,v)=>g('metal_blanc',n,v)} unit="°C" />
-                <F label="Face arrière 1ère roue TTWS101"  name="ttws1_01" value={mb.ttws1_01} set={(n,v)=>g('metal_blanc',n,v)} unit="°C" />
-                <F label="Face arrière 1ère roue TTWS102"  name="ttws1_02" value={mb.ttws1_02} set={(n,v)=>g('metal_blanc',n,v)} unit="°C" />
-                <F label="Face avant 2ème roue TTWS2F01"   name="ttws2f01" value={mb.ttws2f01} set={(n,v)=>g('metal_blanc',n,v)} unit="°C" />
-                <F label="Face avant 2ème roue TTWS2F02"   name="ttws2f02" value={mb.ttws2f02} set={(n,v)=>g('metal_blanc',n,v)} unit="°C" />
-                <F label="Face arrière 2ème roue TTWS2A01" name="ttws2a01" value={mb.ttws2a01} set={(n,v)=>g('metal_blanc',n,v)} unit="°C" />
-                <F label="Face arrière 2ème roue TTWS2A02" name="ttws2a02" value={mb.ttws2a02} set={(n,v)=>g('metal_blanc',n,v)} unit="°C" />
-                <F label="Face avant 3ème roue TTWS3F01"   name="ttws3f01" value={mb.ttws3f01} set={(n,v)=>g('metal_blanc',n,v)} unit="°C" />
-                <F label="Face avant 3ème roue TTWS3F02"   name="ttws3f02" value={mb.ttws3f02} set={(n,v)=>g('metal_blanc',n,v)} unit="°C" />
-                <F label="Face arrière 3ème roue TTWS3A01" name="ttws3a01" value={mb.ttws3a01} set={(n,v)=>g('metal_blanc',n,v)} unit="°C" />
-                <F label="Face arrière 3ème roue TTWS3A02" name="ttws3a02" value={mb.ttws3a02} set={(n,v)=>g('metal_blanc',n,v)} unit="°C" />
-
-                {/* 9 */}
-                <Titre t="Circuit Gaz" />
-                <F label="Temp gaz FTG-TKG"        name="temp_gaz_ftg_tkg"       value={form.temp_gaz_ftg_tkg}       set={f} unit="°C" />
-                <F label="Press skid gaz FPGI"     name="press_skid_gaz_fpgi"    value={form.press_skid_gaz_fpgi}    set={f} unit="bar" />
-                <F label="Press avant SRV FGUP"    name="press_avant_srv_fgup"   value={form.press_avant_srv_fgup}   set={f} unit="bar" />
-                <F label="Press inter-vanne FPG2"  name="press_inter_vanne_fpg2" value={form.press_inter_vanne_fpg2} set={f} unit="bar" />
-                <F label="Débit massique FQGM"     name="debit_massique_fqgm"    value={form.debit_massique_fqgm}    set={f} unit="kg/s" />
-                <F label="Signal de référence FSR" name="signal_reference_fsr"   value={form.signal_reference_fsr}   set={f} unit="%" />
-
-                {/* 10 */}
-                <Titre t="Compresseur Axial" />
-                <F label="Press refoulement CPD"   name="press_refoul_cpd"       value={form.press_refoul_cpd}       set={f} unit="bar" />
-                <F label="Temp entrée com CTIFR"   name="temp_entree_comp_ctifr" value={form.temp_entree_comp_ctifr} set={f} unit="°C" />
-                <F label="Temp sortie CTD"         name="temp_sortie_ctd"        value={form.temp_sortie_ctd}        set={f} unit="°C" />
-                <F label="Débit massique"          name="debit_massique_comp"    value={form.debit_massique_comp}    set={f} unit="kg/s" />
-
-                {/* 11 */}
-                <Titre t="Température d'Échappement" />
-                <F label="Temp moyenne TTXM"       name="ttxm_moyenne"  value={ec.ttxm_moyenne}  set={(n,v)=>g('echappement',n,v)} unit="°C" />
-                <F label="Ecart admissible TTXSPL" name="ttxspl_ecart"  value={ec.ttxspl_ecart}  set={(n,v)=>g('echappement',n,v)} unit="°C" />
-                <F label="Ecart n°1 TTXSP1"        name="ttxsp1"        value={ec.ttxsp1}        set={(n,v)=>g('echappement',n,v)} unit="°C" />
-                <F label="Ecart n°2 TTXSP2"        name="ttxsp2"        value={ec.ttxsp2}        set={(n,v)=>g('echappement',n,v)} unit="°C" />
-                <F label="Ecart n°3 TTXSP3"        name="ttxsp3"        value={ec.ttxsp3}        set={(n,v)=>g('echappement',n,v)} unit="°C" />
-                {Array.from({length:24},(_,i)=>i+1).map(n => (
-                  <F key={n} label={`Thermocouple TTXD_${n}`} name={`ttxd_${String(n).padStart(2,'0')}`} value={ec[`ttxd_${String(n).padStart(2,'0')}`]} set={(k,v)=>g('echappement',k,v)} unit="°C" />
-                ))}
+                {/* ── Colonne 4 : Compresseur + Échappement ── */}
+                <div className="space-y-2">
+                  <SectHead t="Compresseur Axial" />
+                  <F label="Press refoulement CPD"   name="press_refoul_cpd"       value={form.press_refoul_cpd}       set={f} unit="bar" />
+                  <F label="Temp entrée com CTIFR"   name="temp_entree_comp_ctifr" value={form.temp_entree_comp_ctifr} set={f} unit="°C" />
+                  <F label="Temp sortie CTD"         name="temp_sortie_ctd"        value={form.temp_sortie_ctd}        set={f} unit="°C" />
+                  <F label="Débit massique"          name="debit_massique_comp"    value={form.debit_massique_comp}    set={f} unit="kg/s" />
+                  <SectHead t="Température d'Échappement" />
+                  <F label="Temp moyenne TTXM"       name="ttxm_moyenne"  value={ec.ttxm_moyenne}  set={(n,v)=>g('echappement',n,v)} unit="°C" />
+                  <F label="Ecart admissible TTXSPL" name="ttxspl_ecart"  value={ec.ttxspl_ecart}  set={(n,v)=>g('echappement',n,v)} unit="°C" />
+                  <F label="Ecart n°1 TTXSP1"        name="ttxsp1"        value={ec.ttxsp1}        set={(n,v)=>g('echappement',n,v)} unit="°C" />
+                  <F label="Ecart n°2 TTXSP2"        name="ttxsp2"        value={ec.ttxsp2}        set={(n,v)=>g('echappement',n,v)} unit="°C" />
+                  <F label="Ecart n°3 TTXSP3"        name="ttxsp3"        value={ec.ttxsp3}        set={(n,v)=>g('echappement',n,v)} unit="°C" />
+                  {Array.from({length:24},(_,i)=>i+1).map(n => (
+                    <F key={n} label={`Thermocouple TTXD_${n}`} name={`ttxd_${String(n).padStart(2,'0')}`} value={ec[`ttxd_${String(n).padStart(2,'0')}`]} set={(k,v)=>g('echappement',k,v)} unit="°C" />
+                  ))}
+                </div>
 
               </div>
               <SaveBtn />

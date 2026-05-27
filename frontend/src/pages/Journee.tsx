@@ -258,7 +258,11 @@ export default function Journee() {
                 className="w-full bg-slate-800 border border-slate-600 rounded-lg px-3 py-2 text-white text-sm focus:outline-none focus:border-amber-500"
               >
                 <option value="">— Non assigné —</option>
-                {users?.map((u: any) => (
+                {users?.filter((u: any) =>
+                  field === 'chef_quart_id' ? u.role === 'chef_quart' :
+                  field === 'chef_bloc_id'  ? u.role === 'chef_bloc'  :
+                  u.role === 'operateur'
+                ).map((u: any) => (
                   <option key={u.id} value={u.id}>{u.prenom} {u.nom} ({u.matricule})</option>
                 ))}
               </select>
