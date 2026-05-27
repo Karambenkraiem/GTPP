@@ -11,7 +11,7 @@ type NavItem = { to: string; icon: any; label: string; roles?: string[] };
 
 const navItems: NavItem[] = [
   { to: '/', icon: LayoutDashboard, label: 'Dashboard' },
-  { to: '/journee', icon: BookOpen, label: 'Journée' },
+  { to: '/journee', icon: BookOpen, label: 'Journée', roles: ['operateur', 'chef_bloc', 'chef_quart', 'chef_exploitation', 'admin'] },
   { to: '/releves-bloc', icon: Activity, label: 'Relevés Chef Bloc', roles: ['chef_bloc', 'chef_quart', 'admin', 'chef_exploitation'] },
   { to: '/releves-op', icon: ClipboardList, label: 'Saisie Relevés Op.', roles: ['operateur', 'chef_quart', 'admin', 'chef_exploitation'] },
   { to: '/manouvres', icon: Zap, label: 'Manœuvres' },

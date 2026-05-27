@@ -299,54 +299,44 @@ export default function Rapport() {
                       </div>
                     ))}
                   </div>
-                </div>
-              </div>
-            )}
 
-            {/* ── 4. Paramètres machine ── */}
-            {releves.length > 0 && (
-              <div className="bg-slate-900 border border-slate-700 rounded-lg overflow-hidden">
-                <SectionTitle icon={Activity} title="Paramètres Machine — Résumé" count={releves.length} />
-                <div className="overflow-x-auto">
-                  <table className="w-full text-xs border-collapse" style={{ minWidth: '700px' }}>
-                    <thead>
-                      <tr className="bg-slate-800 border-b border-slate-600 text-slate-400">
-                        <th className="text-left px-3 py-2 font-medium border-r border-slate-700">Heure</th>
-                        <th className="text-center px-3 py-2 font-medium border-r border-slate-700">P.Active (MW)</th>
-                        <th className="text-center px-3 py-2 font-medium border-r border-slate-700">Fréq. (Hz)</th>
-                        <th className="text-center px-3 py-2 font-medium border-r border-slate-700">TTXM moy. (°C)</th>
-                        <th className="text-center px-3 py-2 font-medium border-r border-slate-700">Spread (°C)</th>
-                        <th className="text-center px-3 py-2 font-medium border-r border-slate-700">Vib. Maxi (mm/s)</th>
-                        <th className="text-center px-3 py-2 font-medium border-r border-slate-700">T° Amb. (°C)</th>
-                        <th className="text-center px-3 py-2 font-medium">Saisi par</th>
-                      </tr>
-                    </thead>
-                    <tbody className="divide-y divide-slate-800">
-                      {releves.map((r: any) => {
-                        const vibMax = r.vibrations?.vibration_maxi;
-                        return (
-                          <tr key={r.id} className="hover:bg-slate-800/30">
-                            <td className="px-3 py-2 text-amber-400 font-medium border-r border-slate-800">
-                              {safeDate(r.heure_releve, 'HH:mm')}
-                            </td>
-                            <td className="text-center px-3 py-2 text-white border-r border-slate-800">{fmt(r.generateur?.puissance_active_mw)}</td>
-                            <td className="text-center px-3 py-2 text-white border-r border-slate-800">{fmt(r.generateur?.frequence_hz, 3)}</td>
-                            <td className="text-center px-3 py-2 text-white border-r border-slate-800">{fmt(r.echappement?.ttxm_moyenne)}</td>
-                            <td className="text-center px-3 py-2 text-white border-r border-slate-800">{fmt(r.echappement?.spread_calcule)}</td>
-                            <td className="text-center px-3 py-2 border-r border-slate-800">
-                              <span className={vibMax != null && Number(vibMax) > 5 ? 'text-red-400 font-medium' : 'text-white'}>
-                                {fmt(vibMax, 2)}
-                              </span>
-                            </td>
-                            <td className="text-center px-3 py-2 text-white border-r border-slate-800">{fmt(r.temp_ambiante_ctim)}</td>
-                            <td className="text-center px-3 py-2 text-slate-400">
-                              {r.saiseur ? `${r.saiseur.prenom} ${r.saiseur.nom}` : '—'}
-                            </td>
-                          </tr>
-                        );
-                      })}
-                    </tbody>
-                  </table>
+                  {/* ── Ligne 3 : PMS / Aux en charge / Production nette / Aux 24h ── */}
+                  {(() => {
+                    const energieBrute = compteurs.energie_active_00h != null && compteurs.energie_active_24h != null
+                      ? Number(compteurs.energie_active_24h) - Number(compteurs.energie_active_00h) : null;
+                    const consoAuxCharge = compteurs.conso_aux_couplage != null && compteurs.conso_aux_decouplage != null
+                      ? Math.abs(Number(compteurs.conso_aux_decouplage) - Number(compteurs.conso_aux_couplage)) : null;
+                    const productionNette = energieBrute != null && consoAuxCharge != null
+                      ? energieBrute - consoAuxCharge : null;
+                    const consoAux24h = compteurs.auxiliaires_00h != null && compteurs.auxiliaires_24h != null
+                      ? Number(compteurs.auxiliaires_24h) - Number(compteurs.auxiliaires_00h) : null;
+                    const hPms = compteurs.h_pms_00h != null && compteurs.h_pms_24h != null
+                      ? Number(compteurs.h_pms_24h) - Number(compteurs.h_pms_00h) : null;
+
+                    return (
+                      <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
+                        <div className="bg-slate-800 rounded-lg p-3">
+                          <p className="text-xs text-slate-500 mb-1">Heures PMS</p>
+                          <p className="text-base font-bold text-white">{hPms != null ? `${hPms.toFixed(1)} h` : '—'}</p>
+                        </div>
+                        <div className="bg-slate-800 rounded-lg p-3">
+                          <p className="text-xs text-slate-500 mb-1">Conso. Aux. en Charge</p>
+                          <p className="text-base font-bold text-white">{consoAuxCharge != null ? `${consoAuxCharge.toFixed(3)} MWh` : '—'}</p>
+                          <p className="text-[10px] text-slate-600 mt-0.5">Découplage − Couplage (opérateur)</p>
+                        </div>
+                        <div className="bg-slate-800 border border-amber-500/20 rounded-lg p-3">
+                          <p className="text-xs text-slate-500 mb-1">Production Nette</p>
+                          <p className="text-base font-bold text-amber-400">{productionNette != null ? `${productionNette.toFixed(1)} MWh` : '—'}</p>
+                          <p className="text-[10px] text-slate-600 mt-0.5">Brute − Aux. en charge</p>
+                        </div>
+                        <div className="bg-slate-800 rounded-lg p-3">
+                          <p className="text-xs text-slate-500 mb-1">Conso. Aux. 24h</p>
+                          <p className="text-base font-bold text-white">{consoAux24h != null ? `${consoAux24h.toFixed(1)} MWh` : '—'}</p>
+                          <p className="text-[10px] text-slate-600 mt-0.5">Index 24h − Index 00h</p>
+                        </div>
+                      </div>
+                    );
+                  })()}
                 </div>
               </div>
             )}

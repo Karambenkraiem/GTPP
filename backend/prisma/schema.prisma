@@ -13,6 +13,8 @@ enum RoleUtilisateur {
   chef_bloc
   chef_quart
   chef_exploitation
+  chef_centrale
+  chef_maintenance
   admin
 
   @@map("role_utilisateur")

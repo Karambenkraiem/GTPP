@@ -7,8 +7,8 @@ import { Plus, Pencil, UserX, ChevronUp, ChevronDown, ChevronsUpDown } from 'luc
 import { ROLE_LABELS } from '../../types';
 import type { User, Role } from '../../types';
 
-const ROLES: Role[] = ['operateur', 'chef_bloc', 'chef_quart', 'chef_exploitation', 'admin'];
-const ROLE_ORDER: Record<Role, number> = { operateur: 0, chef_bloc: 1, chef_quart: 2, chef_exploitation: 3, admin: 4 };
+const ROLES: Role[] = ['operateur', 'chef_bloc', 'chef_quart', 'chef_exploitation', 'chef_centrale', 'chef_maintenance', 'admin'];
+const ROLE_ORDER: Record<Role, number> = { operateur: 0, chef_bloc: 1, chef_quart: 2, chef_exploitation: 3, chef_centrale: 4, chef_maintenance: 5, admin: 6 };
 const EMPTY_FORM = { role: 'operateur' as Role };
 
 type SortCol = 'nom' | 'matricule' | 'role' | 'actif';
@@ -66,6 +66,8 @@ export default function Users() {
     chef_bloc: 'bg-blue-400/10 text-blue-400',
     chef_quart: 'bg-purple-400/10 text-purple-400',
     chef_exploitation: 'bg-amber-400/10 text-amber-400',
+    chef_centrale: 'bg-teal-400/10 text-teal-400',
+    chef_maintenance: 'bg-orange-400/10 text-orange-400',
     admin: 'bg-red-400/10 text-red-400',
   };
 

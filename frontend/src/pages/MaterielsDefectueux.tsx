@@ -1,4 +1,4 @@
-import { useState, useRef } from 'react';
+import { useState, useRef, useEffect } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { defautsApi } from '../lib/api';
 import { useAuth } from '../contexts/AuthContext';
@@ -40,7 +40,9 @@ function fmtDate(val: string | null | undefined) {
 
 export default function MaterielsDefectueux() {
   const { user } = useAuth();
-  const canEdit = ['chef_quart', 'chef_exploitation', 'admin'].includes(user?.role ?? '');
+  const canEditFields = ['chef_quart', 'chef_exploitation', 'admin'].includes(user?.role ?? '');
+  const canEditCommentaires = ['chef_quart', 'chef_exploitation', 'admin', 'chef_maintenance'].includes(user?.role ?? '');
+  const canEdit = canEditCommentaires;
   const qc = useQueryClient();
 
   const [activeTab, setActiveTab] = useState<ZoneKey>('site');
@@ -139,6 +141,14 @@ export default function MaterielsDefectueux() {
     el.style.height = el.scrollHeight + 'px';
   }
 
+  useEffect(() => {
+    if (!editingId) return;
+    setTimeout(() => {
+      if (editDescRef.current) autoResize(editDescRef.current);
+      if (editComRef.current)  autoResize(editComRef.current);
+    }, 0);
+  }, [editingId]);
+
   const section = SECTIONS.find(s => s.key === activeTab)!;
 
   return (
@@ -179,7 +189,9 @@ export default function MaterielsDefectueux() {
 
           {canEdit && (
             <p className="text-[11px] text-slate-500 px-4 py-1.5 border-b border-slate-800 italic">
-              Cliquer sur une ligne pour modifier · Entrée pour naviguer · Shift+Entrée pour aller à la ligne · Entrée sur Commentaires pour valider
+              {canEditFields
+                ? 'Cliquer sur une ligne pour modifier · Entrée pour naviguer · Shift+Entrée pour aller à la ligne · Entrée sur Commentaires pour valider'
+                : 'Cliquer sur une ligne pour saisir les commentaires · Entrée pour valider'}
             </p>
           )}
 
@@ -211,17 +223,20 @@ export default function MaterielsDefectueux() {
                   editingId === d.id ? (
                     <tr key={d.id} className="border-b border-amber-500/40 bg-amber-500/5">
                       <td className="px-2 py-1.5 w-28">
-                        <input type="text" value={editRow.kks_equipement} autoFocus
+                        <input type="text" value={editRow.kks_equipement}
+                          autoFocus={canEditFields}
+                          disabled={!canEditFields}
                           placeholder="KKS"
                           onChange={e => setEditRow(r => ({ ...r, kks_equipement: e.target.value }))}
                           onKeyDown={e => {
                             if (e.key === 'Enter')  { e.preventDefault(); editDescRef.current?.focus(); }
                             if (e.key === 'Escape') setEditingId(null);
                           }}
-                          className={`${inputCls} font-mono text-center text-amber-400`} />
+                          className={`${canEditFields ? inputCls : 'w-full bg-slate-800/30 border border-slate-700 rounded px-2 py-1 text-slate-500 text-sm font-mono text-center cursor-not-allowed'}`} />
                       </td>
                       <td className="px-2 py-1.5 w-60">
                         <textarea ref={editDescRef} value={editRow.description} rows={1}
+                          disabled={!canEditFields}
                           placeholder="Description..."
                           onChange={e => { setEditRow(r => ({ ...r, description: e.target.value })); autoResize(e.target); }}
                           onInput={e => autoResize(e.currentTarget)}
@@ -229,28 +244,31 @@ export default function MaterielsDefectueux() {
                             if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); editDeclRef.current?.focus(); }
                             if (e.key === 'Escape') setEditingId(null);
                           }}
-                          className={`${inputCls} ${taCls}`} />
+                          className={`${canEditFields ? inputCls : 'w-full bg-slate-800/30 border border-slate-700 rounded px-2 py-1 text-slate-500 text-sm cursor-not-allowed'} ${taCls}`} />
                       </td>
                       <td className="px-2 py-1.5 w-32">
                         <input ref={editDeclRef} type="date" value={editRow.date_declaration}
+                          disabled={!canEditFields}
                           onChange={e => setEditRow(r => ({ ...r, date_declaration: e.target.value }))}
                           onKeyDown={e => {
                             if (e.key === 'Enter')  { e.preventDefault(); editCloRef.current?.focus(); }
                             if (e.key === 'Escape') setEditingId(null);
                           }}
-                          className={inputCls} />
+                          className={canEditFields ? inputCls : 'w-full bg-slate-800/30 border border-slate-700 rounded px-2 py-1 text-slate-500 text-sm cursor-not-allowed'} />
                       </td>
                       <td className="px-2 py-1.5 w-32">
                         <input ref={editCloRef} type="date" value={editRow.date_cloture}
+                          disabled={!canEditFields}
                           onChange={e => setEditRow(r => ({ ...r, date_cloture: e.target.value }))}
                           onKeyDown={e => {
                             if (e.key === 'Enter')  { e.preventDefault(); editComRef.current?.focus(); }
                             if (e.key === 'Escape') setEditingId(null);
                           }}
-                          className={inputCls} />
+                          className={canEditFields ? inputCls : 'w-full bg-slate-800/30 border border-slate-700 rounded px-2 py-1 text-slate-500 text-sm cursor-not-allowed'} />
                       </td>
                       <td className="px-2 py-1.5 w-60">
                         <textarea ref={editComRef} value={editRow.commentaires} rows={1}
+                          autoFocus={!canEditFields}
                           placeholder="Commentaires..."
                           onChange={e => { setEditRow(r => ({ ...r, commentaires: e.target.value })); autoResize(e.target); }}
                           onInput={e => autoResize(e.currentTarget)}
@@ -277,7 +295,7 @@ export default function MaterielsDefectueux() {
                       <td className="text-center px-3 py-3 text-slate-300 text-xs align-top">{fmtDate(d.date_cloture)}</td>
                       <td className="px-3 py-3 text-slate-400 text-xs align-top whitespace-pre-wrap w-60">{d.commentaires || '—'}</td>
                       <td className="px-2 py-3 text-center align-top" onClick={e => e.stopPropagation()}>
-                        {canEdit && (
+                        {canEditFields && (
                           <button onClick={() => deleteMut.mutate(d.id)} disabled={deleteMut.isPending}
                             className="text-slate-600 hover:text-red-400 transition-colors disabled:opacity-40">
                             <Trash2 size={13} />
@@ -289,7 +307,7 @@ export default function MaterielsDefectueux() {
                 )}
 
                 {/* ── Nouvelle ligne ── */}
-                {canEdit && (
+                {canEditFields && (
                   <tr className="border-t-2 border-amber-500/30 bg-slate-800/40">
                     <td className="px-2 py-2 w-28">
                       <input ref={newKksRef} type="text" value={newRow.kks_equipement}

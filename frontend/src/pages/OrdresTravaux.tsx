@@ -20,7 +20,7 @@ const EMPTY_ROW: RowState = { numero_ot: '', kks_equipement: '', description: ''
 
 export default function OrdresTravaux() {
   const { user } = useAuth();
-  const canEdit = user?.role !== 'operateur';
+  const canEdit = ['chef_bloc', 'chef_quart', 'chef_exploitation', 'admin'].includes(user?.role ?? '');
   const qc = useQueryClient();
   const today = format(new Date(), 'yyyy-MM-dd');
   const [selectedDate, setSelectedDate] = useState(today);
