@@ -63,6 +63,9 @@ router.get('/', async (req, res) => {
         ],
       },
       orderBy: { date_declaration: 'asc' },
+      include: {
+        commentaireAuteur: { select: { nom: true, prenom: true } },
+      },
     });
 
     res.json({ journee, defauts });

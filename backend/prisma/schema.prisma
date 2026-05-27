@@ -131,6 +131,7 @@ model Utilisateur {
   releves_op            RelevesOperateur[]
   manouvres             Manouvre[]
   seuilsModifies        SeuilAlarme[]
+  defautsCommentes      MaterielDefectueux[] @relation("CommentaireAuteur")
 
   @@map("utilisateurs")
 }
@@ -592,10 +593,14 @@ model MaterielDefectueux {
   date_declaration DateTime     @db.Date
   date_cloture     DateTime?    @db.Date
   commentaires     String?      @db.Text
+  commentaire_par  String?      @db.Uuid
+  commentaire_le   DateTime?    @db.Timestamptz(6)
   statut           StatutDefaut @default(ouvert)
   actif            Boolean?
   cree_le          DateTime     @default(now()) @db.Timestamptz(6)
   modifie_le       DateTime     @default(now()) @db.Timestamptz(6)
+
+  commentaireAuteur Utilisateur? @relation("CommentaireAuteur", fields: [commentaire_par], references: [id])
 
   @@map("materiels_defectueux")
 }

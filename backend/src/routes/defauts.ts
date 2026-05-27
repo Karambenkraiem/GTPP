@@ -15,6 +15,9 @@ router.get('/', async (req, res) => {
     const defauts = await prisma.materielDefectueux.findMany({
       where,
       orderBy: { date_declaration: 'desc' },
+      include: {
+        commentaireAuteur: { select: { nom: true, prenom: true } },
+      },
     });
     res.json(defauts);
   } catch {
@@ -33,6 +36,7 @@ router.post('/', async (req, res) => {
         date_declaration: new Date(date_declaration),
         commentaires,
         statut: 'ouvert',
+        ...(commentaires ? { commentaire_par: req.user!.userId, commentaire_le: new Date() } : {}),
       },
     });
     res.status(201).json(defaut);
@@ -44,6 +48,8 @@ router.post('/', async (req, res) => {
 router.put('/:id', async (req, res) => {
   try {
     const { kks_equipement, description, zone, commentaires, statut, date_cloture } = req.body;
+    const prev = await prisma.materielDefectueux.findUnique({ where: { id: req.params.id } });
+    const commentaireChanged = (commentaires ?? null) !== (prev?.commentaires ?? null);
     const defaut = await prisma.materielDefectueux.update({
       where: { id: req.params.id },
       data: {
@@ -54,6 +60,10 @@ router.put('/:id', async (req, res) => {
         statut,
         date_cloture: date_cloture ? new Date(date_cloture) : undefined,
         modifie_le: new Date(),
+        ...(commentaireChanged ? { commentaire_par: req.user!.userId, commentaire_le: new Date() } : {}),
+      },
+      include: {
+        commentaireAuteur: { select: { nom: true, prenom: true } },
       },
     });
     res.json(defaut);

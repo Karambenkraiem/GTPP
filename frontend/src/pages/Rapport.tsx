@@ -50,7 +50,15 @@ function DefautTable({ rows }: { rows: any[] }) {
             <td className="px-4 py-2.5 text-slate-300 text-sm align-top whitespace-pre-wrap">{d.description}</td>
             <td className="px-4 py-2.5 text-slate-400 text-xs align-top">{safeDate(d.date_declaration, 'dd/MM/yyyy')}</td>
             <td className="px-4 py-2.5 text-slate-400 text-xs align-top">{safeDate(d.date_cloture, 'dd/MM/yyyy')}</td>
-            <td className="px-4 py-2.5 text-slate-400 text-xs align-top whitespace-pre-wrap">{d.commentaires || '—'}</td>
+            <td className="px-4 py-2.5 text-slate-400 text-xs align-top whitespace-pre-wrap">
+              {d.commentaires || '—'}
+              {d.commentaires && d.commentaireAuteur && (
+                <p className="text-slate-600 text-[10px] mt-0.5 italic">
+                  {d.commentaireAuteur.prenom} {d.commentaireAuteur.nom}
+                  {d.commentaire_le ? ` · ${safeDate(d.commentaire_le, 'dd/MM HH:mm')}` : ''}
+                </p>
+              )}
+            </td>
           </tr>
         ))}
       </tbody>
