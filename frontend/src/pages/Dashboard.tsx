@@ -38,7 +38,7 @@ export default function Dashboard() {
     <div>
       <PageHeader
         title="Tableau de Bord"
-        subtitle={`${format(new Date(), "EEEE d MMMM yyyy", { locale: fr })} — Journée ${journee ? STATUT_JOURNEE_LABELS[journee.statut] : 'non créée'}`}
+        subtitle={`${format(new Date(), "EEEE d MMMM yyyy", { locale: fr })} — Journée ${journee ? STATUT_JOURNEE_LABELS[journee.statut as keyof typeof STATUT_JOURNEE_LABELS] : 'non créée'}`}
       />
 
       <div className="p-6 space-y-6">

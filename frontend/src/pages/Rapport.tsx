@@ -198,7 +198,7 @@ export default function Rapport() {
                     journee.statut === 'valide_bloc'  ? 'bg-amber-500/10 text-amber-400':
                     'bg-slate-700 text-slate-300'
                   }`}>
-                    {STATUT_JOURNEE_LABELS[journee.statut]}
+                    {STATUT_JOURNEE_LABELS[journee.statut as keyof typeof STATUT_JOURNEE_LABELS]}
                   </span>
                 </div>
                 {journee.valide_bloc_le && (

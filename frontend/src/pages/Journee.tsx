@@ -147,7 +147,7 @@ export default function Journee() {
                     selectedJournee.statut === 'valide_bloc' ? 'bg-amber-500/10 text-amber-400' :
                     'bg-slate-700 text-slate-300'
                   }`}>
-                    {STATUT_JOURNEE_LABELS[selectedJournee.statut]}
+                    {STATUT_JOURNEE_LABELS[selectedJournee.statut as keyof typeof STATUT_JOURNEE_LABELS]}
                   </span>
                 </div>
                 <div className="flex gap-2">
