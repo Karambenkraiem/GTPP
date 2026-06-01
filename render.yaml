@@ -1,0 +1,19 @@
+services:
+  - type: web
+    name: gtpp-backend
+    runtime: docker
+    dockerfilePath: ./backend/Dockerfile.prod
+    dockerContext: ./backend
+    envVars:
+      - key: DATABASE_URL
+        sync: false
+      - key: JWT_SECRET
+        sync: false
+      - key: NODE_ENV
+        value: production
+      - key: PORT
+        value: 3001
+      - key: TZ
+        value: Africa/Tunis
+      - key: CORS_ORIGIN
+        sync: false
