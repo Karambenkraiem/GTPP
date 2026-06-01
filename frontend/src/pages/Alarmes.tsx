@@ -19,7 +19,7 @@ const EMPTY_ROW: RowState = { tag: '', designation: '' };
 
 export default function Alarmes() {
   const { user } = useAuth();
-  const canEdit = ['chef_bloc', 'chef_quart', 'chef_exploitation', 'admin'].includes(user?.role ?? '');
+  const canEdit = ['chef_quart', 'chef_exploitation', 'admin'].includes(user?.role ?? '');
   const qc = useQueryClient();
   const today = format(new Date(), 'yyyy-MM-dd');
   const [selectedDate, setSelectedDate] = useState(today);
