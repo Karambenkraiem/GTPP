@@ -1,0 +1,28 @@
+FROM node:20-alpine AS builder
+
+RUN apk add --no-cache openssl
+
+WORKDIR /app
+
+COPY backend/package*.json ./
+COPY backend/prisma ./prisma/
+
+RUN npm install
+
+COPY backend/ ./
+
+RUN npx prisma generate && npm run build
+
+# ── Image finale ──
+FROM node:20-alpine
+
+RUN apk add --no-cache openssl
+
+WORKDIR /app
+
+COPY --from=builder /app/dist         ./dist
+COPY --from=builder /app/node_modules ./node_modules
+COPY --from=builder /app/prisma       ./prisma
+COPY backend/package*.json ./
+
+CMD ["sh", "-c", "npx prisma db push --accept-data-loss && node dist/index.js"]
