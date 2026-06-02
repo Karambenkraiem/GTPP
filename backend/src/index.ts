@@ -62,8 +62,16 @@ async function seedAdmin() {
 
 app.listen(PORT, async () => {
   console.log(`GTpp backend démarré sur le port ${PORT}`);
-  await seedAdmin();
-  startReleveCron();
+  try {
+    await seedAdmin();
+  } catch (e) {
+    console.error('seedAdmin failed (DB pas encore prête ?):', e);
+  }
+  try {
+    startReleveCron();
+  } catch (e) {
+    console.error('cron failed:', e);
+  }
 });
 
 export default app;
