@@ -11,7 +11,8 @@ RUN npm install
 
 COPY backend/ ./
 
-RUN DATABASE_URL="postgresql://dummy:dummy@dummy:5432/dummy" npx prisma generate && npm run build
+ENV DATABASE_URL="postgresql://dummy:dummy@dummy:5432/dummy"
+RUN npm run build
 
 # ── Image finale ──
 FROM node:20-alpine
