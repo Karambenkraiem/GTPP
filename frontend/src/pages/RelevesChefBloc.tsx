@@ -337,7 +337,7 @@ export default function RelevesChefBloc() {
         ))}
       </div>
 
-      <div className="p-6 space-y-4">
+      <div className="p-3 sm:p-6 space-y-4">
         {!journee && (
           <div className="bg-slate-900 border border-slate-700 rounded-lg p-8 text-center text-slate-400">
             Aucune journée créée pour le {format(new Date(selectedDate + 'T12:00:00'), 'd MMMM yyyy', { locale: fr })}
@@ -737,7 +737,7 @@ export default function RelevesChefBloc() {
                       selectedHour === new Date(r.heure_releve).getHours() ? 'bg-amber-500/5' : ''
                     }`}>
                       <span className="font-mono text-amber-400 text-sm w-14 flex-shrink-0">{format(new Date(r.heure_releve), 'HH:mm')}</span>
-                      <div className="flex-1 grid grid-cols-4 gap-4 text-xs">
+                      <div className="flex-1 grid grid-cols-2 sm:grid-cols-4 gap-2 text-xs">
                         <span className="text-slate-400">T amb: <span className="text-white">{r.temp_ambiante_ctim ?? '—'}°C</span></span>
                         <span className="text-slate-400">RPM: <span className="text-white">{r.vitesse_turbine_rpm ?? '—'}</span></span>
                         <span className="text-slate-400">MW: <span className="text-white">{r.generateur?.puissance_active_mw ?? '—'}</span></span>

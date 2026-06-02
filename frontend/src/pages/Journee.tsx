@@ -105,7 +105,7 @@ export default function Journee() {
     <div>
       <PageHeader title="Gestion de la Journée" subtitle="Journal d'exploitation quotidien" />
 
-      <div className="p-6">
+      <div className="p-3 sm:p-6">
         <div className="flex gap-4 mb-6">
           <div className="flex items-center gap-2">
             <Calendar size={16} className="text-slate-400" />
@@ -216,7 +216,7 @@ export default function Journee() {
 
             {/* Stats */}
             {selectedJournee._count && (
-              <div className="grid grid-cols-4 gap-3">
+              <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
                 {[
                   { label: 'Relevés Bloc', value: selectedJournee._count.releves_bloc },
                   { label: 'Manœuvres', value: selectedJournee._count.manouvres },

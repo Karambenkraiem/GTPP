@@ -354,7 +354,7 @@ export default function RelevesOperateurPage() {
         ))}
       </div>
 
-      <div className="p-6">
+      <div className="p-3 sm:p-6">
         {!journee && (
           <div className="bg-slate-900 border border-slate-700 rounded-lg p-8 text-center text-slate-400">
             Aucune journée créée pour le {format(new Date(selectedDate + 'T12:00:00'), 'd MMMM yyyy', { locale: fr })}
@@ -545,7 +545,7 @@ export default function RelevesOperateurPage() {
                         {format(new Date(r.heure_releve), 'HH:mm')}
                       </span>
                       {r.saisi_par ? (
-                        <div className="flex-1 grid grid-cols-4 gap-4 text-xs">
+                        <div className="flex-1 grid grid-cols-2 sm:grid-cols-4 gap-2 text-xs">
                           <span className="text-slate-400">P refoul.: <span className="text-white">{r.pression_refoul_pompe_bar ?? '—'} bar</span></span>
                           <span className="text-slate-400">P gaz: <span className="text-white">{r.pression_gaz_fpgi_bar ?? '—'} bar</span></span>
                           <span className="text-slate-400">N. huile: <span className="text-white">{r.niveau_huile_reservoir ?? '—'}</span></span>

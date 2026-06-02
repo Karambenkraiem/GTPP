@@ -85,8 +85,9 @@ export default function Users() {
         }
       />
 
-      <div className="p-6">
+      <div className="p-3 sm:p-6">
         <div className="bg-slate-900 border border-slate-700 rounded-lg overflow-hidden">
+          <div className="overflow-x-auto">
           <table className="w-full text-sm">
             <thead>
               <tr className="border-b border-slate-700">
@@ -125,6 +126,7 @@ export default function Users() {
               ))}
             </tbody>
           </table>
+          </div>
         </div>
       </div>
 

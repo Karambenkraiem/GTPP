@@ -158,7 +158,7 @@ export default function MaterielsDefectueux() {
         subtitle="Matériels défectueux et points de réserves retenus"
       />
 
-      <div className="p-6">
+      <div className="p-3 sm:p-6">
         <div className="bg-slate-900 border border-slate-700 rounded-lg overflow-visible">
 
           {/* ── Onglets ── */}

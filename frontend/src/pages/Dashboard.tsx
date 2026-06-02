@@ -41,7 +41,7 @@ export default function Dashboard() {
         subtitle={`${format(new Date(), "EEEE d MMMM yyyy", { locale: fr })} — Journée ${journee ? STATUT_JOURNEE_LABELS[journee.statut as keyof typeof STATUT_JOURNEE_LABELS] : 'non créée'}`}
       />
 
-      <div className="p-6 space-y-6">
+      <div className="p-3 sm:p-6 space-y-4 sm:space-y-6">
         {/* Mesures temps réel */}
         <div>
           <h2 className="text-xs font-medium text-slate-400 uppercase tracking-wider mb-3">Mesures temps réel</h2>

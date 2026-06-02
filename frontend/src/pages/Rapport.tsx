@@ -156,7 +156,7 @@ export default function Rapport() {
         }
       />
 
-      <div className="p-6 space-y-4">
+      <div className="p-3 sm:p-6 space-y-4">
         {/* En-tête imprimable uniquement */}
         <div className="hidden print:flex items-center justify-between border-b border-slate-700 pb-3 mb-2">
           <div>

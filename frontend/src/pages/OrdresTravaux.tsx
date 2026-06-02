@@ -132,7 +132,7 @@ export default function OrdresTravaux() {
         }
       />
 
-      <div className="p-6">
+      <div className="p-3 sm:p-6">
         {!journee && (
           <div className="bg-slate-900 border border-slate-700 rounded-lg p-8 text-center text-slate-400">
             Aucune journée pour le {format(new Date(selectedDate + 'T12:00:00'), 'd MMMM yyyy', { locale: fr })}

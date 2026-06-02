@@ -26,8 +26,9 @@ export default function Seuils() {
     <div>
       <PageHeader title="Seuils d'Alerte" subtitle="Paramètres de surveillance GE 9001E" />
 
-      <div className="p-6">
+      <div className="p-3 sm:p-6">
         <div className="bg-slate-900 border border-slate-700 rounded-lg overflow-hidden">
+          <div className="overflow-x-auto">
           <table className="w-full text-sm">
             <thead>
               <tr className="border-b border-slate-700">
@@ -82,6 +83,7 @@ export default function Seuils() {
               ))}
             </tbody>
           </table>
+          </div>
         </div>
       </div>
     </div>
