@@ -15,6 +15,7 @@ enum RoleUtilisateur {
   chef_exploitation
   chef_centrale
   chef_maintenance
+  directeur
   admin
 
   @@map("role_utilisateur")

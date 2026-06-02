@@ -1,4 +1,4 @@
-export type Role = 'operateur' | 'chef_bloc' | 'chef_quart' | 'chef_exploitation' | 'chef_centrale' | 'chef_maintenance' | 'admin';
+export type Role = 'operateur' | 'chef_bloc' | 'chef_quart' | 'chef_exploitation' | 'chef_centrale' | 'chef_maintenance' | 'directeur' | 'admin';
 export type TrancheHoraire = 'h00_07h' | 'h07_14h' | 'h14_20h' | 'h20_00h';
 export type StatutJournee = 'en_cours' | 'valide_bloc' | 'valide_quart' | 'transmis';
 export type StatutPoste = 'en_cours' | 'termine' | 'valide';
@@ -218,6 +218,7 @@ export const ROLE_LABELS: Record<Role, string> = {
   chef_exploitation: 'Chef d\'Exploitation',
   chef_centrale: 'Chef de Centrale',
   chef_maintenance: 'Chef de Maintenance',
+  directeur: 'Directeur',
   admin: 'Administrateur',
 };
 
