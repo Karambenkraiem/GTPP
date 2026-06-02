@@ -27,12 +27,12 @@ const adminItems = [
   { to: '/admin/seuils', icon: Settings, label: 'Seuils d\'alerte' },
 ];
 
-export default function Sidebar() {
+export default function Sidebar({ onClose }: { onClose?: () => void }) {
   const { user, logout } = useAuth();
   const { theme, toggle } = useTheme();
 
   return (
-    <aside className="w-60 flex-shrink-0 bg-slate-900 border-r border-slate-700 flex flex-col h-screen sticky top-0 print:hidden">
+    <aside className="w-64 md:w-60 flex-shrink-0 bg-slate-900 border-r border-slate-700 flex flex-col h-screen sticky top-0 print:hidden">
       {/* Logo */}
       <div className="px-4 py-5 border-b border-slate-700">
         <div className="flex items-center gap-2">
@@ -52,6 +52,7 @@ export default function Sidebar() {
               key={to}
               to={to}
               end={to === '/'}
+              onClick={onClose}
               className={({ isActive }) =>
                 `flex items-center gap-3 px-3 py-2 rounded text-sm transition-colors ${
                   isActive
@@ -74,6 +75,7 @@ export default function Sidebar() {
                 <NavLink
                   key={to}
                   to={to}
+                  onClick={onClose}
                   className={({ isActive }) =>
                     `flex items-center gap-3 px-3 py-2 rounded text-sm transition-colors ${
                       isActive
