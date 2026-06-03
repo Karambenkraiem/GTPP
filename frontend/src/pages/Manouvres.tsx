@@ -171,7 +171,7 @@ export default function Manouvres() {
   function startEdit(m: any) {
     if (!canEdit) return;
     setEditingId(m.id);
-    setEditRow({ heure: format(new Date(m.heure_manouvre), 'HH:mm'), description: m.description });
+    setEditRow({ heure: m.heure_manouvre.slice(11, 16), description: m.description });
   }
 
   function handleUpdate(id: string, desc?: string) {
@@ -275,7 +275,7 @@ export default function Manouvres() {
                       onClick={() => startEdit(m)}
                       className={`border-b border-slate-800 transition-colors ${canEdit ? 'cursor-pointer hover:bg-slate-800/50' : ''}`}>
                       <td className="text-center px-4 py-3 font-mono text-amber-400 font-bold">
-                        {format(new Date(m.heure_manouvre), 'HH:mm')}
+                        {m.heure_manouvre.slice(11, 16)}
                       </td>
                       <td className="px-4 py-3 text-slate-200">{m.description}</td>
                       <td className="px-2 py-3 text-center" onClick={e => e.stopPropagation()}>
