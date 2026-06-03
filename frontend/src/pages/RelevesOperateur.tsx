@@ -215,7 +215,7 @@ export default function RelevesOperateurPage() {
   const releveByHour = useMemo(() => {
     const map: Record<number, any> = {};
     releves?.forEach((r: any) => {
-      const h = new Date(r.heure_releve).getHours();
+      const h = new Date(r.heure_releve).getUTCHours();
       map[h] = r;
     });
     return map;
@@ -228,7 +228,7 @@ export default function RelevesOperateurPage() {
     if (releve) {
       setForm({
         ...releve,
-        heure_releve: format(new Date(releve.heure_releve), "yyyy-MM-dd'T'HH:mm"),
+        heure_releve: releve.heure_releve.slice(0, 16),
         detecteurs_gaz: releve.detecteurs_gaz || {},
       });
     } else {
@@ -539,10 +539,10 @@ export default function RelevesOperateurPage() {
                 <div className="divide-y divide-slate-800">
                   {releves.map((r: any) => (
                     <div key={r.id} className={`flex items-center gap-4 px-4 py-3 cursor-pointer transition-colors ${
-                      selectedHour === new Date(r.heure_releve).getHours() ? 'bg-amber-500/5' : 'hover:bg-slate-800/50'
-                    }`} onClick={() => setSelectedHour(new Date(r.heure_releve).getHours())}>
+                      selectedHour === new Date(r.heure_releve).getUTCHours() ? 'bg-amber-500/5' : 'hover:bg-slate-800/50'
+                    }`} onClick={() => setSelectedHour(new Date(r.heure_releve).getUTCHours())}>
                       <span className="font-mono text-amber-400 text-sm w-14 flex-shrink-0">
-                        {format(new Date(r.heure_releve), 'HH:mm')}
+                        {r.heure_releve.slice(11, 16)}
                       </span>
                       {r.saisi_par ? (
                         <div className="flex-1 grid grid-cols-2 sm:grid-cols-4 gap-2 text-xs">

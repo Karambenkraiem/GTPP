@@ -148,7 +148,7 @@ export default function RelevesChefBloc() {
 
   const releveByHour = useMemo(() => {
     const map: Record<number, any> = {};
-    releves?.forEach((r: any) => { map[new Date(r.heure_releve).getHours()] = r; });
+    releves?.forEach((r: any) => { map[new Date(r.heure_releve).getUTCHours()] = r; });
     return map;
   }, [releves]);
 
@@ -158,7 +158,7 @@ export default function RelevesChefBloc() {
     if (releve) {
       setForm({
         ...releve,
-        heure_releve: format(new Date(releve.heure_releve), "yyyy-MM-dd'T'HH:mm"),
+        heure_releve: releve.heure_releve.slice(0, 16),
         generateur: releve.generateur || {},
         huile: releve.huile || {},
         vibrations: releve.vibrations || {},
@@ -734,9 +734,9 @@ export default function RelevesChefBloc() {
                 <div className="divide-y divide-slate-800">
                   {releves.map((r: any) => (
                     <div key={r.id} className={`flex items-center gap-4 px-4 py-3 transition-colors ${
-                      selectedHour === new Date(r.heure_releve).getHours() ? 'bg-amber-500/5' : ''
+                      selectedHour === new Date(r.heure_releve).getUTCHours() ? 'bg-amber-500/5' : ''
                     }`}>
-                      <span className="font-mono text-amber-400 text-sm w-14 flex-shrink-0">{format(new Date(r.heure_releve), 'HH:mm')}</span>
+                      <span className="font-mono text-amber-400 text-sm w-14 flex-shrink-0">{r.heure_releve.slice(11, 16)}</span>
                       <div className="flex-1 grid grid-cols-2 sm:grid-cols-4 gap-2 text-xs">
                         <span className="text-slate-400">T amb: <span className="text-white">{r.temp_ambiante_ctim ?? '—'}°C</span></span>
                         <span className="text-slate-400">RPM: <span className="text-white">{r.vitesse_turbine_rpm ?? '—'}</span></span>

@@ -43,6 +43,26 @@ async function carryPreviousCompteurs(journeeId: string, jourDate: Date) {
   }
 }
 
+async function carryPreviousAlarmes(journeeId: string, jourDate: Date) {
+  const prevDay = new Date(jourDate);
+  prevDay.setUTCDate(prevDay.getUTCDate() - 1);
+  const prevJournee = await prisma.journee.findUnique({
+    where: { jour: prevDay },
+    include: { alarmes: { where: { repetitive: true } } },
+  });
+  if (!prevJournee?.alarmes?.length) return;
+  await prisma.alarme.createMany({
+    data: prevJournee.alarmes.map(a => ({
+      journee_id: journeeId,
+      tag: a.tag,
+      designation: a.designation,
+      heure: a.heure,
+      origine: a.origine,
+      repetitive: true,
+    })),
+  });
+}
+
 router.get('/', async (req, res) => {
   try {
     const { from, to } = req.query;
@@ -97,6 +117,7 @@ router.get('/today', async (req, res) => {
         },
       });
       await carryPreviousCompteurs(journee.id, today).catch(() => {});
+      await carryPreviousAlarmes(journee.id, today).catch(() => {});
     }
     res.json(journee);
   } catch {
@@ -136,6 +157,7 @@ router.post('/', async (req, res) => {
       data: { jour: jourDate, consignes_permanentes },
     });
     await carryPreviousCompteurs(journee.id, jourDate).catch(() => {});
+    await carryPreviousAlarmes(journee.id, jourDate).catch(() => {});
     res.status(201).json(journee);
   } catch (err: any) {
     if (err.code === 'P2002') return res.status(409).json({ error: 'Journée déjà existante pour cette date' });

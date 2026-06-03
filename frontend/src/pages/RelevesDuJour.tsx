@@ -268,12 +268,12 @@ export default function RelevesDuJour() {
 
   const opByHour: Record<number, any> = {};
   jourData?.operateur?.forEach((r: any) => {
-    opByHour[new Date(r.heure_releve).getHours()] = r;
+    opByHour[new Date(r.heure_releve).getUTCHours()] = r;
   });
 
   const bloc: any[] = jourData?.bloc || [];
   const blocByHour: Record<number, any> = {};
-  bloc.forEach((r: any) => { blocByHour[new Date(r.heure_releve).getHours()] = r; });
+  bloc.forEach((r: any) => { blocByHour[new Date(r.heure_releve).getUTCHours()] = r; });
 
   return (
     <div>
