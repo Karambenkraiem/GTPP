@@ -128,6 +128,15 @@ export const defautsApi = {
   updateSeuil: (id: string, data: any) => api.put(`/defauts/seuils/${id}`, data).then((r) => r.data),
 };
 
+// Messages / Messagerie
+export const messagesApi = {
+  list: (limit?: number) => api.get('/messages', { params: limit ? { limit } : undefined }).then((r) => r.data),
+  count: (after: string) => api.get('/messages/count', { params: { after } }).then((r) => r.data),
+  create: (data: { contenu: string; type: string }) => api.post('/messages', data).then((r) => r.data),
+  toggleEpingle: (id: string) => api.put(`/messages/${id}/epingle`).then((r) => r.data),
+  remove: (id: string) => api.delete(`/messages/${id}`).then((r) => r.data),
+};
+
 // Dashboard
 export const dashboardApi = {
   get: () => api.get('/dashboard').then((r) => r.data),

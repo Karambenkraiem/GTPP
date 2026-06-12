@@ -250,3 +250,15 @@ export const ETAT_OT_LABELS: Record<EtatOT, string> = {
   reporte: 'Reporté',
   annule: 'Annulé',
 };
+
+export type TypeMessage = 'consigne' | 'information' | 'alerte';
+
+export interface Message {
+  id: string;
+  contenu: string;
+  type: TypeMessage;
+  is_epingle: boolean;
+  auteur_id: string;
+  auteur: { nom: string; prenom: string; role: string };
+  cree_le: string;
+}

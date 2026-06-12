@@ -32,6 +32,7 @@ import RelevesDuJour from './pages/RelevesDuJour';
 import Rapport from './pages/Rapport';
 import Users from './pages/admin/Users';
 import Seuils from './pages/admin/Seuils';
+import Messagerie from './pages/Messagerie';
 
 const queryClient = new QueryClient({
   defaultOptions: { queries: { staleTime: 30_000, retry: 1 } },
@@ -51,6 +52,15 @@ function ProtectedRoute({ children }: { children: JSX.Element }) {
 function AdminRoute({ children }: { children: JSX.Element }) {
   const { user } = useAuth();
   if (!user || !['admin', 'chef_exploitation'].includes(user.role)) {
+    return <Navigate to="/" replace />;
+  }
+  return children;
+}
+
+const MESSAGERIE_ROLES = ['chef_quart', 'chef_exploitation', 'chef_centrale', 'chef_maintenance', 'directeur', 'admin'];
+function MessagerieRoute({ children }: { children: JSX.Element }) {
+  const { user } = useAuth();
+  if (!user || !MESSAGERIE_ROLES.includes(user.role)) {
     return <Navigate to="/" replace />;
   }
   return children;
@@ -76,6 +86,7 @@ export default function App() {
               <Route path="defauts" element={<MaterielsDefectueux />} />
               <Route path="releves-jour" element={<RelevesDuJour />} />
               <Route path="rapport" element={<Rapport />} />
+              <Route path="messagerie" element={<MessagerieRoute><Messagerie /></MessagerieRoute>} />
               <Route path="admin/users" element={<AdminRoute><Users /></AdminRoute>} />
               <Route path="admin/seuils" element={<AdminRoute><Seuils /></AdminRoute>} />
             </Route>
