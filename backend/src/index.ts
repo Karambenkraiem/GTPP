@@ -38,7 +38,7 @@ app.use('/api/dashboard', dashboardRouter);
 app.use('/api/rapport', rapportRouter);
 app.use('/api/messages', messagesRouter);
 
-app.get('/api/health', (_, res) => res.json({ status: 'ok', time: new Date() }));
+app.get('/api/health', (_, res) => res.json({ status: 'ok', time: new Date(), v: 2 }));
 
 app.use((err: any, req: express.Request, res: express.Response, next: express.NextFunction) => {
   console.error(err);
