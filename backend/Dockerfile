@@ -28,4 +28,4 @@ COPY package*.json ./
 
 EXPOSE 3001
 
-CMD ["sh", "-c", "timeout 60 npx prisma db push --accept-data-loss; node dist/index.js"]
+CMD ["node", "dist/index.js"]
