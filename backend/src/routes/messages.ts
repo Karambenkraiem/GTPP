@@ -21,7 +21,8 @@ router.get('/', async (req, res) => {
       },
     });
     res.json(messages);
-  } catch {
+  } catch (err) {
+    console.error('[messages GET /]', err);
     res.status(500).json({ error: 'Erreur serveur' });
   }
 });
@@ -33,21 +34,22 @@ router.get('/count', async (req, res) => {
       where: { cree_le: { gt: after } },
     });
     res.json({ count });
-  } catch {
+  } catch (err) {
+    console.error('[messages GET /count]', err);
     res.status(500).json({ error: 'Erreur serveur' });
   }
 });
 
 router.post('/', async (req, res) => {
   try {
-    const { contenu, type } = req.body;
+    const { contenu, type } = req.body as { contenu?: string; type?: string };
     if (!contenu?.trim()) {
       return res.status(400).json({ error: 'Le contenu est requis' });
     }
     const message = await prisma.message.create({
       data: {
         contenu: contenu.trim(),
-        type: type || 'information',
+        type: (type as 'consigne' | 'information' | 'alerte') || 'information',
         auteur_id: req.user!.userId,
       },
       include: {
@@ -55,7 +57,8 @@ router.post('/', async (req, res) => {
       },
     });
     res.status(201).json(message);
-  } catch {
+  } catch (err) {
+    console.error('[messages POST /]', err);
     res.status(500).json({ error: 'Erreur serveur' });
   }
 });
@@ -70,7 +73,8 @@ router.put('/:id/epingle', requireRole(...PIN_ROLES), async (req, res) => {
       include: { auteur: { select: { nom: true, prenom: true, role: true } } },
     });
     res.json(message);
-  } catch {
+  } catch (err) {
+    console.error('[messages PUT /:id/epingle]', err);
     res.status(500).json({ error: 'Erreur serveur' });
   }
 });
@@ -85,7 +89,8 @@ router.delete('/:id', async (req, res) => {
     if (!canDelete) return res.status(403).json({ error: 'Accès refusé' });
     await prisma.message.delete({ where: { id: req.params.id } });
     res.json({ message: 'Message supprimé' });
-  } catch {
+  } catch (err) {
+    console.error('[messages DELETE /:id]', err);
     res.status(500).json({ error: 'Erreur serveur' });
   }
 });
