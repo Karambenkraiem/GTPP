@@ -111,7 +111,14 @@ router.get('/today', async (req, res) => {
       journee = await prisma.journee.create({
         data: { jour: today },
         include: {
-          postes: true,
+          postes: {
+            include: {
+              chefQuart: { select: { nom: true, prenom: true } },
+              chefBloc: { select: { nom: true, prenom: true } },
+              operateur1: { select: { nom: true, prenom: true } },
+              operateur2: { select: { nom: true, prenom: true } },
+            },
+          },
           compteurs: true,
           _count: { select: { releves_bloc: true, manouvres: true, alarmes: true, ordres_travaux: true } },
         },
