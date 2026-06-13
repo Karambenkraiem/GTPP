@@ -2,12 +2,10 @@ import { NavLink } from 'react-router-dom';
 import {
   LayoutDashboard, BookOpen, ClipboardList, Activity,
   Wrench, Bell, AlertTriangle, Users, Settings, Zap, LogOut, CalendarDays, FileText,
-  Sun, Moon, MessageSquare,
+  Sun, Moon,
 } from 'lucide-react';
-import { useQuery } from '@tanstack/react-query';
 import { useAuth } from '../contexts/AuthContext';
 import { useTheme } from '../contexts/ThemeContext';
-import { messagesApi } from '../lib/api';
 
 type NavItem = { to: string; icon: any; label: string; roles?: string[] };
 
@@ -29,25 +27,9 @@ const adminItems = [
   { to: '/admin/seuils', icon: Settings, label: 'Seuils d\'alerte' },
 ];
 
-const MESSAGERIE_ROLES = ['chef_quart', 'chef_exploitation', 'chef_centrale', 'chef_maintenance', 'directeur', 'admin'];
-
 export default function Sidebar({ onClose }: { onClose?: () => void }) {
   const { user, logout } = useAuth();
   const { theme, toggle } = useTheme();
-
-  const hasMessagerieAccess = MESSAGERIE_ROLES.includes(user?.role ?? '');
-
-  const { data: unreadData } = useQuery({
-    queryKey: ['messages-count'],
-    queryFn: () => {
-      const lastRead = localStorage.getItem('gtpp_messages_last_read') || new Date(0).toISOString();
-      return messagesApi.count(lastRead);
-    },
-    refetchInterval: 10_000,
-    enabled: hasMessagerieAccess,
-  });
-
-  const unreadCount: number = unreadData?.count ?? 0;
 
   return (
     <aside className="w-64 md:w-60 flex-shrink-0 bg-slate-900 border-r border-slate-700 flex flex-col h-screen sticky top-0 print:hidden">
@@ -83,36 +65,6 @@ export default function Sidebar({ onClose }: { onClose?: () => void }) {
               {label}
             </NavLink>
           ))}
-
-          {/* Messagerie — roles restreints + badge non lus */}
-          {hasMessagerieAccess && (
-            <NavLink
-              to="/messagerie"
-              onClick={onClose}
-              className={({ isActive }) =>
-                `flex items-center gap-3 px-3 py-2 rounded text-sm transition-colors ${
-                  isActive
-                    ? 'bg-blue-500/15 text-blue-300 font-medium'
-                    : 'text-slate-400 hover:text-white hover:bg-slate-800'
-                }`
-              }
-            >
-              <div className="relative flex-shrink-0">
-                <MessageSquare size={15} />
-                {unreadCount > 0 && (
-                  <span className="absolute -top-1.5 -right-1.5 bg-red-500 text-white text-[9px] font-bold rounded-full min-w-[14px] h-3.5 flex items-center justify-center px-0.5 leading-none">
-                    {unreadCount > 99 ? '99+' : unreadCount}
-                  </span>
-                )}
-              </div>
-              <span>Messagerie</span>
-              {unreadCount > 0 && (
-                <span className="ml-auto bg-red-500 text-white text-[10px] font-bold rounded-full px-1.5 py-0.5 min-w-[18px] text-center leading-none">
-                  {unreadCount > 99 ? '99+' : unreadCount}
-                </span>
-              )}
-            </NavLink>
-          )}
         </div>
 
         {(user?.role === 'admin' || user?.role === 'chef_exploitation') && (

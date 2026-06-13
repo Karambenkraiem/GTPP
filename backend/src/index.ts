@@ -15,7 +15,6 @@ import otRouter from './routes/ot';
 import defautsRouter from './routes/defauts';
 import dashboardRouter from './routes/dashboard';
 import rapportRouter from './routes/rapport';
-import messagesRouter from './routes/messages';
 import { startReleveCron } from './cron';
 
 const app = express();
@@ -36,9 +35,8 @@ app.use('/api/ot', otRouter);
 app.use('/api/defauts', defautsRouter);
 app.use('/api/dashboard', dashboardRouter);
 app.use('/api/rapport', rapportRouter);
-app.use('/api/messages', messagesRouter);
 
-app.get('/api/health', (_, res) => res.json({ status: 'ok', time: new Date(), v: 2 }));
+app.get('/api/health', (_, res) => res.json({ status: 'ok', time: new Date() }));
 
 app.use((err: any, req: express.Request, res: express.Response, next: express.NextFunction) => {
   console.error(err);
@@ -62,43 +60,12 @@ async function seedAdmin() {
   }
 }
 
-async function ensureMessagesTable() {
-  // Create enum type_message and messages table if they don't exist yet.
-  // This is a safety net in case prisma db push didn't run or partially failed.
-  try {
-    await prisma.$executeRawUnsafe(`
-      DO $$ BEGIN
-        CREATE TYPE type_message AS ENUM ('consigne', 'information', 'alerte');
-      EXCEPTION WHEN duplicate_object THEN NULL;
-      END $$;
-    `);
-    await prisma.$executeRawUnsafe(`
-      CREATE TABLE IF NOT EXISTS messages (
-        id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-        contenu TEXT NOT NULL,
-        type type_message NOT NULL DEFAULT 'information',
-        is_epingle BOOLEAN NOT NULL DEFAULT FALSE,
-        auteur_id UUID NOT NULL REFERENCES utilisateurs(id) ON DELETE CASCADE,
-        cree_le TIMESTAMPTZ(6) NOT NULL DEFAULT NOW()
-      );
-    `);
-    console.log('✓ Table messages prête');
-  } catch (e) {
-    console.error('⚠ ensureMessagesTable failed:', e);
-  }
-}
-
 app.listen(PORT, async () => {
   console.log(`GTpp backend démarré sur le port ${PORT}`);
   try {
     await seedAdmin();
   } catch (e) {
     console.error('seedAdmin failed (DB pas encore prête ?):', e);
-  }
-  try {
-    await ensureMessagesTable();
-  } catch (e) {
-    console.error('ensureMessagesTable failed:', e);
   }
   try {
     startReleveCron();

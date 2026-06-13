@@ -133,7 +133,6 @@ model Utilisateur {
   manouvres             Manouvre[]
   seuilsModifies        SeuilAlarme[]
   defautsCommentes      MaterielDefectueux[] @relation("CommentaireAuteur")
-  messages              Message[]
 
   @@map("utilisateurs")
 }
@@ -623,23 +622,3 @@ model SeuilAlarme {
   @@map("seuils_alarme")
 }
 
-enum TypeMessage {
-  consigne
-  information
-  alerte
-
-  @@map("type_message")
-}
-
-model Message {
-  id         String      @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
-  contenu    String      @db.Text
-  type       TypeMessage @default(information)
-  is_epingle Boolean     @default(false)
-  auteur_id  String      @db.Uuid
-  cree_le    DateTime    @default(now()) @db.Timestamptz(6)
-
-  auteur Utilisateur @relation(fields: [auteur_id], references: [id])
-
-  @@map("messages")
-}
