@@ -1,0 +1,58 @@
+services:
+  postgres:
+    image: postgres:16-alpine
+    container_name: gtpp_postgres_prod
+    restart: unless-stopped
+    environment:
+      POSTGRES_DB: gtpp
+      POSTGRES_USER: gtpp
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
+    volumes:
+      - gtpp_postgres_data:/var/lib/postgresql/data
+    networks:
+      - internal
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U gtpp -d gtpp"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+
+  backend:
+    build:
+      context: ./backend
+      dockerfile: Dockerfile
+    container_name: gtpp_backend_prod
+    restart: unless-stopped
+    environment:
+      DATABASE_URL: postgresql://gtpp:${POSTGRES_PASSWORD}@postgres:5432/gtpp
+      JWT_SECRET: ${JWT_SECRET}
+      PORT: 3001
+      NODE_ENV: production
+      CORS_ORIGIN: https://gtpp.alkaramsoft.ovh
+      TZ: Africa/Tunis
+    depends_on:
+      postgres:
+        condition: service_healthy
+    networks:
+      - internal
+
+  frontend:
+    build:
+      context: ./frontend
+      dockerfile: Dockerfile
+    container_name: gtpp_frontend_prod
+    restart: unless-stopped
+    depends_on:
+      - backend
+    networks:
+      - internal
+      - proxy_net
+
+volumes:
+  gtpp_postgres_data:
+
+networks:
+  internal:
+    driver: bridge
+  proxy_net:
+    external: true
