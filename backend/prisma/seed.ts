@@ -27,6 +27,10 @@ const UTILISATEURS: { nom: string; prenom: string; matricule: string; role: stri
   { nom: 'RAJHI', prenom: 'Lamjed', matricule: '65764', role: 'operateur' },
   { nom: 'NEFZI', prenom: 'Oussama', matricule: '69504', role: 'chef_quart' },
   { nom: 'AYARI', prenom: 'Hassen', matricule: '70723', role: 'operateur' },
+  { nom: 'DARGHOUTHI', prenom: 'Abdelghani', matricule: '60023', role: 'directeur' },
+  { nom: 'FEKIH', prenom: 'Zied', matricule: '60111', role: 'chef_centrale' },
+  { nom: 'BEN MANSOUR', prenom: 'Ali', matricule: '63164', role: 'chef_exploitation' },
+  { nom: 'KHAMMASSI', prenom: 'Maher', matricule: '60999', role: 'operateur' },
 ];
 
 async function main() {
@@ -40,17 +44,14 @@ async function main() {
   console.log(`Seuils d'alarme: ${SEUILS_ALARME.length} vérifiés/créés.`);
 
   const hash = await bcrypt.hash(DEFAULT_PASSWORD, 10);
-  let created = 0;
   for (const u of UTILISATEURS) {
-    const existing = await prisma.utilisateur.findUnique({ where: { matricule: u.matricule } });
-    if (!existing) {
-      await prisma.utilisateur.create({
-        data: { ...u, role: u.role as any, mot_de_passe_hash: hash },
-      });
-      created++;
-    }
+    await prisma.utilisateur.upsert({
+      where: { matricule: u.matricule },
+      update: { nom: u.nom, prenom: u.prenom, role: u.role as any, mot_de_passe_hash: hash, modifie_le: new Date() },
+      create: { ...u, role: u.role as any, mot_de_passe_hash: hash },
+    });
   }
-  console.log(`Utilisateurs: ${created} créé(s), ${UTILISATEURS.length - created} déjà existant(s). Mot de passe par défaut: ${DEFAULT_PASSWORD}`);
+  console.log(`Utilisateurs: ${UTILISATEURS.length} créés/mis à jour. Mot de passe réinitialisé à: ${DEFAULT_PASSWORD}`);
 }
 
 main()
