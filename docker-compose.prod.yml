@@ -42,6 +42,10 @@ services:
       dockerfile: Dockerfile
     container_name: gtpp_frontend_prod
     restart: unless-stopped
+    ports:
+      # TEMPORAIRE — pour tester via http://<IP_VPS>:8080 avant que le DNS/nginx
+      # soient en place. À retirer une fois gtpp.alkaramsoft.ovh fonctionnel.
+      - "8080:80"
     depends_on:
       - backend
     networks:

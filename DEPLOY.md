@@ -32,7 +32,7 @@ EOF
 ```bash
 docker compose -f docker-compose.prod.yml --env-file .env up -d --build
 docker compose -f docker-compose.prod.yml exec backend npx prisma db push
-docker compose -f docker-compose.prod.yml exec backend npx prisma db seed   # optionnel
+docker compose -f docker-compose.prod.yml exec backend npm run db:seed:prod   # optionnel
 ```
 
 ## 5. Certificat SSL (Let's Encrypt, méthode webroot)

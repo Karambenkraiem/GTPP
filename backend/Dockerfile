@@ -13,6 +13,7 @@ COPY . .
 
 RUN npx prisma generate
 RUN npm run build
+RUN npx tsc prisma/seed.ts --outDir dist/prisma --module commonjs --target ES2020 --esModuleInterop --skipLibCheck --resolveJsonModule
 
 # ── Image finale légère ──
 FROM node:20-alpine
