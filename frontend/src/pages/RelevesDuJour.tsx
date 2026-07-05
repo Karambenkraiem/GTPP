@@ -5,6 +5,7 @@ import PageHeader from '../components/PageHeader';
 import { format } from 'date-fns';
 import { fr } from 'date-fns/locale';
 import { Calendar } from 'lucide-react';
+import { getTunisHour } from '../lib/tz';
 
 const SLOT_HOURS = [0, 2, 4, 6, 8, 10, 12, 14, 16, 18, 20, 22];
 
@@ -268,12 +269,12 @@ export default function RelevesDuJour() {
 
   const opByHour: Record<number, any> = {};
   jourData?.operateur?.forEach((r: any) => {
-    opByHour[new Date(r.heure_releve).getUTCHours()] = r;
+    opByHour[getTunisHour(r.heure_releve)] = r;
   });
 
   const bloc: any[] = jourData?.bloc || [];
   const blocByHour: Record<number, any> = {};
-  bloc.forEach((r: any) => { blocByHour[new Date(r.heure_releve).getUTCHours()] = r; });
+  bloc.forEach((r: any) => { blocByHour[getTunisHour(r.heure_releve)] = r; });
 
   return (
     <div>

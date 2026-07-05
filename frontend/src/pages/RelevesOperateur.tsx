@@ -9,6 +9,7 @@ import { fr } from 'date-fns/locale';
 import type { Poste } from '../types';
 import { TRANCHE_LABELS } from '../types';
 import { useAuth } from '../contexts/AuthContext';
+import { tunisLocalToISOString, formatTunisHM, getTunisHour, formatTunisDateTimeLocal } from '../lib/tz';
 
 const SLOT_HOURS = [0, 2, 4, 6, 8, 10, 12, 14, 16, 18, 20, 22];
 
@@ -215,7 +216,7 @@ export default function RelevesOperateurPage() {
   const releveByHour = useMemo(() => {
     const map: Record<number, any> = {};
     releves?.forEach((r: any) => {
-      const h = new Date(r.heure_releve).getUTCHours();
+      const h = getTunisHour(r.heure_releve);
       map[h] = r;
     });
     return map;
@@ -228,7 +229,7 @@ export default function RelevesOperateurPage() {
     if (releve) {
       setForm({
         ...releve,
-        heure_releve: releve.heure_releve.slice(0, 16),
+        heure_releve: formatTunisDateTimeLocal(releve.heure_releve),
         detecteurs_gaz: releve.detecteurs_gaz || {},
       });
     } else {
@@ -307,7 +308,7 @@ export default function RelevesOperateurPage() {
   function handleSave() {
     if (!journee || selectedHour === null) return;
     const existing = releveByHour[selectedHour];
-    const payload = { ...form, poste_id: form.poste_id || null };
+    const payload = { ...form, poste_id: form.poste_id || null, heure_releve: tunisLocalToISOString(form.heure_releve) };
     if (existing) {
       updateMut.mutate({ id: existing.id, data: payload });
     } else {
@@ -539,10 +540,10 @@ export default function RelevesOperateurPage() {
                 <div className="divide-y divide-slate-800">
                   {releves.map((r: any) => (
                     <div key={r.id} className={`flex items-center gap-4 px-4 py-3 cursor-pointer transition-colors ${
-                      selectedHour === new Date(r.heure_releve).getUTCHours() ? 'bg-amber-500/5' : 'hover:bg-slate-800/50'
-                    }`} onClick={() => setSelectedHour(new Date(r.heure_releve).getUTCHours())}>
+                      selectedHour === getTunisHour(r.heure_releve) ? 'bg-amber-500/5' : 'hover:bg-slate-800/50'
+                    }`} onClick={() => setSelectedHour(getTunisHour(r.heure_releve))}>
                       <span className="font-mono text-amber-400 text-sm w-14 flex-shrink-0">
-                        {r.heure_releve.slice(11, 16)}
+                        {formatTunisHM(r.heure_releve)}
                       </span>
                       {r.saisi_par ? (
                         <div className="flex-1 grid grid-cols-2 sm:grid-cols-4 gap-2 text-xs">

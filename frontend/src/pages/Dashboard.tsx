@@ -7,6 +7,7 @@ import { format } from 'date-fns';
 import { fr } from 'date-fns/locale';
 import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer } from 'recharts';
 import { STATUT_JOURNEE_LABELS } from '../types';
+import { formatTunisHM } from '../lib/tz';
 
 export default function Dashboard() {
   const { data, isLoading } = useQuery({ queryKey: ['dashboard'], queryFn: dashboardApi.get, refetchInterval: 60000 });
@@ -51,7 +52,7 @@ export default function Dashboard() {
             <StatCard label="Temp. Échappement" value={ttxm ?? '—'} unit="°C" icon={<Thermometer size={20} />} color={ttxm ? 'amber' : 'slate'} />
             <StatCard label="Spread" value={spread ?? '—'} unit="°C" color={spread && spread > 40 ? 'red' : 'green'} sub={spread && spread > 40 ? '⚠ Seuil dépassé' : 'Normal'} />
             <StatCard label="Vibration Maxi" value={vibraMaxi ?? '—'} unit="mm/s" icon={<Gauge size={20} />} color={vibraMaxi && vibraMaxi > 20 ? 'red' : 'green'} />
-            <StatCard label="Dernier Relevé" value={dernierReleve ? dernierReleve.heure_releve.slice(11, 16) : '—'} color="slate" sub={dernierReleve ? format(new Date(dernierReleve.heure_releve), 'dd/MM/yyyy') : 'Aucun'} />
+            <StatCard label="Dernier Relevé" value={dernierReleve ? formatTunisHM(dernierReleve.heure_releve) : '—'} color="slate" sub={dernierReleve ? format(new Date(dernierReleve.heure_releve), 'dd/MM/yyyy') : 'Aucun'} />
           </div>
         </div>
 

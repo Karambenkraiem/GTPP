@@ -9,6 +9,7 @@ import { fr } from 'date-fns/locale';
 import type { Poste } from '../types';
 import { TRANCHE_LABELS } from '../types';
 import { useAuth } from '../contexts/AuthContext';
+import { tunisLocalToISOString, formatTunisHM, getTunisHour, formatTunisDateTimeLocal } from '../lib/tz';
 
 const SLOT_HOURS = [0, 2, 4, 6, 8, 10, 12, 14, 16, 18, 20, 22];
 
@@ -148,7 +149,7 @@ export default function RelevesChefBloc() {
 
   const releveByHour = useMemo(() => {
     const map: Record<number, any> = {};
-    releves?.forEach((r: any) => { map[new Date(r.heure_releve).getUTCHours()] = r; });
+    releves?.forEach((r: any) => { map[getTunisHour(r.heure_releve)] = r; });
     return map;
   }, [releves]);
 
@@ -158,7 +159,7 @@ export default function RelevesChefBloc() {
     if (releve) {
       setForm({
         ...releve,
-        heure_releve: releve.heure_releve.slice(0, 16),
+        heure_releve: formatTunisDateTimeLocal(releve.heure_releve),
         generateur: releve.generateur || {},
         huile: releve.huile || {},
         vibrations: releve.vibrations || {},
@@ -231,7 +232,7 @@ export default function RelevesChefBloc() {
   function handleSave() {
     if (!journee || selectedHour === null) return;
     const existing = releveByHour[selectedHour];
-    const payload = { ...form, poste_id: form.poste_id || null };
+    const payload = { ...form, poste_id: form.poste_id || null, heure_releve: tunisLocalToISOString(form.heure_releve) };
     if (existing) {
       updateMut.mutate({ id: existing.id, data: payload });
     } else {
@@ -734,9 +735,9 @@ export default function RelevesChefBloc() {
                 <div className="divide-y divide-slate-800">
                   {releves.map((r: any) => (
                     <div key={r.id} className={`flex items-center gap-4 px-4 py-3 transition-colors ${
-                      selectedHour === new Date(r.heure_releve).getUTCHours() ? 'bg-amber-500/5' : ''
+                      selectedHour === getTunisHour(r.heure_releve) ? 'bg-amber-500/5' : ''
                     }`}>
-                      <span className="font-mono text-amber-400 text-sm w-14 flex-shrink-0">{r.heure_releve.slice(11, 16)}</span>
+                      <span className="font-mono text-amber-400 text-sm w-14 flex-shrink-0">{formatTunisHM(r.heure_releve)}</span>
                       <div className="flex-1 grid grid-cols-2 sm:grid-cols-4 gap-2 text-xs">
                         <span className="text-slate-400">T amb: <span className="text-white">{r.temp_ambiante_ctim ?? '—'}°C</span></span>
                         <span className="text-slate-400">RPM: <span className="text-white">{r.vitesse_turbine_rpm ?? '—'}</span></span>

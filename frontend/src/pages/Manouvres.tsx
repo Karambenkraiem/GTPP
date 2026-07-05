@@ -7,6 +7,7 @@ import { Trash2 } from 'lucide-react';
 import { format } from 'date-fns';
 import { fr } from 'date-fns/locale';
 import type { TypeManouvre } from '../types';
+import { tunisLocalToISOString, formatTunisHM } from '../lib/tz';
 
 const PHRASES = [
   'Ordre de démarrage',
@@ -161,7 +162,7 @@ export default function Manouvres() {
     if (!description) return;
     createMut.mutate({
       journee_id: journee.id,
-      heure_manouvre: `${selectedDate}T${newRow.heure}:00`,
+      heure_manouvre: tunisLocalToISOString(`${selectedDate}T${newRow.heure}`),
       description,
       type_manouvre: 'exploitation' as TypeManouvre,
       feuille_numero: 1,
@@ -171,7 +172,7 @@ export default function Manouvres() {
   function startEdit(m: any) {
     if (!canEdit) return;
     setEditingId(m.id);
-    setEditRow({ heure: m.heure_manouvre.slice(11, 16), description: m.description });
+    setEditRow({ heure: formatTunisHM(m.heure_manouvre), description: m.description });
   }
 
   function handleUpdate(id: string, desc?: string) {
@@ -180,7 +181,7 @@ export default function Manouvres() {
     updateMut.mutate({
       id,
       data: {
-        heure_manouvre: `${selectedDate}T${editRow.heure}:00`,
+        heure_manouvre: tunisLocalToISOString(`${selectedDate}T${editRow.heure}`),
         description,
         type_manouvre: 'exploitation' as TypeManouvre,
         feuille_numero: 1,
@@ -275,7 +276,7 @@ export default function Manouvres() {
                       onClick={() => startEdit(m)}
                       className={`border-b border-slate-800 transition-colors ${canEdit ? 'cursor-pointer hover:bg-slate-800/50' : ''}`}>
                       <td className="text-center px-4 py-3 font-mono text-amber-400 font-bold">
-                        {m.heure_manouvre.slice(11, 16)}
+                        {formatTunisHM(m.heure_manouvre)}
                       </td>
                       <td className="px-4 py-3 text-slate-200">{m.description}</td>
                       <td className="px-2 py-3 text-center" onClick={e => e.stopPropagation()}>
