@@ -28,7 +28,7 @@ services:
       JWT_SECRET: ${JWT_SECRET}
       PORT: 3001
       NODE_ENV: production
-      CORS_ORIGIN: https://gtpp.alkaramsoft.ovh
+      CORS_ORIGIN: https://gtpp.alkaramsoft.ovh,capacitor://localhost,https://localhost,http://localhost
       TZ: Africa/Tunis
     depends_on:
       postgres:

@@ -5,9 +5,15 @@
   "scripts": {
     "dev": "vite",
     "build": "vite build",
-    "preview": "vite preview"
+    "build:mobile": "VITE_API_URL=https://gtpp.alkaramsoft.ovh/api vite build",
+    "preview": "vite preview",
+    "cap:sync": "npm run build:mobile && npx cap sync"
   },
   "dependencies": {
+    "@capacitor/android": "^8.4.1",
+    "@capacitor/cli": "^8.4.1",
+    "@capacitor/core": "^8.4.1",
+    "@capacitor/ios": "^8.4.1",
     "@tanstack/react-query": "^5.45.1",
     "axios": "^1.7.2",
     "date-fns": "^3.6.0",

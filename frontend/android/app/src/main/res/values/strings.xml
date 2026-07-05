@@ -1,0 +1,7 @@
+<?xml version='1.0' encoding='utf-8'?>
+<resources>
+    <string name="app_name">GTpp</string>
+    <string name="title_activity_main">GTpp</string>
+    <string name="package_name">com.steg.gtpp</string>
+    <string name="custom_url_scheme">com.steg.gtpp</string>
+</resources>

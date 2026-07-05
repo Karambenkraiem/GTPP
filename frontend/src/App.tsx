@@ -32,6 +32,7 @@ import RelevesDuJour from './pages/RelevesDuJour';
 import Rapport from './pages/Rapport';
 import Users from './pages/admin/Users';
 import Seuils from './pages/admin/Seuils';
+import InstallPrompt from './components/InstallPrompt';
 const queryClient = new QueryClient({
   defaultOptions: { queries: { staleTime: 30_000, retry: 1 } },
 });
@@ -79,6 +80,7 @@ export default function App() {
               <Route path="admin/seuils" element={<AdminRoute><Seuils /></AdminRoute>} />
             </Route>
           </Routes>
+          <InstallPrompt />
         </BrowserRouter>
       </AuthProvider>
       </ThemeProvider>
