@@ -30,6 +30,7 @@ services:
       NODE_ENV: production
       CORS_ORIGIN: https://gtpp.alkaramsoft.ovh,capacitor://localhost,https://localhost,http://localhost
       TZ: Africa/Tunis
+      DEMO_LOGIN: ${DEMO_LOGIN:-false}
     depends_on:
       postgres:
         condition: service_healthy
@@ -40,6 +41,8 @@ services:
     build:
       context: ./frontend
       dockerfile: Dockerfile
+      args:
+        VITE_DEMO_LOGIN: ${DEMO_LOGIN:-false}
     container_name: gtpp_frontend_prod
     restart: unless-stopped
     depends_on:

@@ -33,6 +33,7 @@ export const authApi = {
     api.put('/auth/me', data).then((r) => r.data),
   changePassword: (currentPassword: string, newPassword: string) =>
     api.put('/auth/change-password', { currentPassword, newPassword }).then((r) => r.data),
+  demoUsers: () => api.get('/auth/demo-users').then((r) => r.data),
 };
 
 // Users

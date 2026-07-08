@@ -63,6 +63,24 @@ Dans GitHub → Settings → Secrets and variables → Actions, ajouter :
 À chaque push sur `main` : le workflow build les images (test), puis se connecte en SSH
 au VPS, fait `git pull`, rebuild et relance `docker-compose.prod.yml`.
 
+## 8. Activer temporairement le mode démo (accès rapide utilisateurs)
+La page de login peut afficher un panneau "Accès rapide" avec un bouton par utilisateur réel
+(connexion en un clic, mot de passe par défaut `123456`, ou `00000` pour le rôle `guest`).
+**Désactivé par défaut** — à n'activer que le temps d'une démonstration, jamais en continu.
+
+```bash
+cd /opt/gtpp
+git pull origin main
+echo "DEMO_LOGIN=true" >> .env
+docker compose -f docker-compose.prod.yml --env-file .env up -d --build
+```
+
+Une fois la démo terminée, désactiver impérativement :
+```bash
+sed -i '/^DEMO_LOGIN=/d' .env
+docker compose -f docker-compose.prod.yml --env-file .env up -d --build
+```
+
 ## Développement local
 Rien ne change : `docker compose up -d --build` avec `docker-compose.yml` (Docker Desktop),
 comme avant. Le pipeline ne concerne que le déploiement après un push sur `main`.

@@ -33,6 +33,7 @@ services:
       NODE_ENV: ${NODE_ENV:-development}
       CORS_ORIGIN: http://localhost:5173
       TZ: Africa/Tunis
+      DEMO_LOGIN: ${DEMO_LOGIN:-true}
     ports:
       - "3004:3001"
     depends_on:
@@ -49,6 +50,7 @@ services:
     restart: unless-stopped
     environment:
       VITE_API_URL: http://localhost:3004/api
+      VITE_DEMO_LOGIN: ${DEMO_LOGIN:-true}
     ports:
       - "5173:5173"
     depends_on:

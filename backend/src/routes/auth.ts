@@ -38,6 +38,22 @@ router.post('/login', async (req, res) => {
   }
 });
 
+router.get('/demo-users', async (_req, res) => {
+  if (process.env.DEMO_LOGIN !== 'true') {
+    return res.status(404).json({ error: 'Non trouvé' });
+  }
+  try {
+    const users = await prisma.utilisateur.findMany({
+      where: { actif: true },
+      select: { matricule: true, nom: true, prenom: true, role: true },
+      orderBy: [{ role: 'asc' }, { nom: 'asc' }],
+    });
+    res.json(users);
+  } catch {
+    res.status(500).json({ error: 'Erreur serveur' });
+  }
+});
+
 router.get('/me', authenticate, async (req, res) => {
   try {
     const user = await prisma.utilisateur.findUnique({
