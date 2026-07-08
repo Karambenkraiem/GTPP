@@ -21,6 +21,9 @@ router.get('/journee/:journeeId', async (req, res) => {
 router.post('/', async (req, res) => {
   try {
     const { journee_id, poste_id, heure_manouvre, description, type_manouvre, feuille_numero } = req.body;
+    if (type_manouvre === 'incident' && !['chef_quart', 'admin'].includes(req.user!.role)) {
+      return res.status(403).json({ error: 'Seul le chef de quart ou un administrateur peut saisir un incident' });
+    }
     const manouvre = await prisma.manouvre.create({
       data: {
         journee_id,
@@ -41,6 +44,12 @@ router.post('/', async (req, res) => {
 
 router.put('/:id', async (req, res) => {
   try {
+    const existing = await prisma.manouvre.findUnique({ where: { id: req.params.id } });
+    if (!existing) return res.status(404).json({ error: 'Introuvable' });
+    if (existing.type_manouvre === 'incident' && !['chef_quart', 'admin'].includes(req.user!.role)) {
+      return res.status(403).json({ error: 'Seul le chef de quart ou un administrateur peut modifier un incident' });
+    }
+
     const { heure_manouvre, description, type_manouvre, feuille_numero } = req.body;
     const manouvre = await prisma.manouvre.update({
       where: { id: req.params.id },
@@ -59,6 +68,11 @@ router.put('/:id', async (req, res) => {
 
 router.delete('/:id', async (req, res) => {
   try {
+    const existing = await prisma.manouvre.findUnique({ where: { id: req.params.id } });
+    if (!existing) return res.status(404).json({ error: 'Introuvable' });
+    if (existing.type_manouvre === 'incident' && !['chef_quart', 'admin'].includes(req.user!.role)) {
+      return res.status(403).json({ error: 'Seul le chef de quart ou un administrateur peut supprimer un incident' });
+    }
     await prisma.manouvre.delete({ where: { id: req.params.id } });
     res.json({ message: 'Manœuvre supprimée' });
   } catch {

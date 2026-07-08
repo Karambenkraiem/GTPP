@@ -3,7 +3,7 @@ import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { journeesApi, postesApi, usersApi } from '../lib/api';
 import PageHeader from '../components/PageHeader';
 import Modal from '../components/Modal';
-import { Plus, CheckCircle, ChevronDown, Calendar } from 'lucide-react';
+import { Plus, Pencil, CheckCircle, ChevronDown, Calendar } from 'lucide-react';
 import { format } from 'date-fns';
 import { fr } from 'date-fns/locale';
 import { STATUT_JOURNEE_LABELS, TRANCHE_LABELS } from '../types';
@@ -26,6 +26,7 @@ export default function Journee() {
   const qc = useQueryClient();
   const [selectedDate, setSelectedDate] = useState(format(new Date(), 'yyyy-MM-dd'));
   const [showPosteModal, setShowPosteModal] = useState(false);
+  const [editingPoste, setEditingPoste] = useState<any | null>(null);
   const [posteForm, setPosteForm] = useState<any>({ tranche: 'h07_14h' });
   const [showValiderConfirm, setShowValiderConfirm] = useState(false);
 
@@ -48,6 +49,11 @@ export default function Journee() {
   const addPosteMut = useMutation({
     mutationFn: (data: any) => postesApi.create(data),
     onSuccess: () => { qc.invalidateQueries({ queryKey: ['journee'] }); setShowPosteModal(false); },
+  });
+
+  const updatePosteMut = useMutation({
+    mutationFn: (data: any) => postesApi.update(editingPoste.id, data),
+    onSuccess: () => { qc.invalidateQueries({ queryKey: ['journee'] }); setShowPosteModal(false); setEditingPoste(null); },
   });
 
   const validerQuartMut = useMutation({
@@ -90,6 +96,25 @@ export default function Journee() {
     ...(manquantsBloc.length ? [`Chef Bloc : ${manquantsBloc.map(f => LABELS[f]).join(', ')}`] : []),
   ].join('\n');
   const canManageJournee = ['chef_quart', 'chef_exploitation', 'admin'].includes(user?.role || '');
+  const canEditPoste = ['chef_quart', 'admin'].includes(user?.role || '');
+
+  function openAddPoste() {
+    setEditingPoste(null);
+    setPosteForm({ tranche: 'h07_14h' });
+    setShowPosteModal(true);
+  }
+
+  function openEditPoste(poste: any) {
+    setEditingPoste(poste);
+    setPosteForm({
+      tranche: poste.tranche,
+      chef_quart_id: poste.chef_quart_id || '',
+      chef_bloc_id: poste.chef_bloc_id || '',
+      operateur1_id: poste.operateur1_id || '',
+      operateur2_id: poste.operateur2_id || '',
+    });
+    setShowPosteModal(true);
+  }
 
   function handleAddPoste() {
     if (!journeeDetail) return;
@@ -99,6 +124,19 @@ export default function Journee() {
     let fin = new Date(`${dateStr}T${finTime}:00`);
     if (posteForm.tranche === 'h20_00h') fin = new Date(`${dateStr}T23:59:59`);
     addPosteMut.mutate({ ...posteForm, journee_id: journeeDetail.id, debut, fin });
+  }
+
+  function handleSavePoste() {
+    if (editingPoste) {
+      updatePosteMut.mutate({
+        chef_quart_id: posteForm.chef_quart_id || null,
+        chef_bloc_id: posteForm.chef_bloc_id || null,
+        operateur1_id: posteForm.operateur1_id || null,
+        operateur2_id: posteForm.operateur2_id || null,
+      });
+    } else {
+      handleAddPoste();
+    }
   }
 
   return (
@@ -182,7 +220,7 @@ export default function Journee() {
                 <h3 className="text-sm font-medium text-white">Postes (4 tranches)</h3>
                 {canManageJournee && (
                   <button
-                    onClick={() => setShowPosteModal(true)}
+                    onClick={openAddPoste}
                     className="flex items-center gap-1.5 text-amber-400 hover:text-amber-300 text-xs transition-colors"
                   >
                     <Plus size={13} /> Ajouter
@@ -199,11 +237,17 @@ export default function Journee() {
                         <span className="text-sm text-slate-300">{TRANCHE_LABELS[tranche]}</span>
                       </div>
                       {poste ? (
-                        <div className="flex gap-4 text-xs text-slate-400">
+                        <div className="flex items-center gap-4 text-xs text-slate-400">
                           <span>CQ: {poste.chefQuart ? `${poste.chefQuart.prenom} ${poste.chefQuart.nom}` : '—'}</span>
                           <span>CB: {poste.chefBloc ? `${poste.chefBloc.prenom} ${poste.chefBloc.nom}` : '—'}</span>
                           <span>Op1: {poste.operateur1 ? `${poste.operateur1.prenom}` : '—'}</span>
                           <span>Op2: {poste.operateur2 ? `${poste.operateur2.prenom}` : '—'}</span>
+                          {canEditPoste && (
+                            <button onClick={() => openEditPoste(poste)} title="Modifier l'équipe"
+                              className="text-slate-500 hover:text-amber-400 transition-colors">
+                              <Pencil size={12} />
+                            </button>
+                          )}
                         </div>
                       ) : (
                         <span className="text-xs text-slate-600">Non configuré</span>
@@ -235,14 +279,15 @@ export default function Journee() {
       </div>
 
       {/* Modal Poste */}
-      <Modal open={showPosteModal} onClose={() => setShowPosteModal(false)} title="Ajouter un poste">
+      <Modal open={showPosteModal} onClose={() => { setShowPosteModal(false); setEditingPoste(null); }} title={editingPoste ? "Modifier l'équipe du poste" : 'Ajouter un poste'}>
         <div className="space-y-4">
           <div>
             <label className="block text-sm text-slate-400 mb-1">Tranche</label>
             <select
               value={posteForm.tranche}
               onChange={(e) => setPosteForm({ ...posteForm, tranche: e.target.value })}
-              className="w-full bg-slate-800 border border-slate-600 rounded-lg px-3 py-2 text-white text-sm focus:outline-none focus:border-amber-500"
+              disabled={!!editingPoste}
+              className="w-full bg-slate-800 border border-slate-600 rounded-lg px-3 py-2 text-white text-sm focus:outline-none focus:border-amber-500 disabled:opacity-60 disabled:cursor-not-allowed"
             >
               {TRANCHES.map((t) => <option key={t} value={t}>{TRANCHE_LABELS[t]}</option>)}
             </select>
@@ -269,13 +314,13 @@ export default function Journee() {
             </div>
           ))}
           <div className="flex gap-3 pt-2">
-            <button onClick={() => setShowPosteModal(false)} className="flex-1 bg-slate-800 hover:bg-slate-700 text-slate-300 py-2 rounded-lg text-sm transition-colors">Annuler</button>
+            <button onClick={() => { setShowPosteModal(false); setEditingPoste(null); }} className="flex-1 bg-slate-800 hover:bg-slate-700 text-slate-300 py-2 rounded-lg text-sm transition-colors">Annuler</button>
             <button
-              onClick={handleAddPoste}
-              disabled={addPosteMut.isPending}
+              onClick={handleSavePoste}
+              disabled={addPosteMut.isPending || updatePosteMut.isPending}
               className="flex-1 bg-amber-500 hover:bg-amber-600 text-slate-900 font-medium py-2 rounded-lg text-sm transition-colors"
             >
-              {addPosteMut.isPending ? 'Enregistrement...' : 'Enregistrer'}
+              {(addPosteMut.isPending || updatePosteMut.isPending) ? 'Enregistrement...' : 'Enregistrer'}
             </button>
           </div>
         </div>

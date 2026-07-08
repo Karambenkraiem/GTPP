@@ -1,6 +1,6 @@
 import { Router } from 'express';
 import prisma from '../lib/prisma';
-import { authenticate } from '../middleware/auth';
+import { authenticate, requireRole } from '../middleware/auth';
 
 const router = Router();
 router.use(authenticate);
@@ -36,7 +36,7 @@ router.post('/', async (req, res) => {
   }
 });
 
-router.put('/:id', async (req, res) => {
+router.put('/:id', requireRole('chef_quart', 'admin'), async (req, res) => {
   try {
     const { chef_quart_id, chef_bloc_id, operateur1_id, operateur2_id, statut } = req.body;
     const poste = await prisma.poste.update({

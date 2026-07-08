@@ -14,7 +14,7 @@ const navItems: NavItem[] = [
   { to: '/journee', icon: BookOpen, label: 'Journée', roles: ['operateur', 'chef_bloc', 'chef_quart', 'chef_exploitation', 'admin'] },
   { to: '/releves-bloc', icon: Activity, label: 'Relevés Chef Bloc', roles: ['chef_bloc', 'chef_quart', 'admin', 'chef_exploitation'] },
   { to: '/releves-op', icon: ClipboardList, label: 'Saisie Relevés Op.', roles: ['operateur', 'chef_quart', 'admin', 'chef_exploitation'] },
-  { to: '/manouvres', icon: Zap, label: 'Manœuvres' },
+  { to: '/manouvres', icon: Zap, label: 'Manœuvres & Incidents' },
   { to: '/alarmes', icon: Bell, label: 'Alarmes Répétitives' },
   { to: '/ordres-travaux', icon: Wrench, label: 'Ordres de Travaux' },
   { to: '/defauts', icon: AlertTriangle, label: 'Matériels Défectueux' },

@@ -29,6 +29,8 @@ const PHRASES = [
   'Baisse de charge à PMC',
 ];
 
+type Tab = 'manoeuvre' | 'incident';
+
 /* ── Autocomplete ── */
 const AutoInput = forwardRef<HTMLInputElement, {
   value: string;
@@ -37,13 +39,14 @@ const AutoInput = forwardRef<HTMLInputElement, {
   onEscape?: () => void;
   placeholder?: string;
   autoFocus?: boolean;
-}>(function AutoInput({ value, onChange, onCommit, onEscape, placeholder, autoFocus }, inputRef) {
+  suggestionsList?: string[];
+}>(function AutoInput({ value, onChange, onCommit, onEscape, placeholder, autoFocus, suggestionsList = PHRASES }, inputRef) {
   const [open, setOpen] = useState(false);
   const [cursor, setCursor] = useState(0);
   const ref = useRef<HTMLDivElement>(null);
 
   const suggestions = value.trim()
-    ? PHRASES.filter(p => p.toLowerCase().includes(value.toLowerCase()))
+    ? suggestionsList.filter(p => p.toLowerCase().includes(value.toLowerCase()))
     : [];
 
   useEffect(() => { setCursor(0); }, [value]);
@@ -113,7 +116,11 @@ type RowState = { heure: string; description: string };
 
 export default function Manouvres() {
   const { user } = useAuth();
-  const canEdit = ['chef_bloc', 'chef_quart', 'chef_exploitation', 'admin'].includes(user?.role ?? '');
+  const [tab, setTab] = useState<Tab>('manoeuvre');
+  const canEditManoeuvre = ['chef_bloc', 'chef_quart', 'chef_exploitation', 'admin'].includes(user?.role ?? '');
+  const canEditIncident = ['chef_quart', 'admin'].includes(user?.role ?? '');
+  const canEdit = tab === 'manoeuvre' ? canEditManoeuvre : canEditIncident;
+
   const qc = useQueryClient();
   const today = format(new Date(), 'yyyy-MM-dd');
   const [selectedDate, setSelectedDate] = useState(today);
@@ -129,11 +136,15 @@ export default function Manouvres() {
   });
   const journee = journees?.find((j: any) => (j.jour as string).slice(0, 10) === selectedDate);
 
-  const { data: manouvres, isLoading } = useQuery({
+  const { data: allEntries, isLoading } = useQuery({
     queryKey: ['manouvres', journee?.id],
     queryFn: () => manouvresApi.list(journee!.id),
     enabled: !!journee?.id,
   });
+
+  const entries = allEntries?.filter((m: any) =>
+    tab === 'incident' ? m.type_manouvre === 'incident' : m.type_manouvre !== 'incident'
+  );
 
   const newHeureRef = useRef<HTMLInputElement>(null);
 
@@ -164,7 +175,7 @@ export default function Manouvres() {
       journee_id: journee.id,
       heure_manouvre: tunisLocalToISOString(`${selectedDate}T${newRow.heure}`),
       description,
-      type_manouvre: 'exploitation' as TypeManouvre,
+      type_manouvre: (tab === 'incident' ? 'incident' : 'exploitation') as TypeManouvre,
       feuille_numero: 1,
     });
   }
@@ -183,17 +194,21 @@ export default function Manouvres() {
       data: {
         heure_manouvre: tunisLocalToISOString(`${selectedDate}T${editRow.heure}`),
         description,
-        type_manouvre: 'exploitation' as TypeManouvre,
+        type_manouvre: (tab === 'incident' ? 'incident' : 'exploitation') as TypeManouvre,
         feuille_numero: 1,
       },
     });
   }
 
+  const isIncident = tab === 'incident';
+  const sectionTitle = isIncident ? 'Incidents' : "Manœuvres d'Exploitation";
+  const emptyLabel = isIncident ? 'Aucun incident enregistré pour cette journée' : 'Aucune manœuvre enregistrée pour cette journée';
+
   return (
     <div>
       <PageHeader
-        title="Manœuvres d'Exploitation"
-        subtitle="Journal chronologique des manœuvres"
+        title="Manœuvres & Incidents"
+        subtitle="Journal chronologique des manœuvres et incidents"
         actions={
           <input type="date" value={selectedDate} onChange={e => setSelectedDate(e.target.value)}
             className="bg-slate-800 border border-slate-600 rounded-lg px-3 py-1.5 text-white text-sm focus:outline-none focus:border-amber-500" />
@@ -201,6 +216,23 @@ export default function Manouvres() {
       />
 
       <div className="p-3 sm:p-6">
+        {/* Tabs */}
+        <div className="flex gap-1 mb-4 border-b border-slate-800">
+          {([['manoeuvre', 'Manœuvres'], ['incident', 'Incidents']] as [Tab, string][]).map(([t, label]) => (
+            <button
+              key={t}
+              onClick={() => setTab(t)}
+              className={`px-4 py-2 text-sm font-medium border-b-2 transition-colors ${
+                tab === t
+                  ? 'border-amber-500 text-amber-400'
+                  : 'border-transparent text-slate-500 hover:text-slate-300'
+              }`}
+            >
+              {label}
+            </button>
+          ))}
+        </div>
+
         {!journee && (
           <div className="bg-slate-900 border border-slate-700 rounded-lg p-8 text-center text-slate-400">
             Aucune journée pour le {format(new Date(selectedDate + 'T12:00:00'), 'd MMMM yyyy', { locale: fr })}
@@ -212,10 +244,15 @@ export default function Manouvres() {
           <div className="bg-slate-900 border border-slate-700 rounded-lg overflow-visible">
             <div className="bg-cyan-500 px-4 py-2.5 rounded-t-lg">
               <h3 className="text-slate-900 font-bold text-sm uppercase tracking-wide italic">
-                Manœuvres d'Exploitation
+                {sectionTitle}
               </h3>
             </div>
 
+            {isIncident && !canEdit && (
+              <p className="text-[11px] text-slate-500 px-4 py-1.5 border-b border-slate-800 italic">
+                Lecture seule · seul le chef de quart (ou un administrateur) peut saisir un incident
+              </p>
+            )}
             {canEdit && (
               <p className="text-[11px] text-slate-500 px-4 py-1.5 border-b border-slate-800 italic">
                 Cliquer sur une ligne pour modifier · ↑↓ suggestions · Entrée pour valider
@@ -226,7 +263,7 @@ export default function Manouvres() {
               <thead>
                 <tr className="bg-cyan-500/15 border-b border-cyan-500/30">
                   <th className="text-center px-4 py-2 text-cyan-300 font-semibold w-24">Heure</th>
-                  <th className="text-left px-4 py-2 text-cyan-300 font-semibold">Manœuvre d'Exploitation</th>
+                  <th className="text-left px-4 py-2 text-cyan-300 font-semibold">{sectionTitle}</th>
                   <th className="w-10" />
                 </tr>
               </thead>
@@ -236,15 +273,15 @@ export default function Manouvres() {
                     <td colSpan={3} className="text-center text-slate-500 py-6 text-xs">Chargement...</td>
                   </tr>
                 )}
-                {!isLoading && (!manouvres || manouvres.length === 0) && (
+                {!isLoading && (!entries || entries.length === 0) && (
                   <tr>
                     <td colSpan={3} className="text-center text-slate-600 py-8 text-xs italic">
-                      Aucune manœuvre enregistrée pour cette journée
+                      {emptyLabel}
                     </td>
                   </tr>
                 )}
 
-                {manouvres?.map((m: any) =>
+                {entries?.map((m: any) =>
                   editingId === m.id ? (
                     <tr key={m.id} className="border-b border-amber-500/40 bg-amber-500/5">
                       <td className="px-2 py-1.5 w-24">
@@ -263,6 +300,7 @@ export default function Manouvres() {
                           onChange={v => setEditRow(r => ({ ...r, description: v }))}
                           onCommit={v => handleUpdate(m.id, v)}
                           onEscape={() => setEditingId(null)}
+                          suggestionsList={isIncident ? [] : PHRASES}
                           autoFocus
                         />
                       </td>
@@ -306,7 +344,8 @@ export default function Manouvres() {
                         value={newRow.description}
                         onChange={v => setNewRow(r => ({ ...r, description: v }))}
                         onCommit={v => { if (v.trim()) handleAdd(v); }}
-                        placeholder="Saisir la manœuvre..."
+                        placeholder={isIncident ? "Saisir l'incident..." : 'Saisir la manœuvre...'}
+                        suggestionsList={isIncident ? [] : PHRASES}
                       />
                     </td>
                     <td className="px-2 py-2 text-center">
