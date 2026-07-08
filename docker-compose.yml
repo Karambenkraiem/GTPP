@@ -50,7 +50,6 @@ services:
     restart: unless-stopped
     environment:
       VITE_API_URL: http://localhost:3004/api
-      VITE_DEMO_LOGIN: ${DEMO_LOGIN:-true}
     ports:
       - "5173:5173"
     depends_on:

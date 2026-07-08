@@ -1,9 +1,10 @@
 import { useState, useMemo } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
-import { usersApi } from '../../lib/api';
+import { usersApi, authApi } from '../../lib/api';
 import PageHeader from '../../components/PageHeader';
 import Modal from '../../components/Modal';
-import { Plus, Pencil, UserX, ChevronUp, ChevronDown, ChevronsUpDown } from 'lucide-react';
+import { Plus, Pencil, UserX, ChevronUp, ChevronDown, ChevronsUpDown, ToggleLeft, ToggleRight } from 'lucide-react';
+import { useAuth } from '../../contexts/AuthContext';
 import { ROLE_LABELS } from '../../types';
 import type { User, Role } from '../../types';
 
@@ -15,6 +16,8 @@ type SortCol = 'nom' | 'matricule' | 'role' | 'actif';
 
 export default function Users() {
   const qc = useQueryClient();
+  const { user: currentUser } = useAuth();
+  const isAdmin = currentUser?.role === 'admin';
   const [showModal, setShowModal] = useState(false);
   const [showConfirm, setShowConfirm] = useState(false);
   const [editUser, setEditUser] = useState<User | null>(null);
@@ -61,6 +64,17 @@ export default function Users() {
     onSuccess: () => qc.invalidateQueries({ queryKey: ['users'] }),
   });
 
+  const { data: demoStatus } = useQuery({
+    queryKey: ['demo-status'],
+    queryFn: authApi.demoStatus,
+    enabled: isAdmin,
+  });
+
+  const toggleDemoMut = useMutation({
+    mutationFn: (enabled: boolean) => authApi.setDemoStatus(enabled),
+    onSuccess: () => qc.invalidateQueries({ queryKey: ['demo-status'] }),
+  });
+
   function openEdit(u: User) {
     setEditUser(u);
     setForm({ nom: u.nom, prenom: u.prenom, role: u.role, actif: u.actif });
@@ -85,10 +99,27 @@ export default function Users() {
         title="Gestion des Utilisateurs"
         subtitle="Comptes du personnel autorisé"
         actions={
-          <button onClick={() => { setEditUser(null); setForm(EMPTY_FORM); setShowModal(true); }}
-            className="flex items-center gap-1.5 bg-amber-500 hover:bg-amber-600 text-slate-900 font-medium px-3 py-1.5 rounded-lg text-sm">
-            <Plus size={14} /> Nouvel utilisateur
-          </button>
+          <>
+            {isAdmin && (
+              <button
+                onClick={() => toggleDemoMut.mutate(!demoStatus?.enabled)}
+                disabled={toggleDemoMut.isPending || demoStatus === undefined}
+                title="Affiche/masque le panneau d'accès rapide sur la page de connexion"
+                className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-sm font-medium disabled:opacity-50 transition-colors ${
+                  demoStatus?.enabled
+                    ? 'bg-green-500/10 text-green-400 hover:bg-green-500/20'
+                    : 'bg-slate-800 text-slate-300 hover:bg-slate-700'
+                }`}
+              >
+                {demoStatus?.enabled ? <ToggleRight size={16} /> : <ToggleLeft size={16} />}
+                Mode démo {demoStatus?.enabled ? 'activé' : 'désactivé'}
+              </button>
+            )}
+            <button onClick={() => { setEditUser(null); setForm(EMPTY_FORM); setShowModal(true); }}
+              className="flex items-center gap-1.5 bg-amber-500 hover:bg-amber-600 text-slate-900 font-medium px-3 py-1.5 rounded-lg text-sm">
+              <Plus size={14} /> Nouvel utilisateur
+            </button>
+          </>
         }
       />
 

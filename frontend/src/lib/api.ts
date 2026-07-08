@@ -34,6 +34,9 @@ export const authApi = {
   changePassword: (currentPassword: string, newPassword: string) =>
     api.put('/auth/change-password', { currentPassword, newPassword }).then((r) => r.data),
   demoUsers: () => api.get('/auth/demo-users').then((r) => r.data),
+  demoStatus: () => api.get('/auth/demo-status').then((r) => r.data),
+  setDemoStatus: (enabled: boolean) =>
+    api.put('/auth/demo-status', { enabled }).then((r) => r.data),
 };
 
 // Users

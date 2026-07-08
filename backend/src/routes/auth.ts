@@ -2,9 +2,11 @@ import { Router } from 'express';
 import bcrypt from 'bcryptjs';
 import jwt from 'jsonwebtoken';
 import prisma from '../lib/prisma';
-import { authenticate } from '../middleware/auth';
+import { authenticate, requireRole } from '../middleware/auth';
 
 const router = Router();
+
+let demoLoginEnabled = process.env.DEMO_LOGIN === 'true';
 
 router.post('/login', async (req, res) => {
   try {
@@ -39,8 +41,8 @@ router.post('/login', async (req, res) => {
 });
 
 router.get('/demo-users', async (_req, res) => {
-  if (process.env.DEMO_LOGIN !== 'true') {
-    return res.status(404).json({ error: 'Non trouvé' });
+  if (!demoLoginEnabled) {
+    return res.json([]);
   }
   try {
     const users = await prisma.utilisateur.findMany({
@@ -52,6 +54,15 @@ router.get('/demo-users', async (_req, res) => {
   } catch {
     res.status(500).json({ error: 'Erreur serveur' });
   }
+});
+
+router.get('/demo-status', authenticate, requireRole('admin'), (_req, res) => {
+  res.json({ enabled: demoLoginEnabled });
+});
+
+router.put('/demo-status', authenticate, requireRole('admin'), (req, res) => {
+  demoLoginEnabled = !!req.body.enabled;
+  res.json({ enabled: demoLoginEnabled });
 });
 
 router.get('/me', authenticate, async (req, res) => {

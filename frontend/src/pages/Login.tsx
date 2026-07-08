@@ -7,8 +7,6 @@ import { ROLE_LABELS } from '../types';
 import type { Role } from '../types';
 import { Zap } from 'lucide-react';
 
-const DEMO_LOGIN_ENABLED = import.meta.env.VITE_DEMO_LOGIN === 'true';
-
 interface DemoUser {
   matricule: string;
   nom: string;
@@ -27,7 +25,6 @@ export default function Login() {
   const { data: demoUsers } = useQuery<DemoUser[]>({
     queryKey: ['demo-users'],
     queryFn: authApi.demoUsers,
-    enabled: DEMO_LOGIN_ENABLED,
     retry: false,
   });
 
@@ -53,7 +50,7 @@ export default function Login() {
     doLogin(u.matricule, u.role === 'guest' ? '00000' : '123456');
   };
 
-  const showDemoPanel = DEMO_LOGIN_ENABLED && !!demoUsers?.length;
+  const showDemoPanel = !!demoUsers?.length;
 
   return (
     <div className="min-h-screen bg-slate-950 flex items-center justify-center p-4">
