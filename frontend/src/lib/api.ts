@@ -29,6 +29,8 @@ export const authApi = {
   login: (matricule: string, password: string) =>
     api.post('/auth/login', { matricule, password }).then((r) => r.data),
   me: () => api.get('/auth/me').then((r) => r.data),
+  updateMe: (data: { nom: string; prenom: string }) =>
+    api.put('/auth/me', data).then((r) => r.data),
   changePassword: (currentPassword: string, newPassword: string) =>
     api.put('/auth/change-password', { currentPassword, newPassword }).then((r) => r.data),
 };

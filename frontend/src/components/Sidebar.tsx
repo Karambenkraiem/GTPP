@@ -95,15 +95,15 @@ export default function Sidebar({ onClose }: { onClose?: () => void }) {
 
       {/* User */}
       <div className="border-t border-slate-700 px-3 py-3">
-        <div className="flex items-center gap-2 mb-2">
-          <div className="w-7 h-7 rounded-full bg-amber-500 flex items-center justify-center text-slate-900 font-bold text-xs">
+        <NavLink to="/profil" onClick={onClose} className="flex items-center gap-2 mb-2 -mx-1 px-1 py-1 rounded hover:bg-slate-800 transition-colors">
+          <div className="w-7 h-7 rounded-full bg-amber-500 flex items-center justify-center text-slate-900 font-bold text-xs flex-shrink-0">
             {user?.prenom?.[0]}{user?.nom?.[0]}
           </div>
           <div className="flex-1 min-w-0">
             <p className="text-white text-xs font-medium truncate">{user?.prenom} {user?.nom}</p>
             <p className="text-slate-400 text-xs">{user?.matricule}</p>
           </div>
-        </div>
+        </NavLink>
         <div className="flex items-center justify-between mb-2">
           <button
             onClick={toggle}

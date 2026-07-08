@@ -51,6 +51,22 @@ router.get('/me', authenticate, async (req, res) => {
   }
 });
 
+router.put('/me', authenticate, async (req, res) => {
+  try {
+    const { nom, prenom } = req.body;
+    if (!nom || !prenom) return res.status(400).json({ error: 'Nom et prénom requis' });
+
+    const user = await prisma.utilisateur.update({
+      where: { id: req.user!.userId },
+      data: { nom, prenom, modifie_le: new Date() },
+      select: { id: true, nom: true, prenom: true, matricule: true, role: true, actif: true },
+    });
+    res.json(user);
+  } catch {
+    res.status(500).json({ error: 'Erreur serveur' });
+  }
+});
+
 router.put('/change-password', authenticate, async (req, res) => {
   try {
     const { currentPassword, newPassword } = req.body;
