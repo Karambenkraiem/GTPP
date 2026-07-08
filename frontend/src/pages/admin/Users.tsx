@@ -16,6 +16,7 @@ type SortCol = 'nom' | 'matricule' | 'role' | 'actif';
 export default function Users() {
   const qc = useQueryClient();
   const [showModal, setShowModal] = useState(false);
+  const [showConfirm, setShowConfirm] = useState(false);
   const [editUser, setEditUser] = useState<User | null>(null);
   const [form, setForm] = useState<any>(EMPTY_FORM);
   const [sort, setSort] = useState<{ col: SortCol; dir: 'asc' | 'desc' }>({ col: 'nom', dir: 'asc' });
@@ -49,6 +50,11 @@ export default function Users() {
     mutationFn: (data: any) => editUser ? usersApi.update(editUser.id, data) : usersApi.create(data),
     onSuccess: () => { qc.invalidateQueries({ queryKey: ['users'] }); setShowModal(false); setEditUser(null); setForm(EMPTY_FORM); },
   });
+
+  function confirmSave() {
+    setShowConfirm(false);
+    saveMut.mutate(form);
+  }
 
   const deactivateMut = useMutation({
     mutationFn: (id: string) => usersApi.remove(id),
@@ -177,10 +183,32 @@ export default function Users() {
           <div className="flex gap-3 pt-2">
             <button onClick={() => { setShowModal(false); setEditUser(null); }} className="flex-1 bg-slate-800 hover:bg-slate-700 text-slate-300 py-2 rounded-lg text-sm">Annuler</button>
             <button
-              onClick={() => saveMut.mutate(form)}
+              onClick={() => setShowConfirm(true)}
               disabled={saveMut.isPending || !form.prenom || !form.nom || (!editUser && (!form.matricule || !form.password))}
               className="flex-1 bg-amber-500 hover:bg-amber-600 text-slate-900 font-medium py-2 rounded-lg text-sm disabled:opacity-50">
               {saveMut.isPending ? 'Enregistrement...' : 'Enregistrer'}
+            </button>
+          </div>
+        </div>
+      </Modal>
+
+      <Modal open={showConfirm} onClose={() => setShowConfirm(false)} title="Confirmer" size="sm">
+        <div className="space-y-4">
+          <p className="text-sm text-slate-300">
+            {editUser
+              ? <>Confirmer la modification de l'utilisateur <span className="text-white font-medium">{form.prenom} {form.nom}</span> ?</>
+              : <>Confirmer la création de l'utilisateur <span className="text-white font-medium">{form.prenom} {form.nom}</span> ({form.matricule}) avec le rôle <span className="text-white font-medium">{ROLE_LABELS[form.role as Role]}</span> ?</>}
+          </p>
+          {editUser && form.password && (
+            <p className="text-xs text-amber-400">Le mot de passe de ce compte sera également modifié.</p>
+          )}
+          <div className="flex gap-3 pt-2">
+            <button onClick={() => setShowConfirm(false)} className="flex-1 bg-slate-800 hover:bg-slate-700 text-slate-300 py-2 rounded-lg text-sm">Annuler</button>
+            <button
+              onClick={confirmSave}
+              disabled={saveMut.isPending}
+              className="flex-1 bg-amber-500 hover:bg-amber-600 text-slate-900 font-medium py-2 rounded-lg text-sm disabled:opacity-50">
+              {saveMut.isPending ? 'Enregistrement...' : 'Confirmer'}
             </button>
           </div>
         </div>
