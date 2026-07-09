@@ -52,6 +52,15 @@ async function main() {
     });
   }
   console.log(`Utilisateurs: ${UTILISATEURS.length} créés/mis à jour. Mot de passe réinitialisé à: ${DEFAULT_PASSWORD}`);
+
+  // Compte invité à accès rapide — toujours disponible, matricule/mot de passe fixes (00000/00000).
+  const guestHash = await bcrypt.hash('00000', 10);
+  await prisma.utilisateur.upsert({
+    where: { matricule: '00000' },
+    update: { nom: 'Invité', prenom: 'Accès rapide', role: 'guest', mot_de_passe_hash: guestHash, actif: true, modifie_le: new Date() },
+    create: { nom: 'Invité', prenom: 'Accès rapide', matricule: '00000', role: 'guest', mot_de_passe_hash: guestHash },
+  });
+  console.log('Compte invité 00000/00000 vérifié/créé.');
 }
 
 main()

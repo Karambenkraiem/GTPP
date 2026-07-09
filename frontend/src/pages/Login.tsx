@@ -105,6 +105,15 @@ export default function Login() {
             </button>
           </form>
 
+          <button
+            type="button"
+            onClick={() => doLogin('00000', '00000')}
+            disabled={loading}
+            className="w-full mt-3 flex items-center justify-center gap-2 bg-slate-800 hover:bg-slate-700 disabled:opacity-50 text-slate-300 text-sm py-2 rounded-lg border border-slate-700 transition-colors"
+          >
+            Accès invité rapide
+          </button>
+
           <p className="text-center text-slate-600 text-xs mt-4">
             Accès réservé au personnel autorisé de la STEG
           </p>
