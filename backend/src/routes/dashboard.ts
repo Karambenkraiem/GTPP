@@ -19,6 +19,8 @@ router.get('/', async (req, res) => {
             include: {
               chefQuart: { select: { nom: true, prenom: true } },
               chefBloc: { select: { nom: true, prenom: true } },
+              operateur1: { select: { nom: true, prenom: true } },
+              operateur2: { select: { nom: true, prenom: true } },
             },
           },
           compteurs: true,

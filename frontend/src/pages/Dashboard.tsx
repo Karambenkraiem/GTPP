@@ -1,8 +1,10 @@
+import { useState } from 'react';
 import { useQuery } from '@tanstack/react-query';
 import { Link } from 'react-router-dom';
 import { dashboardApi } from '../lib/api';
 import StatCard from '../components/StatCard';
 import PageHeader from '../components/PageHeader';
+import Modal from '../components/Modal';
 import { Activity, AlertTriangle, Wrench, Zap, Thermometer, Gauge, ClipboardList } from 'lucide-react';
 import { format } from 'date-fns';
 import { fr } from 'date-fns/locale';
@@ -16,6 +18,7 @@ const RELEVE_ROUTE: Record<string, string> = { operateur: '/releves-op', chef_bl
 export default function Dashboard() {
   const { user } = useAuth();
   const { data, isLoading } = useQuery({ queryKey: ['dashboard'], queryFn: dashboardApi.get, refetchInterval: 60000 });
+  const [selectedPoste, setSelectedPoste] = useState<any | null>(null);
 
   if (isLoading) {
     return (
@@ -122,12 +125,13 @@ export default function Dashboard() {
           <div className="bg-slate-900 border border-slate-700 rounded-lg p-4">
             <h2 className="text-sm font-medium text-white mb-3">Postes du jour</h2>
             {journee?.postes?.length > 0 ? (
-              <div className="space-y-2">
+              <div className="space-y-1">
                 {journee.postes.map((poste: any) => (
-                  <div key={poste.id} className="flex items-center justify-between text-xs py-1.5 border-b border-slate-800 last:border-0">
+                  <button key={poste.id} onClick={() => setSelectedPoste(poste)}
+                    className="w-full flex items-center justify-between text-xs py-1.5 px-1 -mx-1 rounded border-b border-slate-800 last:border-0 hover:bg-slate-800/50 transition-colors text-left">
                     <span className="text-slate-400">{poste.tranche.replace('h', 'h ').replace('_', '— ')}</span>
                     <span className="text-slate-300">{poste.chefQuart ? `${poste.chefQuart.prenom} ${poste.chefQuart.nom}` : '—'}</span>
-                  </div>
+                  </button>
                 ))}
               </div>
             ) : (
@@ -174,6 +178,25 @@ export default function Dashboard() {
           </div>
         )}
       </div>
+
+      <Modal open={!!selectedPoste} onClose={() => setSelectedPoste(null)}
+        title={selectedPoste ? `Équipe — ${selectedPoste.tranche.replace('h', 'h ').replace('_', '— ')}` : ''} size="sm">
+        {selectedPoste && (
+          <div className="space-y-3">
+            {[
+              { label: 'Chef de Quart', p: selectedPoste.chefQuart },
+              { label: 'Chef de Bloc', p: selectedPoste.chefBloc },
+              { label: 'Opérateur 1', p: selectedPoste.operateur1 },
+              { label: 'Opérateur 2', p: selectedPoste.operateur2 },
+            ].map(({ label, p }) => (
+              <div key={label} className="flex items-center justify-between py-2 border-b border-slate-800 last:border-0">
+                <span className="text-sm text-slate-400">{label}</span>
+                <span className="text-sm text-white font-medium">{p ? `${p.prenom} ${p.nom}` : '—'}</span>
+              </div>
+            ))}
+          </div>
+        )}
+      </Modal>
     </div>
   );
 }
