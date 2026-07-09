@@ -1,4 +1,5 @@
 import { useQuery } from '@tanstack/react-query';
+import { Link } from 'react-router-dom';
 import { dashboardApi } from '../lib/api';
 import StatCard from '../components/StatCard';
 import PageHeader from '../components/PageHeader';
@@ -61,7 +62,7 @@ export default function Dashboard() {
           <div className="bg-slate-900 border border-slate-700 rounded-lg p-4">
             <h2 className="text-sm font-medium text-white mb-3">État des alertes</h2>
             <div className="space-y-2">
-              <div className="flex items-center justify-between py-2 border-b border-slate-800">
+              <Link to="/defauts" className="flex items-center justify-between py-2 border-b border-slate-800 -mx-2 px-2 rounded hover:bg-slate-800/50 transition-colors">
                 <div className="flex items-center gap-2 text-sm text-slate-300">
                   <AlertTriangle size={14} className="text-red-400" />
                   Matériels défectueux actifs
@@ -69,21 +70,21 @@ export default function Dashboard() {
                 <span className={`text-sm font-bold ${data?.defautsActifs > 0 ? 'text-red-400' : 'text-green-400'}`}>
                   {data?.defautsActifs ?? 0}
                 </span>
-              </div>
-              <div className="flex items-center justify-between py-2 border-b border-slate-800">
+              </Link>
+              <Link to="/ordres-travaux" className="flex items-center justify-between py-2 border-b border-slate-800 -mx-2 px-2 rounded hover:bg-slate-800/50 transition-colors">
                 <div className="flex items-center gap-2 text-sm text-slate-300">
                   <Wrench size={14} className="text-amber-400" />
                   OT en cours
                 </div>
                 <span className="text-sm font-bold text-amber-400">{data?.otsEnCours ?? 0}</span>
-              </div>
-              <div className="flex items-center justify-between py-2">
+              </Link>
+              <Link to="/releves-jour" className="flex items-center justify-between py-2 -mx-2 px-2 rounded hover:bg-slate-800/50 transition-colors">
                 <div className="flex items-center gap-2 text-sm text-slate-300">
                   <Activity size={14} className="text-blue-400" />
                   Relevés aujourd'hui
                 </div>
                 <span className="text-sm font-bold text-blue-400">{journee?._count?.releves_bloc ?? 0}</span>
-              </div>
+              </Link>
             </div>
           </div>
 
@@ -109,14 +110,14 @@ export default function Dashboard() {
             <h2 className="text-sm font-medium text-white mb-3">Activité aujourd'hui</h2>
             <div className="space-y-2">
               {[
-                { label: 'Manœuvres', value: journee?._count?.manouvres ?? 0 },
-                { label: 'Alarmes', value: journee?._count?.alarmes ?? 0 },
-                { label: 'OT', value: journee?._count?.ordres_travaux ?? 0 },
-              ].map(({ label, value }) => (
-                <div key={label} className="flex items-center justify-between py-2 border-b border-slate-800 last:border-0">
+                { label: 'Manœuvres', value: journee?._count?.manouvres ?? 0, to: '/manouvres' },
+                { label: 'Alarmes', value: journee?._count?.alarmes ?? 0, to: '/alarmes' },
+                { label: 'OT', value: journee?._count?.ordres_travaux ?? 0, to: '/ordres-travaux' },
+              ].map(({ label, value, to }) => (
+                <Link key={label} to={to} className="flex items-center justify-between py-2 border-b border-slate-800 last:border-0 -mx-2 px-2 rounded hover:bg-slate-800/50 transition-colors">
                   <span className="text-sm text-slate-300">{label}</span>
                   <span className="text-sm font-bold text-slate-100">{value}</span>
-                </div>
+                </Link>
               ))}
             </div>
           </div>
