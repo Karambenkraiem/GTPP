@@ -9,7 +9,7 @@ import {
 import PageHeader from '../components/PageHeader';
 import { rapportApi } from '../lib/api';
 import {
-  TRANCHE_LABELS, TYPE_MANOUVRE_LABELS,
+  TRANCHE_LABELS,
   ZONE_LABELS, STATUT_JOURNEE_LABELS,
 } from '../types';
 
@@ -350,45 +350,76 @@ export default function Rapport() {
             )}
 
             {/* ── 5. Manœuvres ── */}
-            <div className="bg-slate-900 border border-slate-700 rounded-lg overflow-hidden">
-              <SectionTitle icon={Settings} title="Manœuvres" count={manouvres.length} />
-              {manouvres.length === 0 ? (
-                <p className="text-slate-600 text-sm text-center py-5">Aucune manœuvre enregistrée</p>
-              ) : (
-                <table className="w-full text-sm">
-                  <thead>
-                    <tr className="bg-slate-800 border-b border-slate-700 text-slate-400 text-xs">
-                      <th className="text-left px-4 py-2 font-medium w-20">Heure</th>
-                      <th className="text-left px-4 py-2 font-medium w-28">Type</th>
-                      <th className="text-left px-4 py-2 font-medium">Description</th>
-                      <th className="text-left px-4 py-2 font-medium w-32">Saisi par</th>
-                    </tr>
-                  </thead>
-                  <tbody className="divide-y divide-slate-800">
-                    {manouvres.map((m: any) => (
-                      <tr key={m.id} className="hover:bg-slate-800/30">
-                        <td className="px-4 py-2.5 text-amber-400 font-medium text-xs">
-                          {safeDate(m.heure_manouvre, 'HH:mm')}
-                        </td>
-                        <td className="px-4 py-2.5">
-                          <span className={`text-xs px-2 py-0.5 rounded-full ${
-                            m.type_manouvre === 'incident'  ? 'bg-red-500/10 text-red-400'   :
-                            m.type_manouvre === 'entretien' ? 'bg-blue-500/10 text-blue-400' :
-                            'bg-slate-700 text-slate-300'
-                          }`}>
-                            {TYPE_MANOUVRE_LABELS[m.type_manouvre as keyof typeof TYPE_MANOUVRE_LABELS]}
-                          </span>
-                        </td>
-                        <td className="px-4 py-2.5 text-slate-300">{m.description}</td>
-                        <td className="px-4 py-2.5 text-slate-400 text-xs">
-                          {m.saiseur ? `${m.saiseur.prenom} ${m.saiseur.nom}` : '—'}
-                        </td>
-                      </tr>
-                    ))}
-                  </tbody>
-                </table>
-              )}
-            </div>
+            {(() => {
+              const manouvresNonIncident = manouvres.filter((m: any) => m.type_manouvre !== 'incident');
+              return (
+                <div className="bg-slate-900 border border-slate-700 rounded-lg overflow-hidden">
+                  <SectionTitle icon={Settings} title="Manœuvres" count={manouvresNonIncident.length} />
+                  {manouvresNonIncident.length === 0 ? (
+                    <p className="text-slate-600 text-sm text-center py-5">Aucune manœuvre enregistrée</p>
+                  ) : (
+                    <table className="w-full text-sm">
+                      <thead>
+                        <tr className="bg-slate-800 border-b border-slate-700 text-slate-400 text-xs">
+                          <th className="text-left px-4 py-2 font-medium w-20">Heure</th>
+                          <th className="text-left px-4 py-2 font-medium">Description</th>
+                          <th className="text-left px-4 py-2 font-medium w-32">Saisi par</th>
+                        </tr>
+                      </thead>
+                      <tbody className="divide-y divide-slate-800">
+                        {manouvresNonIncident.map((m: any) => (
+                          <tr key={m.id} className="hover:bg-slate-800/30">
+                            <td className="px-4 py-2.5 text-amber-400 font-medium text-xs">
+                              {safeDate(m.heure_manouvre, 'HH:mm')}
+                            </td>
+                            <td className="px-4 py-2.5 text-slate-300">{m.description}</td>
+                            <td className="px-4 py-2.5 text-slate-400 text-xs">
+                              {m.saiseur ? `${m.saiseur.prenom} ${m.saiseur.nom}` : '—'}
+                            </td>
+                          </tr>
+                        ))}
+                      </tbody>
+                    </table>
+                  )}
+                </div>
+              );
+            })()}
+
+            {/* ── 5b. Incidents ── */}
+            {(() => {
+              const incidents = manouvres.filter((m: any) => m.type_manouvre === 'incident');
+              return (
+                <div className="bg-slate-900 border border-slate-700 rounded-lg overflow-hidden">
+                  <SectionTitle icon={Activity} title="Incidents" count={incidents.length} />
+                  {incidents.length === 0 ? (
+                    <p className="text-slate-600 text-sm text-center py-5">Aucun incident enregistré</p>
+                  ) : (
+                    <table className="w-full text-sm">
+                      <thead>
+                        <tr className="bg-slate-800 border-b border-slate-700 text-slate-400 text-xs">
+                          <th className="text-left px-4 py-2 font-medium w-20">Heure</th>
+                          <th className="text-left px-4 py-2 font-medium">Description</th>
+                          <th className="text-left px-4 py-2 font-medium w-32">Saisi par</th>
+                        </tr>
+                      </thead>
+                      <tbody className="divide-y divide-slate-800">
+                        {incidents.map((m: any) => (
+                          <tr key={m.id} className="hover:bg-slate-800/30">
+                            <td className="px-4 py-2.5 text-red-400 font-medium text-xs">
+                              {safeDate(m.heure_manouvre, 'HH:mm')}
+                            </td>
+                            <td className="px-4 py-2.5 text-slate-300">{m.description}</td>
+                            <td className="px-4 py-2.5 text-slate-400 text-xs">
+                              {m.saiseur ? `${m.saiseur.prenom} ${m.saiseur.nom}` : '—'}
+                            </td>
+                          </tr>
+                        ))}
+                      </tbody>
+                    </table>
+                  )}
+                </div>
+              );
+            })()}
 
             {/* ── 6. Alarmes ── */}
             <div className="bg-slate-900 border border-slate-700 rounded-lg overflow-hidden">
