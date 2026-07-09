@@ -207,7 +207,7 @@ export default function RelevesOperateurPage() {
   const saveCptMut = useMutation({
     mutationFn: (data: any) => relevesApi.saveCompteurs({ journee_id: journee!.id, ...data }),
     onSuccess: () => { qc.invalidateQueries({ queryKey: ['compteurs'] }); showToast('Compteurs enregistrés avec succès'); setCptLocked(true); },
-    onError: () => showToast('Erreur lors de l\'enregistrement', 'error'),
+    onError: (err: any) => showToast(err?.response?.data?.error || 'Erreur lors de l\'enregistrement', 'error'),
   });
 
   function cpt(n: string, v: any) { setCptForm((s: any) => ({ ...s, [n]: v })); }

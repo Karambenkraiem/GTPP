@@ -205,7 +205,7 @@ export default function RelevesChefBloc() {
   const saveCptMut = useMutation({
     mutationFn: (data: any) => relevesApi.saveCompteurs(data),
     onSuccess: () => { qc.invalidateQueries({ queryKey: ['compteurs'] }); showToast('Compteurs enregistrés'); setCptLocked(true); setCptConfirm(null); },
-    onError: () => showToast('Erreur lors de l\'enregistrement des compteurs', 'error'),
+    onError: (err: any) => showToast(err?.response?.data?.error || 'Erreur lors de l\'enregistrement des compteurs', 'error'),
   });
 
   function isSlotFuture(hour: number) {
