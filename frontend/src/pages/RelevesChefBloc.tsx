@@ -2,7 +2,7 @@ import { useState, useEffect, useMemo } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { relevesApi, journeesApi, postesApi } from '../lib/api';
 import PageHeader from '../components/PageHeader';
-import { Save, RotateCcw, FlaskConical, Gauge, Pencil } from 'lucide-react';
+import { Save, RotateCcw, FlaskConical, Gauge, Pencil, Plus, Trash2 } from 'lucide-react';
 import { useToast, ToastContainer } from '../components/Toast';
 import { format } from 'date-fns';
 import { fr } from 'date-fns/locale';
@@ -28,7 +28,7 @@ function normalizeConsoAuxCycles(data: any): ConsoAuxCycle[] {
   if (data?.conso_aux_couplage != null || data?.conso_aux_decouplage != null) {
     return [{ couplage: data.conso_aux_couplage ?? null, decouplage: data.conso_aux_decouplage ?? null }];
   }
-  return [];
+  return [{ couplage: null, decouplage: null }];
 }
 
 function consoAuxTotal(cycles: ConsoAuxCycle[] | undefined): number | null {
@@ -245,6 +245,22 @@ export default function RelevesChefBloc() {
   function f(n: string, v: any) { setForm((s: any) => ({ ...s, [n]: v })); }
   function g(sub: string, n: string, v: any) { setForm((s: any) => ({ ...s, [sub]: { ...(s[sub] || {}), [n]: v } })); }
   const fc = (n: string, v: any) => setCptForm((s: any) => ({ ...s, [n]: v }));
+  function setConsoAuxCycle(i: number, field: keyof ConsoAuxCycle, value: number | null) {
+    setCptForm((s: any) => {
+      const cycles = [...(s.conso_aux_cycles || [])];
+      cycles[i] = { ...cycles[i], [field]: value };
+      return { ...s, conso_aux_cycles: cycles };
+    });
+  }
+  function addConsoAuxCycle() {
+    setCptForm((s: any) => ({ ...s, conso_aux_cycles: [...(s.conso_aux_cycles || []), { couplage: null, decouplage: null }] }));
+  }
+  function removeConsoAuxCycle(i: number) {
+    setCptForm((s: any) => {
+      const cycles = (s.conso_aux_cycles || []).filter((_: any, idx: number) => idx !== i);
+      return { ...s, conso_aux_cycles: cycles.length ? cycles : [{ couplage: null, decouplage: null }] };
+    });
+  }
   function handleSaveCpt() {
     if (!journee) return;
     saveCptMut.mutate({
@@ -493,32 +509,38 @@ export default function RelevesChefBloc() {
                   </div>
                 </div>
 
-                {/* Consommation Auxiliaire — lecture seule (saisie par l'opérateur) */}
+                {/* Consommation Auxiliaire en Charge */}
                 <div className="border border-slate-700 rounded-lg overflow-hidden">
                   <div className="bg-slate-800 text-center text-xs font-bold text-slate-300 uppercase tracking-wider py-2 border-b border-slate-700">
                     Consommation Auxiliaire en Charge (MWh)
                   </div>
                   <div className="p-3 space-y-2">
-                    {((cptForm.conso_aux_cycles as ConsoAuxCycle[]) || []).length === 0 ? (
-                      <p className="text-xs text-slate-600 text-center py-2">Aucun cycle couplage/découplage saisi</p>
-                    ) : (
-                      ((cptForm.conso_aux_cycles as ConsoAuxCycle[]) || []).map((c, i) => (
-                        <div key={i} className="grid grid-cols-2 gap-3">
-                          <div>
-                            <label className="block text-xs text-slate-500 mb-0.5">Compteur couplage {i + 1}</label>
-                            <div className="bg-slate-800/50 border border-slate-700 rounded px-2 py-1.5 text-white text-xs text-center">
-                              {c.couplage != null ? Number(c.couplage).toFixed(3) : '—'}
-                            </div>
-                          </div>
-                          <div>
-                            <label className="block text-xs text-slate-500 mb-0.5">Compteur découplage {i + 1}</label>
-                            <div className="bg-slate-800/50 border border-slate-700 rounded px-2 py-1.5 text-white text-xs text-center">
-                              {c.decouplage != null ? Number(c.decouplage).toFixed(3) : '—'}
-                            </div>
-                          </div>
+                    {((cptForm.conso_aux_cycles as ConsoAuxCycle[]) || []).map((c, i) => (
+                      <div key={i} className="grid grid-cols-[1fr_1fr_auto] gap-3 items-end">
+                        <div>
+                          <label className="block text-xs text-slate-500 mb-0.5">Compteur couplage {i + 1}</label>
+                          <input type="number" step="any" value={c.couplage ?? ''}
+                            onChange={e => setConsoAuxCycle(i, 'couplage', e.target.value === '' ? null : parseFloat(e.target.value))}
+                            className="w-full bg-slate-800 border border-slate-700 rounded px-2 py-1.5 text-white text-xs focus:outline-none focus:border-amber-500" />
                         </div>
-                      ))
-                    )}
+                        <div>
+                          <label className="block text-xs text-slate-500 mb-0.5">Compteur découplage {i + 1}</label>
+                          <input type="number" step="any" value={c.decouplage ?? ''}
+                            onChange={e => setConsoAuxCycle(i, 'decouplage', e.target.value === '' ? null : parseFloat(e.target.value))}
+                            className="w-full bg-slate-800 border border-slate-700 rounded px-2 py-1.5 text-white text-xs focus:outline-none focus:border-amber-500" />
+                        </div>
+                        <button type="button" onClick={() => removeConsoAuxCycle(i)}
+                          disabled={(cptForm.conso_aux_cycles || []).length <= 1}
+                          title="Supprimer ce cycle"
+                          className="text-slate-500 hover:text-red-400 disabled:opacity-30 disabled:cursor-not-allowed transition-colors pb-2">
+                          <Trash2 size={14} />
+                        </button>
+                      </div>
+                    ))}
+                    <button type="button" onClick={addConsoAuxCycle}
+                      className="flex items-center gap-1.5 text-amber-400 hover:text-amber-300 text-xs transition-colors">
+                      <Plus size={13} /> Ajouter un couplage/découplage
+                    </button>
                     <div className="pt-2 border-t border-slate-800">
                       <label className="block text-xs text-slate-500 mb-0.5">Consommation en charge totale (calculée)</label>
                       <div className="bg-slate-800/50 border border-slate-700 rounded px-2 py-1.5 text-amber-400 text-xs font-bold text-center">
@@ -526,7 +548,6 @@ export default function RelevesChefBloc() {
                       </div>
                     </div>
                   </div>
-                  <p className="text-[10px] text-slate-600 text-center pb-2">Saisi par l'opérateur</p>
                 </div>
 
                 {/* Table 00h / 24h */}
