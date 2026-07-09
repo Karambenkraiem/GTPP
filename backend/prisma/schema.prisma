@@ -512,6 +512,7 @@ model CompteursJournaliers {
   nature_puissance_max NaturePuissance?
   conso_aux_couplage   Decimal?        @db.Decimal(12, 3)
   conso_aux_decouplage Decimal?        @db.Decimal(12, 3)
+  conso_aux_cycles     Json            @default("[]")
   aux_gre_couplage     Decimal?        @db.Decimal(12, 3)
   aux_gre_decouplage   Decimal?        @db.Decimal(12, 3)
   cree_le              DateTime        @default(now()) @db.Timestamptz(6)

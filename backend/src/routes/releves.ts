@@ -273,6 +273,31 @@ function findCounterRegression(merged: Record<string, any>, touchedFields: Set<s
   return null;
 }
 
+/**
+ * conso_aux_cycles : liste de cycles { couplage, decouplage } (plusieurs démarrages/arrêts
+ * possibles dans la journée). Comme c'est le même compteur cumulatif, la séquence aplatie
+ * couplage1, decouplage1, couplage2, decouplage2, ... ne doit jamais reculer non plus.
+ */
+function findConsoAuxCyclesRegression(cycles: any): string | null {
+  if (!Array.isArray(cycles)) return null;
+  let prevVal: number | null = null;
+  let prevLabel = '';
+  for (let i = 0; i < cycles.length; i++) {
+    const c = cycles[i] || {};
+    for (const [key, label] of [['couplage', `couplage ${i + 1}`], ['decouplage', `découplage ${i + 1}`]] as const) {
+      const raw = c[key];
+      if (raw == null) continue;
+      const val = toNum(raw);
+      if (prevVal != null && val < prevVal) {
+        return `Le compteur "${label}" (${val}) ne peut pas être inférieur à "${prevLabel}" (${prevVal}) : un compteur ne peut pas reculer.`;
+      }
+      prevVal = val;
+      prevLabel = label;
+    }
+  }
+  return null;
+}
+
 router.get('/compteurs/:journeeId', async (req, res) => {
   try {
     const compteurs = await prisma.compteursJournaliers.findUnique({
@@ -292,7 +317,7 @@ router.post('/compteurs', async (req, res) => {
     const existing = await prisma.compteursJournaliers.findUnique({ where: { journee_id } });
     const merged = { ...(existing || {}), ...data };
 
-    const regression = findCounterRegression(merged, touchedFields);
+    const regression = findCounterRegression(merged, touchedFields) || findConsoAuxCyclesRegression(data.conso_aux_cycles);
     if (regression) {
       return res.status(400).json({ error: regression });
     }

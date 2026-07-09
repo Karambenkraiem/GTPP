@@ -2,7 +2,7 @@ import { useState, useEffect, useMemo } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { relevesApi, journeesApi, postesApi } from '../lib/api';
 import PageHeader from '../components/PageHeader';
-import { Save, Trash2, RotateCcw, FlaskConical, Pencil } from 'lucide-react';
+import { Save, Trash2, RotateCcw, FlaskConical, Pencil, Plus } from 'lucide-react';
 import { useToast, ToastContainer } from '../components/Toast';
 import { format } from 'date-fns';
 import { fr } from 'date-fns/locale';
@@ -18,6 +18,30 @@ function hourToTranche(h: number) {
   if (h < 14) return 'h07_14h';
   if (h < 20) return 'h14_20h';
   return 'h20_00h';
+}
+
+type ConsoAuxCycle = { couplage: number | null; decouplage: number | null };
+
+/** Reconstitue la liste des cycles couplage/découplage, avec repli sur les anciens champs uniques. */
+function normalizeConsoAuxCycles(data: any): ConsoAuxCycle[] {
+  if (Array.isArray(data?.conso_aux_cycles) && data.conso_aux_cycles.length) return data.conso_aux_cycles;
+  if (data?.conso_aux_couplage != null || data?.conso_aux_decouplage != null) {
+    return [{ couplage: data.conso_aux_couplage ?? null, decouplage: data.conso_aux_decouplage ?? null }];
+  }
+  return [{ couplage: null, decouplage: null }];
+}
+
+function consoAuxTotal(cycles: ConsoAuxCycle[] | undefined): number | null {
+  if (!cycles?.length) return null;
+  let sum = 0;
+  let hasPair = false;
+  for (const c of cycles) {
+    if (c?.couplage != null && c?.decouplage != null) {
+      sum += Number(c.decouplage) - Number(c.couplage);
+      hasPair = true;
+    }
+  }
+  return hasPair ? sum : null;
 }
 
 function onEnter(e: React.KeyboardEvent<HTMLInputElement | HTMLSelectElement | HTMLTextAreaElement>) {
@@ -200,9 +224,26 @@ export default function RelevesOperateurPage() {
   });
 
   useEffect(() => {
-    setCptForm(compteurs ?? {});
+    setCptForm({ ...(compteurs ?? {}), conso_aux_cycles: normalizeConsoAuxCycles(compteurs) });
     setCptLocked(!!compteurs?.id);
   }, [compteurs]);
+
+  function setConsoAuxCycle(i: number, field: keyof ConsoAuxCycle, value: number | null) {
+    setCptForm((s: any) => {
+      const cycles = [...(s.conso_aux_cycles || [])];
+      cycles[i] = { ...cycles[i], [field]: value };
+      return { ...s, conso_aux_cycles: cycles };
+    });
+  }
+  function addConsoAuxCycle() {
+    setCptForm((s: any) => ({ ...s, conso_aux_cycles: [...(s.conso_aux_cycles || []), { couplage: null, decouplage: null }] }));
+  }
+  function removeConsoAuxCycle(i: number) {
+    setCptForm((s: any) => {
+      const cycles = (s.conso_aux_cycles || []).filter((_: any, idx: number) => idx !== i);
+      return { ...s, conso_aux_cycles: cycles.length ? cycles : [{ couplage: null, decouplage: null }] };
+    });
+  }
 
   const saveCptMut = useMutation({
     mutationFn: (data: any) => relevesApi.saveCompteurs({ journee_id: journee!.id, ...data }),
@@ -643,25 +684,37 @@ export default function RelevesOperateurPage() {
               <div className="bg-slate-800 px-4 py-2 text-xs font-bold text-slate-300 uppercase tracking-wider border-b border-slate-700">
                 Consommation Auxiliaire en Charge (MWh)
               </div>
-              <div className="p-3 grid grid-cols-3 gap-3 items-end">
-                <div>
-                  <label className="block text-xs text-slate-500 mb-0.5">Compteur au couplage</label>
-                  <input type="number" step="any" value={cptForm.conso_aux_couplage ?? ''} onKeyDown={onEnter}
-                    onChange={e => cpt('conso_aux_couplage', e.target.value === '' ? null : parseFloat(e.target.value))}
-                    className={INPUT_CLS} />
-                </div>
-                <div>
-                  <label className="block text-xs text-slate-500 mb-0.5">Compteur au découplage</label>
-                  <input type="number" step="any" value={cptForm.conso_aux_decouplage ?? ''} onKeyDown={onEnter}
-                    onChange={e => cpt('conso_aux_decouplage', e.target.value === '' ? null : parseFloat(e.target.value))}
-                    className={INPUT_CLS} />
-                </div>
-                <div>
-                  <label className="block text-xs text-slate-500 mb-0.5">Consommation en charge (calculée)</label>
+              <div className="p-3 space-y-2">
+                {(cptForm.conso_aux_cycles as ConsoAuxCycle[] || []).map((c, i) => (
+                  <div key={i} className="grid grid-cols-[1fr_1fr_auto] gap-3 items-end">
+                    <div>
+                      <label className="block text-xs text-slate-500 mb-0.5">Compteur couplage {i + 1}</label>
+                      <input type="number" step="any" value={c.couplage ?? ''} onKeyDown={onEnter}
+                        onChange={e => setConsoAuxCycle(i, 'couplage', e.target.value === '' ? null : parseFloat(e.target.value))}
+                        className={INPUT_CLS} />
+                    </div>
+                    <div>
+                      <label className="block text-xs text-slate-500 mb-0.5">Compteur découplage {i + 1}</label>
+                      <input type="number" step="any" value={c.decouplage ?? ''} onKeyDown={onEnter}
+                        onChange={e => setConsoAuxCycle(i, 'decouplage', e.target.value === '' ? null : parseFloat(e.target.value))}
+                        className={INPUT_CLS} />
+                    </div>
+                    <button type="button" onClick={() => removeConsoAuxCycle(i)}
+                      disabled={(cptForm.conso_aux_cycles || []).length <= 1}
+                      title="Supprimer ce cycle"
+                      className="text-slate-500 hover:text-red-400 disabled:opacity-30 disabled:cursor-not-allowed transition-colors pb-2">
+                      <Trash2 size={14} />
+                    </button>
+                  </div>
+                ))}
+                <button type="button" onClick={addConsoAuxCycle}
+                  className="flex items-center gap-1.5 text-amber-400 hover:text-amber-300 text-xs transition-colors">
+                  <Plus size={13} /> Ajouter un couplage/découplage
+                </button>
+                <div className="pt-2 border-t border-slate-800">
+                  <label className="block text-xs text-slate-500 mb-0.5">Consommation en charge totale (calculée)</label>
                   <div className="bg-slate-800/50 border border-slate-700 rounded px-2 py-1.5 text-amber-400 text-sm font-bold text-center">
-                    {cptForm.conso_aux_couplage != null && cptForm.conso_aux_decouplage != null
-                      ? Math.abs(Number(cptForm.conso_aux_decouplage) - Number(cptForm.conso_aux_couplage)).toFixed(3)
-                      : '—'}
+                    {(() => { const t = consoAuxTotal(cptForm.conso_aux_cycles); return t != null ? t.toFixed(3) : '—'; })()}
                   </div>
                 </div>
               </div>
@@ -684,12 +737,15 @@ export default function RelevesOperateurPage() {
                     reactif_absorbe_00h: 12400, reactif_absorbe_07h: 12580, reactif_absorbe_18h: 12900, reactif_absorbe_22h: 13050, reactif_absorbe_24h: 13100,
                     auxiliaires_00h: 4820, auxiliaires_07h: 4860, auxiliaires_18h: 4920, auxiliaires_22h: 4940, auxiliaires_24h: 4950,
                     gasoil_00h_l: 12450, gasoil_07h_l: 12520, gasoil_18h_l: 12620, gasoil_22h_l: 12660, gasoil_24h_l: 12680,
-                    conso_aux_couplage: 4820.250, conso_aux_decouplage: 4950.750,
+                    conso_aux_cycles: [
+                      { couplage: 4820.250, decouplage: 4870.500 },
+                      { couplage: 4900.000, decouplage: 4950.750 },
+                    ],
                   })}
                     className="flex items-center gap-1.5 text-violet-400 hover:text-violet-300 border border-violet-500/30 rounded px-3 py-1.5 text-xs transition-colors">
                     <FlaskConical size={12} /> Remplir test
                   </button>
-                  <button onClick={() => { setCptForm(compteurs ?? {}); if (compteurs?.id) setCptLocked(true); }}
+                  <button onClick={() => { setCptForm({ ...(compteurs ?? {}), conso_aux_cycles: normalizeConsoAuxCycles(compteurs) }); if (compteurs?.id) setCptLocked(true); }}
                     className="flex items-center gap-1.5 text-slate-400 hover:text-white text-sm transition-colors">
                     <RotateCcw size={13} /> Annuler
                   </button>

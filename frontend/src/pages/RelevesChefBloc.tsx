@@ -20,6 +20,30 @@ function hourToTranche(h: number) {
   return 'h20_00h';
 }
 
+type ConsoAuxCycle = { couplage: number | null; decouplage: number | null };
+
+/** Reconstitue la liste des cycles couplage/découplage, avec repli sur les anciens champs uniques. */
+function normalizeConsoAuxCycles(data: any): ConsoAuxCycle[] {
+  if (Array.isArray(data?.conso_aux_cycles) && data.conso_aux_cycles.length) return data.conso_aux_cycles;
+  if (data?.conso_aux_couplage != null || data?.conso_aux_decouplage != null) {
+    return [{ couplage: data.conso_aux_couplage ?? null, decouplage: data.conso_aux_decouplage ?? null }];
+  }
+  return [];
+}
+
+function consoAuxTotal(cycles: ConsoAuxCycle[] | undefined): number | null {
+  if (!cycles?.length) return null;
+  let sum = 0;
+  let hasPair = false;
+  for (const c of cycles) {
+    if (c?.couplage != null && c?.decouplage != null) {
+      sum += Number(c.decouplage) - Number(c.couplage);
+      hasPair = true;
+    }
+  }
+  return hasPair ? sum : null;
+}
+
 function onEnter(e: React.KeyboardEvent<HTMLInputElement>) {
   if (e.key !== 'Enter') return;
   e.preventDefault();
@@ -173,7 +197,10 @@ export default function RelevesChefBloc() {
     }
   }, [selectedHour]);
 
-  useEffect(() => { setCptForm(compteursData ?? {}); setCptLocked(!!compteursData?.id); }, [compteursData]);
+  useEffect(() => {
+    setCptForm({ ...(compteursData ?? {}), conso_aux_cycles: normalizeConsoAuxCycles(compteursData) });
+    setCptLocked(!!compteursData?.id);
+  }, [compteursData]);
 
   const energieCalc = useMemo(() => {
     const n = (v: any) => v != null ? Number(v) : null;
@@ -471,25 +498,31 @@ export default function RelevesChefBloc() {
                   <div className="bg-slate-800 text-center text-xs font-bold text-slate-300 uppercase tracking-wider py-2 border-b border-slate-700">
                     Consommation Auxiliaire en Charge (MWh)
                   </div>
-                  <div className="p-3 grid grid-cols-3 gap-3 items-end">
-                    <div>
-                      <label className="block text-xs text-slate-500 mb-0.5">Compteur au couplage</label>
-                      <div className="bg-slate-800/50 border border-slate-700 rounded px-2 py-1.5 text-white text-xs text-center">
-                        {cptForm.conso_aux_couplage != null ? Number(cptForm.conso_aux_couplage).toFixed(3) : '—'}
-                      </div>
-                    </div>
-                    <div>
-                      <label className="block text-xs text-slate-500 mb-0.5">Compteur au découplage</label>
-                      <div className="bg-slate-800/50 border border-slate-700 rounded px-2 py-1.5 text-white text-xs text-center">
-                        {cptForm.conso_aux_decouplage != null ? Number(cptForm.conso_aux_decouplage).toFixed(3) : '—'}
-                      </div>
-                    </div>
-                    <div>
-                      <label className="block text-xs text-slate-500 mb-0.5">Consommation en charge (calculée)</label>
+                  <div className="p-3 space-y-2">
+                    {((cptForm.conso_aux_cycles as ConsoAuxCycle[]) || []).length === 0 ? (
+                      <p className="text-xs text-slate-600 text-center py-2">Aucun cycle couplage/découplage saisi</p>
+                    ) : (
+                      ((cptForm.conso_aux_cycles as ConsoAuxCycle[]) || []).map((c, i) => (
+                        <div key={i} className="grid grid-cols-2 gap-3">
+                          <div>
+                            <label className="block text-xs text-slate-500 mb-0.5">Compteur couplage {i + 1}</label>
+                            <div className="bg-slate-800/50 border border-slate-700 rounded px-2 py-1.5 text-white text-xs text-center">
+                              {c.couplage != null ? Number(c.couplage).toFixed(3) : '—'}
+                            </div>
+                          </div>
+                          <div>
+                            <label className="block text-xs text-slate-500 mb-0.5">Compteur découplage {i + 1}</label>
+                            <div className="bg-slate-800/50 border border-slate-700 rounded px-2 py-1.5 text-white text-xs text-center">
+                              {c.decouplage != null ? Number(c.decouplage).toFixed(3) : '—'}
+                            </div>
+                          </div>
+                        </div>
+                      ))
+                    )}
+                    <div className="pt-2 border-t border-slate-800">
+                      <label className="block text-xs text-slate-500 mb-0.5">Consommation en charge totale (calculée)</label>
                       <div className="bg-slate-800/50 border border-slate-700 rounded px-2 py-1.5 text-amber-400 text-xs font-bold text-center">
-                        {cptForm.conso_aux_couplage != null && cptForm.conso_aux_decouplage != null
-                          ? Math.abs(Number(cptForm.conso_aux_decouplage) - Number(cptForm.conso_aux_couplage)).toFixed(3)
-                          : '—'}
+                        {(() => { const t = consoAuxTotal(cptForm.conso_aux_cycles); return t != null ? t.toFixed(3) : '—'; })()}
                       </div>
                     </div>
                   </div>
@@ -544,7 +577,7 @@ export default function RelevesChefBloc() {
                   </button>
                 ) : (
                   <>
-                    <button onClick={() => { setCptForm(compteursData ?? {}); if (compteursData?.id) setCptLocked(true); }}
+                    <button onClick={() => { setCptForm({ ...(compteursData ?? {}), conso_aux_cycles: normalizeConsoAuxCycles(compteursData) }); if (compteursData?.id) setCptLocked(true); }}
                       className="flex items-center gap-1.5 text-slate-400 hover:text-white text-sm transition-colors">
                       <RotateCcw size={13} /> Annuler
                     </button>
