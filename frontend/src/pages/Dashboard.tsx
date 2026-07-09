@@ -3,14 +3,18 @@ import { Link } from 'react-router-dom';
 import { dashboardApi } from '../lib/api';
 import StatCard from '../components/StatCard';
 import PageHeader from '../components/PageHeader';
-import { Activity, AlertTriangle, Wrench, Zap, Thermometer, Gauge } from 'lucide-react';
+import { Activity, AlertTriangle, Wrench, Zap, Thermometer, Gauge, ClipboardList } from 'lucide-react';
 import { format } from 'date-fns';
 import { fr } from 'date-fns/locale';
 import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer } from 'recharts';
 import { STATUT_JOURNEE_LABELS } from '../types';
 import { formatTunisHM } from '../lib/tz';
+import { useAuth } from '../contexts/AuthContext';
+
+const RELEVE_ROUTE: Record<string, string> = { operateur: '/releves-op', chef_bloc: '/releves-bloc' };
 
 export default function Dashboard() {
+  const { user } = useAuth();
   const { data, isLoading } = useQuery({ queryKey: ['dashboard'], queryFn: dashboardApi.get, refetchInterval: 60000 });
 
   if (isLoading) {
@@ -44,6 +48,32 @@ export default function Dashboard() {
       />
 
       <div className="p-3 sm:p-6 space-y-4 sm:space-y-6">
+        {/* Accès rapide — opérateur / chef de bloc */}
+        {user?.role && RELEVE_ROUTE[user.role] && (
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+            <Link to={RELEVE_ROUTE[user.role]}
+              className="flex items-center gap-3 bg-slate-900 border border-slate-700 hover:border-amber-500/50 rounded-lg p-4 transition-colors">
+              <div className="w-10 h-10 rounded-lg bg-amber-500/10 flex items-center justify-center text-amber-400 flex-shrink-0">
+                <ClipboardList size={18} />
+              </div>
+              <div>
+                <p className="text-sm font-medium text-white">Saisir un relevé</p>
+                <p className="text-xs text-slate-500">Accès rapide à la saisie du relevé du jour</p>
+              </div>
+            </Link>
+            <Link to={`${RELEVE_ROUTE[user.role]}?tab=compteurs`}
+              className="flex items-center gap-3 bg-slate-900 border border-slate-700 hover:border-amber-500/50 rounded-lg p-4 transition-colors">
+              <div className="w-10 h-10 rounded-lg bg-amber-500/10 flex items-center justify-center text-amber-400 flex-shrink-0">
+                <Gauge size={18} />
+              </div>
+              <div>
+                <p className="text-sm font-medium text-white">Saisir les compteurs</p>
+                <p className="text-xs text-slate-500">Accès rapide aux compteurs journaliers</p>
+              </div>
+            </Link>
+          </div>
+        )}
+
         {/* Mesures temps réel */}
         <div>
           <h2 className="text-xs font-medium text-slate-400 uppercase tracking-wider mb-3">Mesures temps réel</h2>

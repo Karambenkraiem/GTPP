@@ -1,4 +1,5 @@
 import { useState, useEffect, useMemo } from 'react';
+import { useSearchParams } from 'react-router-dom';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { relevesApi, journeesApi, postesApi } from '../lib/api';
 import PageHeader from '../components/PageHeader';
@@ -139,9 +140,10 @@ export default function RelevesChefBloc() {
   const canCreate = ['chef_bloc', 'admin', 'chef_exploitation'].includes(user?.role ?? '');
   const canDelete = ['admin', 'chef_exploitation'].includes(user?.role ?? '');
   const qc = useQueryClient();
+  const [searchParams] = useSearchParams();
   const [selectedDate, setSelectedDate] = useState(format(new Date(), 'yyyy-MM-dd'));
   const [selectedHour, setSelectedHour] = useState<number | null>(null);
-  const [pageTab, setPageTab] = useState<'saisie' | 'compteurs'>('saisie');
+  const [pageTab, setPageTab] = useState<'saisie' | 'compteurs'>(searchParams.get('tab') === 'compteurs' ? 'compteurs' : 'saisie');
   const [form, setForm] = useState<any>(EMPTY(format(new Date(), 'yyyy-MM-dd')));
   const [cptForm, setCptForm] = useState<any>({});
   const [cptLocked, setCptLocked] = useState(false);
