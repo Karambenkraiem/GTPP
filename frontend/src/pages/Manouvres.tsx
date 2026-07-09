@@ -1,4 +1,5 @@
 import { useState, useRef, useEffect, forwardRef } from 'react';
+import { useSearchParams } from 'react-router-dom';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { manouvresApi, journeesApi } from '../lib/api';
 import { useAuth } from '../contexts/AuthContext';
@@ -116,7 +117,8 @@ type RowState = { heure: string; description: string };
 
 export default function Manouvres() {
   const { user } = useAuth();
-  const [tab, setTab] = useState<Tab>('manoeuvre');
+  const [searchParams] = useSearchParams();
+  const [tab, setTab] = useState<Tab>(searchParams.get('tab') === 'incident' ? 'incident' : 'manoeuvre');
   const canEditManoeuvre = ['chef_bloc', 'chef_quart', 'chef_exploitation', 'admin'].includes(user?.role ?? '');
   const canEditIncident = ['chef_quart', 'admin'].includes(user?.role ?? '');
   const canEdit = tab === 'manoeuvre' ? canEditManoeuvre : canEditIncident;

@@ -110,7 +110,8 @@ export default function Dashboard() {
             <h2 className="text-sm font-medium text-white mb-3">Activité aujourd'hui</h2>
             <div className="space-y-2">
               {[
-                { label: 'Manœuvres', value: journee?._count?.manouvres ?? 0, to: '/manouvres' },
+                { label: 'Manœuvres', value: (journee?._count?.manouvres ?? 0) - (data?.incidentsAujourdhui ?? 0), to: '/manouvres' },
+                { label: 'Incidents', value: data?.incidentsAujourdhui ?? 0, to: '/manouvres?tab=incident' },
                 { label: 'Alarmes', value: journee?._count?.alarmes ?? 0, to: '/alarmes' },
                 { label: 'OT', value: journee?._count?.ordres_travaux ?? 0, to: '/ordres-travaux' },
               ].map(({ label, value, to }) => (

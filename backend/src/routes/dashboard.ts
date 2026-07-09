@@ -43,12 +43,17 @@ router.get('/', async (req, res) => {
       orderBy: { jour: 'asc' },
     });
 
+    const incidentsAujourdhui = journeeAujourdhui
+      ? await prisma.manouvre.count({ where: { journee_id: journeeAujourdhui.id, type_manouvre: 'incident' } })
+      : 0;
+
     res.json({
       journeeAujourdhui,
       defautsActifs,
       otsEnCours,
       dernierReleve,
       derniers7Jours,
+      incidentsAujourdhui,
     });
   } catch {
     res.status(500).json({ error: 'Erreur serveur' });
