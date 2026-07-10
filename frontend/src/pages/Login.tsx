@@ -6,6 +6,7 @@ import { authApi } from '../lib/api';
 import { ROLE_LABELS } from '../types';
 import type { Role } from '../types';
 import { Zap } from 'lucide-react';
+import AppDownloadQR from '../components/AppDownloadQR';
 
 interface DemoUser {
   matricule: string;
@@ -117,6 +118,10 @@ export default function Login() {
           <p className="text-center text-slate-600 text-xs mt-4">
             Accès réservé au personnel autorisé de la STEG
           </p>
+
+          <div className="mt-6">
+            <AppDownloadQR />
+          </div>
         </div>
 
         {showDemoPanel && (
