@@ -45,6 +45,8 @@ services:
     restart: unless-stopped
     depends_on:
       - backend
+    volumes:
+      - /opt/gtpp/apk-downloads:/usr/share/nginx/html/downloads:ro
     networks:
       - internal
       - proxy_net

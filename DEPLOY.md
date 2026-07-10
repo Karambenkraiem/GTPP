@@ -59,9 +59,38 @@ Dans GitHub → Settings → Secrets and variables → Actions, ajouter :
 - `VPS_SSH_KEY` — clé privée SSH (celle dont la clé publique est dans `~/.ssh/authorized_keys` du VPS)
 - `VPS_SSH_PORT` — port SSH (22 par défaut)
 - `VPS_PROJECT_PATH` — chemin du clone sur le VPS (ex. `/opt/gtpp`)
+- `ANDROID_KEYSTORE_BASE64` — keystore de signature Android, encodé en base64 (voir §7.1)
+- `ANDROID_KEYSTORE_PASSWORD` — mot de passe du keystore
+- `ANDROID_KEY_ALIAS` — alias de la clé dans le keystore
+- `ANDROID_KEY_PASSWORD` — mot de passe de la clé
 
-À chaque push sur `main` : le workflow build les images (test), puis se connecte en SSH
-au VPS, fait `git pull`, rebuild et relance `docker-compose.prod.yml`.
+À chaque push sur `main` : le workflow build les images (test), compile et **signe l'APK
+Android** (job `build-android`), puis se connecte en SSH au VPS, fait `git pull`, rebuild,
+relance `docker-compose.prod.yml`, et envoie l'APK par SCP dans `/opt/gtpp/apk-downloads/`.
+Le fichier est servi tel quel par nginx sur `https://gtpp.alkaramsoft.ovh/downloads/gtpp.apk`
+(monté en volume lecture seule dans le conteneur `frontend`, cf. `docker-compose.prod.yml`).
+
+### 7.1 Keystore de signature (une seule fois)
+
+Android exige que toutes les versions d'une même app soient signées avec le **même**
+keystore — le perdre signifie ne plus jamais pouvoir publier de mise à jour sans forcer
+chaque utilisateur à désinstaller l'ancienne version. Le garder en lieu sûr (gestionnaire
+de secrets, coffre-fort numérique) **en dehors du dépôt git** (déjà exclu par
+`frontend/android/.gitignore`).
+
+Sur le VPS (une seule fois), créer le dossier de destination des APK avant le premier
+déploiement avec la nouvelle config :
+```bash
+mkdir -p /opt/gtpp/apk-downloads
+```
+
+Puis encoder le keystore en base64 pour le coller dans le secret GitHub
+`ANDROID_KEYSTORE_BASE64` :
+```bash
+base64 -w0 gtpp-release.keystore   # Linux/macOS
+# ou en PowerShell :
+[Convert]::ToBase64String([IO.File]::ReadAllBytes("gtpp-release.keystore"))
+```
 
 ## 8. Mode démo (accès rapide utilisateurs sur la page de login)
 La page de login peut afficher un panneau "Accès rapide" avec un bouton par utilisateur réel

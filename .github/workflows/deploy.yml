@@ -16,10 +16,83 @@ jobs:
       - name: Build frontend image (test)
         run: docker build -t gtpp-frontend-ci ./frontend
 
-  deploy:
-    needs: test-build
+  build-android:
     runs-on: ubuntu-latest
     steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20
+
+      - name: Install frontend dependencies
+        working-directory: frontend
+        run: npm ci
+
+      - name: Build web assets (mobile API URL)
+        working-directory: frontend
+        run: npm run build:mobile
+
+      - name: Sync Capacitor Android project
+        working-directory: frontend
+        run: npx cap sync android
+
+      - name: Set up JDK
+        uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '21'
+
+      - name: Set up Android SDK
+        uses: android-actions/setup-android@v3
+
+      - name: Decode release keystore
+        working-directory: frontend/android/app
+        run: echo "${{ secrets.ANDROID_KEYSTORE_BASE64 }}" | base64 -d > release.keystore
+
+      - name: Build signed release APK
+        working-directory: frontend/android
+        env:
+          ANDROID_KEYSTORE_PASSWORD: ${{ secrets.ANDROID_KEYSTORE_PASSWORD }}
+          ANDROID_KEY_ALIAS: ${{ secrets.ANDROID_KEY_ALIAS }}
+          ANDROID_KEY_PASSWORD: ${{ secrets.ANDROID_KEY_PASSWORD }}
+        run: ./gradlew assembleRelease --no-daemon
+
+      - name: Remove keystore from runner
+        if: always()
+        working-directory: frontend/android/app
+        run: rm -f release.keystore
+
+      - name: Rename APK
+        run: cp frontend/android/app/build/outputs/apk/release/app-release.apk gtpp.apk
+
+      - name: Upload APK artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: gtpp-apk
+          path: gtpp.apk
+          retention-days: 5
+
+  deploy:
+    needs: [test-build, build-android]
+    runs-on: ubuntu-latest
+    steps:
+      - name: Download APK artifact
+        uses: actions/download-artifact@v4
+        with:
+          name: gtpp-apk
+
+      - name: Upload APK to VPS
+        uses: appleboy/scp-action@v0.1.7
+        with:
+          host: ${{ secrets.VPS_HOST }}
+          username: ${{ secrets.VPS_USER }}
+          key: ${{ secrets.VPS_SSH_KEY }}
+          port: ${{ secrets.VPS_SSH_PORT || 22 }}
+          source: gtpp.apk
+          target: /opt/gtpp/apk-downloads
+
       - name: Deploy over SSH
         uses: appleboy/ssh-action@v1.0.3
         with:
