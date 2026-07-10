@@ -38,6 +38,10 @@ jobs:
         working-directory: frontend
         run: npx cap sync android
 
+      - name: Ensure gradlew is executable
+        working-directory: frontend/android
+        run: chmod +x gradlew
+
       - name: Set up JDK
         uses: actions/setup-java@v4
         with:
