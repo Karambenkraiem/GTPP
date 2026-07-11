@@ -1,29 +1,32 @@
 import { useEffect, useState } from 'react';
-import { Smartphone } from 'lucide-react';
+import { Smartphone, Download } from 'lucide-react';
+import { Capacitor } from '@capacitor/core';
 import Modal from './Modal';
 import QRCode from './QRCode';
 
 const APK_PATH = import.meta.env.VITE_APK_URL || '/downloads/gtpp.apk';
 const SEEN_KEY = 'gtpp_qr_popup_seen';
 
-function isMobileDevice() {
-  return /Android|iPhone|iPad|iPod|Mobile|Windows Phone/i.test(window.navigator.userAgent);
+function isMobileBrowser() {
+  const isMobileUA = /Android|iPhone|iPad|iPod|Mobile|Windows Phone/i.test(window.navigator.userAgent);
+  return isMobileUA && !Capacitor.isNativePlatform();
 }
 
 export default function AppDownloadQR() {
+  const isNativeApp = Capacitor.isNativePlatform();
   const [popupOpen, setPopupOpen] = useState(false);
 
   useEffect(() => {
-    if (isMobileDevice() || localStorage.getItem(SEEN_KEY)) return;
+    if (isMobileBrowser() || isNativeApp || localStorage.getItem(SEEN_KEY)) return;
     setPopupOpen(true);
-  }, []);
+  }, [isNativeApp]);
 
   const closePopup = () => {
     localStorage.setItem(SEEN_KEY, '1');
     setPopupOpen(false);
   };
 
-  if (isMobileDevice()) return null;
+  if (isMobileBrowser()) return null;
 
   const apkUrl = APK_PATH.startsWith('http') ? APK_PATH : `${window.location.origin}${APK_PATH}`;
 
@@ -53,11 +56,22 @@ export default function AppDownloadQR() {
         <div className="min-w-0">
           <p className="flex items-center gap-1.5 text-sm font-semibold text-white">
             <Smartphone size={15} className="text-amber-400" />
-            Application mobile
+            {isNativeApp ? 'Mettre à jour l\'application' : 'Application mobile'}
           </p>
           <p className="text-xs text-slate-400 mt-1">
-            Scannez ce code avec votre téléphone pour télécharger et installer l'application GTpp (APK Android).
+            {isNativeApp
+              ? "Téléchargez la dernière version pour mettre à jour l'application GTpp."
+              : "Scannez ce code avec votre téléphone pour télécharger et installer l'application GTpp (APK Android)."}
           </p>
+          {isNativeApp && (
+            <a
+              href={apkUrl}
+              className="inline-flex items-center gap-1.5 mt-2 text-xs font-medium text-amber-400 hover:text-amber-300 transition-colors"
+            >
+              <Download size={12} />
+              Télécharger l'APK
+            </a>
+          )}
         </div>
       </div>
     </>
