@@ -44,12 +44,11 @@ export default function Dashboard() {
   const spread = dernierReleve?.echappement?.spread_calcule;
   const vibraMaxi = dernierReleve?.vibrations?.vibration_maxi;
 
-  const chartData = (data?.derniers7Jours || []).map((j: any) => ({
-    date: format(new Date(j.jour), 'dd/MM', { locale: fr }),
-    production: j.compteurs
-      ? ((j.compteurs.energie_active_24h || 0) - (j.compteurs.energie_active_00h || 0)).toFixed(0)
-      : 0,
+  const chartData = (data?.puissance7Jours || []).map((r: any) => ({
+    date: format(new Date(r.heure_releve), 'dd/MM HH:mm', { locale: fr }),
+    puissance: r.generateur?.puissance_active_mw ?? null,
   }));
+  const chartTickInterval = Math.max(0, Math.floor(chartData.length / 8));
 
   return (
     <div>
@@ -167,21 +166,21 @@ export default function Dashboard() {
           </div>
         </div>
 
-        {/* Graphique production 7 jours */}
+        {/* Graphique puissance active 7 jours */}
         {chartData.length > 0 && (
           <div className="bg-slate-900 border border-slate-700 rounded-lg p-4">
-            <h2 className="text-sm font-medium text-white mb-4">Production 7 derniers jours (MWh)</h2>
+            <h2 className="text-sm font-medium text-white mb-4">Puissance active — 7 derniers jours (MW)</h2>
             <ResponsiveContainer width="100%" height={180}>
               <LineChart data={chartData}>
                 <CartesianGrid strokeDasharray="3 3" stroke="#1e293b" />
-                <XAxis dataKey="date" tick={{ fill: '#94a3b8', fontSize: 11 }} />
-                <YAxis tick={{ fill: '#94a3b8', fontSize: 11 }} />
+                <XAxis dataKey="date" interval={chartTickInterval} tick={{ fill: '#94a3b8', fontSize: 11 }} />
+                <YAxis domain={[0, 130]} tick={{ fill: '#94a3b8', fontSize: 11 }} />
                 <Tooltip
                   contentStyle={{ background: '#1e293b', border: '1px solid #334155', borderRadius: 8 }}
                   labelStyle={{ color: '#f1f5f9' }}
                   itemStyle={{ color: '#f59e0b' }}
                 />
-                <Line type="monotone" dataKey="production" stroke="#f59e0b" strokeWidth={2} dot={{ fill: '#f59e0b', r: 3 }} />
+                <Line type="monotone" dataKey="puissance" stroke="#f59e0b" strokeWidth={2} dot={false} connectNulls />
               </LineChart>
             </ResponsiveContainer>
           </div>

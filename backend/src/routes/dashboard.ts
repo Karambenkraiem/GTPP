@@ -16,6 +16,7 @@ router.get('/', async (req, res) => {
       todayStr = `${now.getFullYear()}-${String(now.getMonth()+1).padStart(2,'0')}-${String(now.getDate()).padStart(2,'0')}`;
     }
     const today = new Date(todayStr + 'T00:00:00.000Z');
+    const endOfToday = new Date(todayStr + 'T23:59:59.999Z');
 
     const [journeeAujourdhui, defautsActifs, otsEnCours, dernierReleve] = await Promise.all([
       prisma.journee.findUnique({
@@ -45,10 +46,13 @@ router.get('/', async (req, res) => {
       }),
     ]);
 
-    const derniers7Jours = await prisma.journee.findMany({
-      where: { jour: { gte: new Date(today.getTime() - 6 * 24 * 3600 * 1000), lte: today } },
-      include: { compteurs: true },
-      orderBy: { jour: 'asc' },
+    const puissance7Jours = await prisma.relevesChefBloc.findMany({
+      where: { heure_releve: { gte: new Date(today.getTime() - 6 * 24 * 3600 * 1000), lte: endOfToday } },
+      select: {
+        heure_releve: true,
+        generateur: { select: { puissance_active_mw: true } },
+      },
+      orderBy: { heure_releve: 'asc' },
     });
 
     const incidentsAujourdhui = journeeAujourdhui
@@ -60,7 +64,7 @@ router.get('/', async (req, res) => {
       defautsActifs,
       otsEnCours,
       dernierReleve,
-      derniers7Jours,
+      puissance7Jours,
       incidentsAujourdhui,
     });
   } catch {
