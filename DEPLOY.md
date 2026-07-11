@@ -58,7 +58,7 @@ Dans GitHub → Settings → Secrets and variables → Actions, ajouter :
 - `VPS_USER` — utilisateur SSH
 - `VPS_SSH_KEY` — clé privée SSH (celle dont la clé publique est dans `~/.ssh/authorized_keys` du VPS)
 - `VPS_SSH_PORT` — port SSH (22 par défaut)
-- `VPS_PROJECT_PATH` — chemin du clone sur le VPS (ex. `/opt/gtpp`)
+- `VPS_PROJECT_PATH` — chemin du clone sur le VPS (ex. `/opt/gtpp` ou `/opt/steg/GTPP`)
 - `ANDROID_KEYSTORE_BASE64` — keystore de signature Android, encodé en base64 (voir §7.1)
 - `ANDROID_KEYSTORE_PASSWORD` — mot de passe du keystore
 - `ANDROID_KEY_ALIAS` — alias de la clé dans le keystore
@@ -66,9 +66,11 @@ Dans GitHub → Settings → Secrets and variables → Actions, ajouter :
 
 À chaque push sur `main` : le workflow build les images (test), compile et **signe l'APK
 Android** (job `build-android`), puis se connecte en SSH au VPS, fait `git pull`, rebuild,
-relance `docker-compose.prod.yml`, et envoie l'APK par SCP dans `/opt/gtpp/apk-downloads/`.
+relance `docker-compose.prod.yml`, et envoie l'APK par SCP dans `$VPS_PROJECT_PATH/apk-downloads/`
+(chemin relatif au clone du projet, quel que soit son emplacement sur le VPS).
 Le fichier est servi tel quel par nginx sur `https://gtpp.alkaramsoft.ovh/downloads/gtpp.apk`
-(monté en volume lecture seule dans le conteneur `frontend`, cf. `docker-compose.prod.yml`).
+(monté en volume lecture seule dans le conteneur `frontend` via `./apk-downloads`, un chemin
+relatif au `docker-compose.prod.yml`, cf. ce fichier).
 
 ### 7.1 Keystore de signature (une seule fois)
 
@@ -78,10 +80,12 @@ chaque utilisateur à désinstaller l'ancienne version. Le garder en lieu sûr (
 de secrets, coffre-fort numérique) **en dehors du dépôt git** (déjà exclu par
 `frontend/android/.gitignore`).
 
-Sur le VPS (une seule fois), créer le dossier de destination des APK avant le premier
-déploiement avec la nouvelle config :
+Sur le VPS (une seule fois), depuis le dossier du projet (celui pointé par le secret
+`VPS_PROJECT_PATH`, ex. `/opt/steg/GTPP`), créer le dossier de destination des APK avant
+le premier déploiement avec la nouvelle config :
 ```bash
-mkdir -p /opt/gtpp/apk-downloads
+cd $VPS_PROJECT_PATH   # ex. cd /opt/steg/GTPP
+mkdir -p apk-downloads
 ```
 
 Puis encoder le keystore en base64 pour le coller dans le secret GitHub

@@ -95,7 +95,7 @@ jobs:
           key: ${{ secrets.VPS_SSH_KEY }}
           port: ${{ secrets.VPS_SSH_PORT || 22 }}
           source: gtpp.apk
-          target: /opt/gtpp/apk-downloads
+          target: ${{ secrets.VPS_PROJECT_PATH }}/apk-downloads
 
       - name: Deploy over SSH
         uses: appleboy/ssh-action@v1.0.3
