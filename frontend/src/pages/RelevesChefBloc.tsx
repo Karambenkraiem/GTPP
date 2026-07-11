@@ -1,4 +1,4 @@
-import { useState, useEffect, useMemo } from 'react';
+import { useState, useEffect, useMemo, useRef } from 'react';
 import { useSearchParams } from 'react-router-dom';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { relevesApi, journeesApi, postesApi } from '../lib/api';
@@ -200,10 +200,21 @@ export default function RelevesChefBloc() {
     }
   }, [selectedHour]);
 
+  const cptSyncedJourneeRef = useRef<string | undefined>(undefined);
+
   useEffect(() => {
+    cptSyncedJourneeRef.current = undefined; // nouvelle journée sélectionnée : autoriser un rechargement du formulaire
+  }, [journee?.id]);
+
+  useEffect(() => {
+    // Un refetch en arrière-plan (polling) renvoie un nouvel objet pour la même
+    // journée : on ne resynchronise le formulaire qu'une fois par journée pour
+    // ne pas écraser une saisie en cours.
+    if (!journee?.id || cptSyncedJourneeRef.current === journee.id) return;
+    cptSyncedJourneeRef.current = journee.id;
     setCptForm({ ...(compteursData ?? {}), conso_aux_cycles: normalizeConsoAuxCycles(compteursData) });
     setCptLocked(!!compteursData?.id);
-  }, [compteursData]);
+  }, [journee?.id, compteursData]);
 
   const energieCalc = useMemo(() => {
     const n = (v: any) => v != null ? Number(v) : null;

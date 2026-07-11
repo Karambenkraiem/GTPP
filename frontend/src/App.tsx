@@ -37,7 +37,7 @@ import InstallPrompt from './components/InstallPrompt';
 import AndroidBackButton from './components/AndroidBackButton';
 import UpdateBanner from './components/UpdateBanner';
 const queryClient = new QueryClient({
-  defaultOptions: { queries: { staleTime: 30_000, retry: 1 } },
+  defaultOptions: { queries: { staleTime: 30_000, retry: 1, refetchInterval: 30_000 } },
 });
 
 function ProtectedRoute({ children }: { children: JSX.Element }) {
