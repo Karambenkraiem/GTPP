@@ -16,7 +16,6 @@ router.get('/', async (req, res) => {
       todayStr = `${now.getFullYear()}-${String(now.getMonth()+1).padStart(2,'0')}-${String(now.getDate()).padStart(2,'0')}`;
     }
     const today = new Date(todayStr + 'T00:00:00.000Z');
-    const endOfToday = new Date(todayStr + 'T23:59:59.999Z');
 
     const [journeeAujourdhui, defautsActifs, otsEnCours, dernierReleve] = await Promise.all([
       prisma.journee.findUnique({
@@ -39,15 +38,29 @@ router.get('/', async (req, res) => {
       prisma.relevesChefBloc.findFirst({
         orderBy: { heure_releve: 'desc' },
         include: {
-          generateur: { select: { puissance_active_mw: true, frequence_hz: true } },
-          echappement: { select: { ttxm_moyenne: true, spread_calcule: true } },
+          generateur: {
+            select: {
+              puissance_active_mw: true,
+              puissance_reactive_mvar: true,
+              frequence_hz: true,
+              cos_phi: true,
+              tension_alt_dvx_kv: true,
+              tension_svlx_kv: true,
+            },
+          },
+          echappement: { select: { ttxm_moyenne: true, spread_calcule: true, ttxspl_ecart: true } },
           vibrations: { select: { vibration_maxi: true } },
         },
       }),
     ]);
 
+    const dayOfWeek = today.getUTCDay(); // 0=dimanche .. 6=samedi
+    const mondayOffset = (dayOfWeek + 6) % 7;
+    const monday = new Date(today.getTime() - mondayOffset * 24 * 3600 * 1000);
+    const endOfSunday = new Date(monday.getTime() + 7 * 24 * 3600 * 1000 - 1);
+
     const puissance7Jours = await prisma.relevesChefBloc.findMany({
-      where: { heure_releve: { gte: new Date(today.getTime() - 6 * 24 * 3600 * 1000), lte: endOfToday } },
+      where: { heure_releve: { gte: monday, lte: endOfSunday } },
       select: {
         heure_releve: true,
         generateur: { select: { puissance_active_mw: true } },

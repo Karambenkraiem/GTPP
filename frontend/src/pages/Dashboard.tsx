@@ -2,16 +2,15 @@ import { useState } from 'react';
 import { useQuery } from '@tanstack/react-query';
 import { Link } from 'react-router-dom';
 import { dashboardApi } from '../lib/api';
-import StatCard from '../components/StatCard';
 import PageHeader from '../components/PageHeader';
 import Modal from '../components/Modal';
 import DateInput from '../components/DateInput';
-import { Activity, AlertTriangle, Wrench, Zap, Thermometer, Gauge, ClipboardList } from 'lucide-react';
-import { format, parse } from 'date-fns';
+import DashboardMetrics from '../components/DashboardMetrics';
+import { Activity, AlertTriangle, Wrench, Gauge, ClipboardList } from 'lucide-react';
+import { format, parse, startOfWeek, endOfWeek } from 'date-fns';
 import { fr } from 'date-fns/locale';
 import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer } from 'recharts';
 import { STATUT_JOURNEE_LABELS } from '../types';
-import { formatTunisHM } from '../lib/tz';
 import { useAuth } from '../contexts/AuthContext';
 
 const RELEVE_ROUTE: Record<string, string> = { operateur: '/releves-op', chef_bloc: '/releves-bloc' };
@@ -36,25 +35,23 @@ export default function Dashboard() {
   }
 
   const journee = data?.journeeAujourdhui;
-  const dayLabel = isToday ? "aujourd'hui" : `le ${format(parse(selectedDate, 'yyyy-MM-dd', new Date()), 'dd/MM/yyyy')}`;
+  const selectedDateObj = parse(selectedDate, 'yyyy-MM-dd', new Date());
+  const dayLabel = isToday ? "aujourd'hui" : `le ${format(selectedDateObj, 'dd/MM/yyyy')}`;
   const dernierReleve = data?.dernierReleve;
-  const puissance = dernierReleve?.generateur?.puissance_active_mw;
-  const frequence = dernierReleve?.generateur?.frequence_hz;
-  const ttxm = dernierReleve?.echappement?.ttxm_moyenne;
-  const spread = dernierReleve?.echappement?.spread_calcule;
-  const vibraMaxi = dernierReleve?.vibrations?.vibration_maxi;
 
   const chartData = (data?.puissance7Jours || []).map((r: any) => ({
     date: format(new Date(r.heure_releve), 'dd/MM HH:mm', { locale: fr }),
     puissance: r.generateur?.puissance_active_mw ?? null,
   }));
   const chartTickInterval = Math.max(0, Math.floor(chartData.length / 8));
+  const weekStart = startOfWeek(selectedDateObj, { weekStartsOn: 1 });
+  const weekEnd = endOfWeek(selectedDateObj, { weekStartsOn: 1 });
 
   return (
     <div>
       <PageHeader
         title="Tableau de Bord"
-        subtitle={`${format(parse(selectedDate, 'yyyy-MM-dd', new Date()), "EEEE d MMMM yyyy", { locale: fr })} — Journée ${journee ? STATUT_JOURNEE_LABELS[journee.statut as keyof typeof STATUT_JOURNEE_LABELS] : 'non créée'}`}
+        subtitle={`${format(selectedDateObj, "EEEE d MMMM yyyy", { locale: fr })} — Journée ${journee ? STATUT_JOURNEE_LABELS[journee.statut as keyof typeof STATUT_JOURNEE_LABELS] : 'non créée'}`}
         actions={<DateInput value={selectedDate} onChange={setSelectedDate} />}
       />
 
@@ -86,17 +83,29 @@ export default function Dashboard() {
         )}
 
         {/* Mesures temps réel */}
-        <div>
-          <h2 className="text-xs font-medium text-slate-400 uppercase tracking-wider mb-3">Mesures temps réel</h2>
-          <div className="grid grid-cols-2 lg:grid-cols-3 xl:grid-cols-6 gap-3">
-            <StatCard label="Puissance Active" value={puissance ?? '—'} unit="MW" icon={<Zap size={20} />} color={puissance ? 'amber' : 'slate'} />
-            <StatCard label="Fréquence" value={frequence ?? '—'} unit="Hz" icon={<Activity size={20} />} color={frequence ? 'green' : 'slate'} />
-            <StatCard label="Temp. Échappement" value={ttxm ?? '—'} unit="°C" icon={<Thermometer size={20} />} color={ttxm ? 'amber' : 'slate'} />
-            <StatCard label="Spread" value={spread ?? '—'} unit="°C" color={spread && spread > 40 ? 'red' : 'green'} sub={spread && spread > 40 ? '⚠ Seuil dépassé' : 'Normal'} />
-            <StatCard label="Vibration Maxi" value={vibraMaxi ?? '—'} unit="mm/s" icon={<Gauge size={20} />} color={vibraMaxi && vibraMaxi > 20 ? 'red' : 'green'} />
-            <StatCard label="Dernier Relevé" value={dernierReleve ? formatTunisHM(dernierReleve.heure_releve) : '—'} color="slate" sub={dernierReleve ? format(new Date(dernierReleve.heure_releve), 'dd/MM/yyyy') : 'Aucun'} />
+        <DashboardMetrics dernierReleve={dernierReleve} />
+
+        {/* Graphique puissance active de la semaine */}
+        {chartData.length > 0 && (
+          <div className="bg-slate-900 border border-slate-700 rounded-lg p-4">
+            <h2 className="text-sm font-medium text-white mb-4">
+              Puissance active (MW) — Semaine du {format(weekStart, 'dd/MM')} au {format(weekEnd, 'dd/MM')}
+            </h2>
+            <ResponsiveContainer width="100%" height={180}>
+              <LineChart data={chartData}>
+                <CartesianGrid strokeDasharray="3 3" stroke="#1e293b" />
+                <XAxis dataKey="date" interval={chartTickInterval} tick={{ fill: '#94a3b8', fontSize: 11 }} />
+                <YAxis domain={[0, 130]} tick={{ fill: '#94a3b8', fontSize: 11 }} />
+                <Tooltip
+                  contentStyle={{ background: '#1e293b', border: '1px solid #334155', borderRadius: 8 }}
+                  labelStyle={{ color: '#f1f5f9' }}
+                  itemStyle={{ color: '#f59e0b' }}
+                />
+                <Line type="monotone" dataKey="puissance" stroke="#f59e0b" strokeWidth={2} dot={false} connectNulls />
+              </LineChart>
+            </ResponsiveContainer>
           </div>
-        </div>
+        )}
 
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
           {/* Alertes */}
@@ -165,26 +174,6 @@ export default function Dashboard() {
             </div>
           </div>
         </div>
-
-        {/* Graphique puissance active 7 jours */}
-        {chartData.length > 0 && (
-          <div className="bg-slate-900 border border-slate-700 rounded-lg p-4">
-            <h2 className="text-sm font-medium text-white mb-4">Puissance active — 7 derniers jours (MW)</h2>
-            <ResponsiveContainer width="100%" height={180}>
-              <LineChart data={chartData}>
-                <CartesianGrid strokeDasharray="3 3" stroke="#1e293b" />
-                <XAxis dataKey="date" interval={chartTickInterval} tick={{ fill: '#94a3b8', fontSize: 11 }} />
-                <YAxis domain={[0, 130]} tick={{ fill: '#94a3b8', fontSize: 11 }} />
-                <Tooltip
-                  contentStyle={{ background: '#1e293b', border: '1px solid #334155', borderRadius: 8 }}
-                  labelStyle={{ color: '#f1f5f9' }}
-                  itemStyle={{ color: '#f59e0b' }}
-                />
-                <Line type="monotone" dataKey="puissance" stroke="#f59e0b" strokeWidth={2} dot={false} connectNulls />
-              </LineChart>
-            </ResponsiveContainer>
-          </div>
-        )}
       </div>
 
       <Modal open={!!selectedPoste} onClose={() => setSelectedPoste(null)}
