@@ -59,7 +59,7 @@ export default function InstallPrompt() {
   if (!visible) return null;
 
   return (
-    <div className="fixed bottom-4 left-4 right-4 z-50 mx-auto max-w-md rounded-xl border border-amber-500/30 bg-slate-900/95 backdrop-blur px-4 py-3 shadow-lg flex items-start gap-3">
+    <div className="fixed bottom-4 right-4 left-4 sm:left-auto sm:w-96 z-50 rounded-xl border border-amber-500/30 bg-slate-900/95 backdrop-blur px-4 py-3 shadow-lg flex items-start gap-3">
       <div className="mt-0.5 flex h-9 w-9 flex-shrink-0 items-center justify-center rounded-lg bg-amber-500/15 text-amber-400">
         {showIosHint ? <Share size={17} /> : <Download size={17} />}
       </div>

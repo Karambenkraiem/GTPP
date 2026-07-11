@@ -119,9 +119,7 @@ export default function Login() {
             Accès réservé au personnel autorisé de la STEG
           </p>
 
-          <div className="mt-6">
-            <AppDownloadQR />
-          </div>
+          <AppDownloadQR />
         </div>
 
         {showDemoPanel && (
