@@ -80,6 +80,8 @@ router.get('/me', authenticate, async (req, res) => {
 
 router.put('/me', authenticate, async (req, res) => {
   try {
+    if (req.user!.role === 'guest') return res.status(403).json({ error: 'Compte invité : modification du profil non autorisée' });
+
     const { nom, prenom } = req.body;
     if (!nom || !prenom) return res.status(400).json({ error: 'Nom et prénom requis' });
 
@@ -96,6 +98,8 @@ router.put('/me', authenticate, async (req, res) => {
 
 router.put('/change-password', authenticate, async (req, res) => {
   try {
+    if (req.user!.role === 'guest') return res.status(403).json({ error: 'Compte invité : changement de mot de passe non autorisé' });
+
     const { currentPassword, newPassword } = req.body;
     const user = await prisma.utilisateur.findUnique({ where: { id: req.user!.userId } });
     if (!user) return res.status(404).json({ error: 'Utilisateur non trouvé' });

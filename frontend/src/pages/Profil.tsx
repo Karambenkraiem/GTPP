@@ -13,6 +13,7 @@ export default function Profil() {
   const { user, updateUser } = useAuth();
   const { theme, toggle } = useTheme();
   const { toasts, show: showToast, dismiss } = useToast();
+  const isGuest = user?.role === 'guest';
 
   const [nom, setNom] = useState(user?.nom || '');
   const [prenom, setPrenom] = useState(user?.prenom || '');
@@ -95,17 +96,20 @@ export default function Profil() {
       <div className="p-3 sm:p-6 space-y-4 max-w-xl">
         <div className="bg-slate-900 border border-slate-700 rounded-lg p-4 space-y-4">
           <p className="text-sm font-medium text-slate-300">Informations personnelles</p>
+          {isGuest && (
+            <p className="text-xs text-slate-500">Le compte invité ne peut pas modifier ces informations.</p>
+          )}
 
           <div className="grid grid-cols-2 gap-3">
             <div>
               <label className="block text-xs text-slate-500 mb-1">Prénom *</label>
-              <input value={prenom} onChange={(e) => setPrenom(e.target.value)}
-                className="w-full bg-slate-800 border border-slate-600 rounded-lg px-3 py-2 text-white text-sm focus:outline-none focus:border-amber-500" />
+              <input value={prenom} onChange={(e) => setPrenom(e.target.value)} disabled={isGuest}
+                className="w-full bg-slate-800 border border-slate-600 rounded-lg px-3 py-2 text-white text-sm focus:outline-none focus:border-amber-500 disabled:opacity-50 disabled:cursor-not-allowed" />
             </div>
             <div>
               <label className="block text-xs text-slate-500 mb-1">Nom *</label>
-              <input value={nom} onChange={(e) => setNom(e.target.value)}
-                className="w-full bg-slate-800 border border-slate-600 rounded-lg px-3 py-2 text-white text-sm focus:outline-none focus:border-amber-500" />
+              <input value={nom} onChange={(e) => setNom(e.target.value)} disabled={isGuest}
+                className="w-full bg-slate-800 border border-slate-600 rounded-lg px-3 py-2 text-white text-sm focus:outline-none focus:border-amber-500 disabled:opacity-50 disabled:cursor-not-allowed" />
             </div>
           </div>
 
@@ -123,42 +127,46 @@ export default function Profil() {
           </div>
         </div>
 
-        <div className="bg-slate-900 border border-slate-700 rounded-lg p-4 space-y-4">
-          <div className="flex items-center gap-2 text-sm font-medium text-slate-300">
-            <Lock size={14} className="text-slate-500" />
-            Changer le mot de passe
-            <span className="text-xs font-normal text-slate-500">(laisser vide pour ne pas modifier)</span>
-          </div>
+        {!isGuest && (
+          <div className="bg-slate-900 border border-slate-700 rounded-lg p-4 space-y-4">
+            <div className="flex items-center gap-2 text-sm font-medium text-slate-300">
+              <Lock size={14} className="text-slate-500" />
+              Changer le mot de passe
+              <span className="text-xs font-normal text-slate-500">(laisser vide pour ne pas modifier)</span>
+            </div>
 
-          <div>
-            <label className="block text-xs text-slate-500 mb-1">Mot de passe actuel</label>
-            <input type="password" value={currentPassword} onChange={(e) => setCurrentPassword(e.target.value)}
-              className="w-full bg-slate-800 border border-slate-600 rounded-lg px-3 py-2 text-white text-sm focus:outline-none focus:border-amber-500" />
-          </div>
-          <div className="grid grid-cols-2 gap-3">
             <div>
-              <label className="block text-xs text-slate-500 mb-1">Nouveau mot de passe</label>
-              <input type="password" value={newPassword} onChange={(e) => setNewPassword(e.target.value)}
-                placeholder="Minimum 6 caractères"
+              <label className="block text-xs text-slate-500 mb-1">Mot de passe actuel</label>
+              <input type="password" value={currentPassword} onChange={(e) => setCurrentPassword(e.target.value)}
                 className="w-full bg-slate-800 border border-slate-600 rounded-lg px-3 py-2 text-white text-sm focus:outline-none focus:border-amber-500" />
             </div>
-            <div>
-              <label className="block text-xs text-slate-500 mb-1">Confirmer</label>
-              <input type="password" value={confirmPassword} onChange={(e) => setConfirmPassword(e.target.value)}
-                className="w-full bg-slate-800 border border-slate-600 rounded-lg px-3 py-2 text-white text-sm focus:outline-none focus:border-amber-500" />
+            <div className="grid grid-cols-2 gap-3">
+              <div>
+                <label className="block text-xs text-slate-500 mb-1">Nouveau mot de passe</label>
+                <input type="password" value={newPassword} onChange={(e) => setNewPassword(e.target.value)}
+                  placeholder="Minimum 6 caractères"
+                  className="w-full bg-slate-800 border border-slate-600 rounded-lg px-3 py-2 text-white text-sm focus:outline-none focus:border-amber-500" />
+              </div>
+              <div>
+                <label className="block text-xs text-slate-500 mb-1">Confirmer</label>
+                <input type="password" value={confirmPassword} onChange={(e) => setConfirmPassword(e.target.value)}
+                  className="w-full bg-slate-800 border border-slate-600 rounded-lg px-3 py-2 text-white text-sm focus:outline-none focus:border-amber-500" />
+              </div>
             </div>
           </div>
-        </div>
+        )}
 
         {formError && <p className="text-red-400 text-sm">{formError}</p>}
 
-        <button
-          onClick={openConfirm}
-          disabled={isSaving}
-          className="bg-amber-500 hover:bg-amber-600 text-slate-900 font-medium px-4 py-2 rounded-lg text-sm disabled:opacity-50"
-        >
-          Enregistrer les modifications
-        </button>
+        {!isGuest && (
+          <button
+            onClick={openConfirm}
+            disabled={isSaving}
+            className="bg-amber-500 hover:bg-amber-600 text-slate-900 font-medium px-4 py-2 rounded-lg text-sm disabled:opacity-50"
+          >
+            Enregistrer les modifications
+          </button>
+        )}
 
         <div className="bg-slate-900 border border-slate-700 rounded-lg p-4">
           <p className="text-sm font-medium text-slate-300 mb-3">Apparence</p>
