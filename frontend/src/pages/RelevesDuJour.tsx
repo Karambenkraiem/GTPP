@@ -4,7 +4,7 @@ import { relevesApi, journeesApi } from '../lib/api';
 import PageHeader from '../components/PageHeader';
 import { format } from 'date-fns';
 import { fr } from 'date-fns/locale';
-import { Calendar } from 'lucide-react';
+import DateInput from '../components/DateInput';
 import { getTunisHour } from '../lib/tz';
 
 const SLOT_HOURS = [0, 2, 4, 6, 8, 10, 12, 14, 16, 18, 20, 22];
@@ -282,12 +282,7 @@ export default function RelevesDuJour() {
         title="Visualisation des Relevés"
         subtitle="Consultation détaillée — accessible à tous les profils"
         actions={
-          <div className="flex items-center gap-2">
-            <Calendar size={15} className="text-slate-400" />
-            <input type="date" value={selectedDate}
-              onChange={e => { setSelectedDate(e.target.value); }}
-              className="bg-slate-800 border border-slate-600 rounded-lg px-3 py-1.5 text-white text-sm focus:outline-none focus:border-amber-500" />
-          </div>
+          <DateInput value={selectedDate} onChange={setSelectedDate} />
         }
       />
 

@@ -3,7 +3,8 @@ import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { journeesApi, postesApi, usersApi } from '../lib/api';
 import PageHeader from '../components/PageHeader';
 import Modal from '../components/Modal';
-import { Plus, Pencil, CheckCircle, ChevronDown, Calendar } from 'lucide-react';
+import { Plus, Pencil, CheckCircle, ChevronDown } from 'lucide-react';
+import DateInput from '../components/DateInput';
 import { format } from 'date-fns';
 import { fr } from 'date-fns/locale';
 import { STATUT_JOURNEE_LABELS, TRANCHE_LABELS } from '../types';
@@ -145,15 +146,7 @@ export default function Journee() {
 
       <div className="p-3 sm:p-6">
         <div className="flex gap-4 mb-6">
-          <div className="flex items-center gap-2">
-            <Calendar size={16} className="text-slate-400" />
-            <input
-              type="date"
-              value={selectedDate}
-              onChange={(e) => setSelectedDate(e.target.value)}
-              className="bg-slate-800 border border-slate-600 rounded-lg px-3 py-2 text-white text-sm focus:outline-none focus:border-amber-500"
-            />
-          </div>
+          <DateInput value={selectedDate} onChange={setSelectedDate} />
           {!selectedJournee && canManageJournee && (
             <button
               onClick={() => createJourneeMut.mutate()}

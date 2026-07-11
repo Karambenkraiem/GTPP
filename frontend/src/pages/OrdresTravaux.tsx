@@ -3,6 +3,7 @@ import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { otApi, journeesApi } from '../lib/api';
 import { useAuth } from '../contexts/AuthContext';
 import PageHeader from '../components/PageHeader';
+import DateInput from '../components/DateInput';
 import { Trash2 } from 'lucide-react';
 import { format } from 'date-fns';
 import { fr } from 'date-fns/locale';
@@ -127,8 +128,7 @@ export default function OrdresTravaux() {
         title="Ordres de Travaux"
         subtitle="Suivi des interventions de maintenance"
         actions={
-          <input type="date" value={selectedDate} onChange={e => setSelectedDate(e.target.value)}
-            className="bg-slate-800 border border-slate-600 rounded-lg px-3 py-1.5 text-white text-sm focus:outline-none focus:border-amber-500" />
+          <DateInput value={selectedDate} onChange={setSelectedDate} />
         }
       />
 

@@ -3,6 +3,7 @@ import { useSearchParams } from 'react-router-dom';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { relevesApi, journeesApi, postesApi } from '../lib/api';
 import PageHeader from '../components/PageHeader';
+import DateInput from '../components/DateInput';
 import { Save, Trash2, RotateCcw, FlaskConical, Pencil, Plus } from 'lucide-react';
 import { useToast, ToastContainer } from '../components/Toast';
 import { format } from 'date-fns';
@@ -384,8 +385,7 @@ export default function RelevesOperateurPage() {
     <div>
       <PageHeader title="Relevés Opérateur" subtitle="Feuille opérateur — relevés toutes les 2 heures"
         actions={
-          <input type="date" value={selectedDate} onChange={e => { setSelectedDate(e.target.value); setSelectedHour(null); }}
-            className="bg-slate-800 border border-slate-600 rounded-lg px-3 py-1.5 text-white text-sm focus:outline-none focus:border-amber-500" />
+          <DateInput value={selectedDate} onChange={d => { setSelectedDate(d); setSelectedHour(null); }} />
         } />
 
       {/* Onglets */}

@@ -3,10 +3,11 @@ import { useQuery } from '@tanstack/react-query';
 import { format } from 'date-fns';
 import { fr } from 'date-fns/locale';
 import {
-  Calendar, Printer, BookOpen, Users, Zap,
+  Printer, BookOpen, Users, Zap,
   Activity, Settings, Bell, Wrench, AlertTriangle,
 } from 'lucide-react';
 import PageHeader from '../components/PageHeader';
+import DateInput from '../components/DateInput';
 import { rapportApi } from '../lib/api';
 import {
   TRANCHE_LABELS,
@@ -138,13 +139,7 @@ export default function Rapport() {
         subtitle="Compte-rendu d'exploitation — T.A.C La Goulette GE 9001E"
         actions={
           <div className="flex items-center gap-2 print:hidden">
-            <Calendar size={15} className="text-slate-400" />
-            <input
-              type="date"
-              value={selectedDate}
-              onChange={e => setSelectedDate(e.target.value)}
-              className="bg-slate-800 border border-slate-600 rounded-lg px-3 py-1.5 text-white text-sm focus:outline-none focus:border-amber-500"
-            />
+            <DateInput value={selectedDate} onChange={setSelectedDate} />
             <button
               onClick={() => window.print()}
               disabled={!journee}
