@@ -17,7 +17,7 @@ router.get('/', async (req, res) => {
     }
     const today = new Date(todayStr + 'T00:00:00.000Z');
 
-    const [journeeAujourdhui, defautsActifs, otsEnCours, dernierReleve] = await Promise.all([
+    const [journeeAujourdhui, defautsActifs, otsEnCours, recentReleves] = await Promise.all([
       prisma.journee.findUnique({
         where: { jour: today },
         include: {
@@ -35,8 +35,9 @@ router.get('/', async (req, res) => {
       }),
       prisma.materielDefectueux.count({ where: { date_cloture: null } }),
       prisma.ordreTravaux.count({ where: { etat: 'en_cours' } }),
-      prisma.relevesChefBloc.findFirst({
+      prisma.relevesChefBloc.findMany({
         orderBy: { heure_releve: 'desc' },
+        take: 10,
         include: {
           generateur: {
             select: {
@@ -53,6 +54,43 @@ router.get('/', async (req, res) => {
         },
       }),
     ]);
+
+    // Un relevé peut avoir des sections incomplètes (chef de bloc n'a pas
+    // encore saisi une zone) : on prend, pour chaque mesure, la dernière
+    // valeur non nulle parmi les relevés récents plutôt que de tout figer
+    // sur le seul dernier relevé (qui peut être partiel).
+    const firstNonNull = <T,>(pick: (r: (typeof recentReleves)[number]) => T | null | undefined): T | null => {
+      for (const r of recentReleves) {
+        const v = pick(r);
+        if (v !== null && v !== undefined) return v;
+      }
+      return null;
+    };
+
+    const dernierReleve = recentReleves[0]
+      ? {
+          heure_releve: recentReleves[0].heure_releve,
+          generateur: {
+            puissance_active_mw: firstNonNull((r) => r.generateur?.puissance_active_mw),
+            puissance_reactive_mvar: firstNonNull((r) => r.generateur?.puissance_reactive_mvar),
+            frequence_hz: firstNonNull((r) => r.generateur?.frequence_hz),
+            cos_phi: firstNonNull((r) => r.generateur?.cos_phi),
+            tension_alt_dvx_kv: firstNonNull((r) => r.generateur?.tension_alt_dvx_kv),
+            tension_svlx_kv: firstNonNull((r) => r.generateur?.tension_svlx_kv),
+          },
+          echappement: {
+            ttxm_moyenne: firstNonNull((r) => r.echappement?.ttxm_moyenne),
+            spread_calcule: firstNonNull((r) => r.echappement?.spread_calcule),
+            ttxspl_ecart: firstNonNull((r) => r.echappement?.ttxspl_ecart),
+          },
+          vibrations: {
+            vibration_maxi: firstNonNull((r) => r.vibrations?.vibration_maxi),
+          },
+          temp_ambiante_ctim: firstNonNull((r) => r.temp_ambiante_ctim),
+          pression_atm_afpap: firstNonNull((r) => r.pression_atm_afpap),
+          vitesse_turbine_rpm: firstNonNull((r) => r.vitesse_turbine_rpm),
+        }
+      : null;
 
     const dayOfWeek = today.getUTCDay(); // 0=dimanche .. 6=samedi
     const mondayOffset = (dayOfWeek + 6) % 7;
