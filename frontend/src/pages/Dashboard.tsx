@@ -5,8 +5,9 @@ import { dashboardApi } from '../lib/api';
 import StatCard from '../components/StatCard';
 import PageHeader from '../components/PageHeader';
 import Modal from '../components/Modal';
+import DateInput from '../components/DateInput';
 import { Activity, AlertTriangle, Wrench, Zap, Thermometer, Gauge, ClipboardList } from 'lucide-react';
-import { format } from 'date-fns';
+import { format, parse } from 'date-fns';
 import { fr } from 'date-fns/locale';
 import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer } from 'recharts';
 import { STATUT_JOURNEE_LABELS } from '../types';
@@ -17,7 +18,13 @@ const RELEVE_ROUTE: Record<string, string> = { operateur: '/releves-op', chef_bl
 
 export default function Dashboard() {
   const { user } = useAuth();
-  const { data, isLoading } = useQuery({ queryKey: ['dashboard'], queryFn: dashboardApi.get, refetchInterval: 60000 });
+  const [selectedDate, setSelectedDate] = useState(() => format(new Date(), 'yyyy-MM-dd'));
+  const isToday = selectedDate === format(new Date(), 'yyyy-MM-dd');
+  const { data, isLoading } = useQuery({
+    queryKey: ['dashboard', selectedDate],
+    queryFn: () => dashboardApi.get(selectedDate),
+    refetchInterval: isToday ? 60000 : false,
+  });
   const [selectedPoste, setSelectedPoste] = useState<any | null>(null);
 
   if (isLoading) {
@@ -29,6 +36,7 @@ export default function Dashboard() {
   }
 
   const journee = data?.journeeAujourdhui;
+  const dayLabel = isToday ? "aujourd'hui" : `le ${format(parse(selectedDate, 'yyyy-MM-dd', new Date()), 'dd/MM/yyyy')}`;
   const dernierReleve = data?.dernierReleve;
   const puissance = dernierReleve?.generateur?.puissance_active_mw;
   const frequence = dernierReleve?.generateur?.frequence_hz;
@@ -47,7 +55,8 @@ export default function Dashboard() {
     <div>
       <PageHeader
         title="Tableau de Bord"
-        subtitle={`${format(new Date(), "EEEE d MMMM yyyy", { locale: fr })} — Journée ${journee ? STATUT_JOURNEE_LABELS[journee.statut as keyof typeof STATUT_JOURNEE_LABELS] : 'non créée'}`}
+        subtitle={`${format(parse(selectedDate, 'yyyy-MM-dd', new Date()), "EEEE d MMMM yyyy", { locale: fr })} — Journée ${journee ? STATUT_JOURNEE_LABELS[journee.statut as keyof typeof STATUT_JOURNEE_LABELS] : 'non créée'}`}
+        actions={<DateInput value={selectedDate} onChange={setSelectedDate} />}
       />
 
       <div className="p-3 sm:p-6 space-y-4 sm:space-y-6">
@@ -114,7 +123,7 @@ export default function Dashboard() {
               <Link to="/releves-jour" className="flex items-center justify-between py-2 -mx-2 px-2 rounded hover:bg-slate-800/50 transition-colors">
                 <div className="flex items-center gap-2 text-sm text-slate-300">
                   <Activity size={14} className="text-blue-400" />
-                  Relevés aujourd'hui
+                  Relevés {dayLabel}
                 </div>
                 <span className="text-sm font-bold text-blue-400">{journee?._count?.releves_bloc ?? 0}</span>
               </Link>
@@ -141,7 +150,7 @@ export default function Dashboard() {
 
           {/* Activité journée */}
           <div className="bg-slate-900 border border-slate-700 rounded-lg p-4">
-            <h2 className="text-sm font-medium text-white mb-3">Activité aujourd'hui</h2>
+            <h2 className="text-sm font-medium text-white mb-3">Activité {dayLabel}</h2>
             <div className="space-y-2">
               {[
                 { label: 'Manœuvres', value: (journee?._count?.manouvres ?? 0) - (data?.incidentsAujourdhui ?? 0), to: '/manouvres' },

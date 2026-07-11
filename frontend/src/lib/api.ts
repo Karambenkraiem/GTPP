@@ -136,7 +136,7 @@ export const defautsApi = {
 
 // Dashboard
 export const dashboardApi = {
-  get: () => api.get('/dashboard').then((r) => r.data),
+  get: (date?: string) => api.get('/dashboard', { params: date ? { date } : undefined }).then((r) => r.data),
 };
 
 // Rapport

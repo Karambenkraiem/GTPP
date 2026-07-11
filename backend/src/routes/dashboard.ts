@@ -7,8 +7,14 @@ router.use(authenticate);
 
 router.get('/', async (req, res) => {
   try {
-    const now = new Date();
-    const todayStr = `${now.getFullYear()}-${String(now.getMonth()+1).padStart(2,'0')}-${String(now.getDate()).padStart(2,'0')}`;
+    const { date } = req.query;
+    let todayStr: string;
+    if (date && typeof date === 'string') {
+      todayStr = date;
+    } else {
+      const now = new Date();
+      todayStr = `${now.getFullYear()}-${String(now.getMonth()+1).padStart(2,'0')}-${String(now.getDate()).padStart(2,'0')}`;
+    }
     const today = new Date(todayStr + 'T00:00:00.000Z');
 
     const [journeeAujourdhui, defautsActifs, otsEnCours, dernierReleve] = await Promise.all([
@@ -40,7 +46,7 @@ router.get('/', async (req, res) => {
     ]);
 
     const derniers7Jours = await prisma.journee.findMany({
-      where: { jour: { gte: new Date(Date.now() - 7 * 24 * 3600 * 1000) } },
+      where: { jour: { gte: new Date(today.getTime() - 6 * 24 * 3600 * 1000), lte: today } },
       include: { compteurs: true },
       orderBy: { jour: 'asc' },
     });
