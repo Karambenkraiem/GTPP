@@ -61,6 +61,8 @@ jobs:
           ANDROID_KEYSTORE_PASSWORD: ${{ secrets.ANDROID_KEYSTORE_PASSWORD }}
           ANDROID_KEY_ALIAS: ${{ secrets.ANDROID_KEY_ALIAS }}
           ANDROID_KEY_PASSWORD: ${{ secrets.ANDROID_KEY_PASSWORD }}
+          APP_VERSION_CODE: ${{ github.run_number }}
+          APP_VERSION_NAME: 1.0.${{ github.run_number }}
         run: ./gradlew assembleRelease --no-daemon
 
       - name: Remove keystore from runner
@@ -68,14 +70,18 @@ jobs:
         working-directory: frontend/android/app
         run: rm -f release.keystore
 
-      - name: Rename APK
-        run: cp frontend/android/app/build/outputs/apk/release/app-release.apk gtpp.apk
+      - name: Rename APK and write version manifest
+        run: |
+          cp frontend/android/app/build/outputs/apk/release/app-release.apk gtpp.apk
+          printf '{"versionCode": %s, "versionName": "1.0.%s"}' "${{ github.run_number }}" "${{ github.run_number }}" > version.json
 
       - name: Upload APK artifact
         uses: actions/upload-artifact@v4
         with:
           name: gtpp-apk
-          path: gtpp.apk
+          path: |
+            gtpp.apk
+            version.json
           retention-days: 5
 
   deploy:
@@ -94,7 +100,7 @@ jobs:
           username: ${{ secrets.VPS_USER }}
           key: ${{ secrets.VPS_SSH_KEY }}
           port: ${{ secrets.VPS_SSH_PORT || 22 }}
-          source: gtpp.apk
+          source: gtpp.apk,version.json
           target: ${{ secrets.VPS_PROJECT_PATH }}/apk-downloads
 
       - name: Deploy over SSH

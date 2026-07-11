@@ -3,6 +3,9 @@ apply plugin: 'com.android.application'
 def releaseKeystoreFile = file('release.keystore')
 def hasReleaseSigning = releaseKeystoreFile.exists()
 
+def envVersionCode = System.getenv('APP_VERSION_CODE')
+def envVersionName = System.getenv('APP_VERSION_NAME')
+
 android {
     namespace = "com.steg.gtpp"
     compileSdk = rootProject.ext.compileSdkVersion
@@ -10,8 +13,8 @@ android {
         applicationId "com.steg.gtpp"
         minSdkVersion rootProject.ext.minSdkVersion
         targetSdkVersion rootProject.ext.targetSdkVersion
-        versionCode 1
-        versionName "1.0"
+        versionCode envVersionCode ? envVersionCode.toInteger() : 1
+        versionName envVersionName ?: "1.0"
         testInstrumentationRunner "androidx.test.runner.AndroidJUnitRunner"
         aaptOptions {
              // Files and dirs to omit from the packaged assets dir, modified to accommodate modern web apps.
