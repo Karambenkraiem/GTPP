@@ -106,9 +106,10 @@ Activation/désactivation en direct, sans redéploiement : bouton "Mode démo" d
 côté backend et repasse à `false` à chaque redémarrage du conteneur backend (donc à chaque
 déploiement) — comportement volontaire, sûr par défaut.
 
-Alternative (pour que le mode démo démarre déjà activé après un déploiement) : définir
-`DEMO_LOGIN=true` dans le `.env` du VPS avant de relancer le backend — sert uniquement de
-valeur initiale au démarrage, le bouton admin reste utilisable ensuite pour basculer.
+`DEMO_LOGIN` est fixé à `"false"` en dur dans `docker-compose.prod.yml` (plus d'indirection
+via le `.env` du VPS) : impossible de le laisser activé par erreur d'un déploiement à
+l'autre. Le bouton admin reste la seule façon de l'activer, et seulement pour la session en
+cours du conteneur.
 
 ## Développement local
 Rien ne change : `docker compose up -d --build` avec `docker-compose.yml` (Docker Desktop),
