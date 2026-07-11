@@ -34,6 +34,7 @@ import Profil from './pages/Profil';
 import Users from './pages/admin/Users';
 import Seuils from './pages/admin/Seuils';
 import InstallPrompt from './components/InstallPrompt';
+import AndroidBackButton from './components/AndroidBackButton';
 const queryClient = new QueryClient({
   defaultOptions: { queries: { staleTime: 30_000, retry: 1 } },
 });
@@ -83,6 +84,7 @@ export default function App() {
             </Route>
           </Routes>
           <InstallPrompt />
+          <AndroidBackButton />
         </BrowserRouter>
       </AuthProvider>
       </ThemeProvider>
