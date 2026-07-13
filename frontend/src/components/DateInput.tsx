@@ -1,4 +1,5 @@
 import { useEffect, useRef, useState } from 'react';
+import { createPortal } from 'react-dom';
 import { format, addMonths, subMonths, startOfMonth, endOfMonth, startOfWeek, endOfWeek, addDays, isSameDay, isSameMonth, parse } from 'date-fns';
 import { fr } from 'date-fns/locale';
 import { Calendar, ChevronLeft, ChevronRight } from 'lucide-react';
@@ -10,21 +11,40 @@ interface DateInputProps {
 }
 
 const WEEKDAYS = ['L', 'M', 'M', 'J', 'V', 'S', 'D'];
+const POPUP_WIDTH = 256; // w-64
+const POPUP_HEIGHT = 300; // hauteur approximative du calendrier
+const MARGIN = 8;
 
 export default function DateInput({ value, onChange, className }: DateInputProps) {
   const [open, setOpen] = useState(false);
   const selected = value ? parse(value, 'yyyy-MM-dd', new Date()) : new Date();
   const [viewMonth, setViewMonth] = useState(startOfMonth(selected));
+  const [coords, setCoords] = useState<{ top: number; left: number } | null>(null);
   const containerRef = useRef<HTMLDivElement>(null);
+  const popupRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
-    if (open) setViewMonth(startOfMonth(selected));
+    if (!open) return;
+    setViewMonth(startOfMonth(selected));
+    const rect = containerRef.current?.getBoundingClientRect();
+    if (rect) {
+      const dropUp = rect.bottom + POPUP_HEIGHT > window.innerHeight && rect.top > POPUP_HEIGHT;
+      const left = Math.max(MARGIN, Math.min(rect.right - POPUP_WIDTH, window.innerWidth - POPUP_WIDTH - MARGIN));
+      const top = dropUp ? rect.top - POPUP_HEIGHT - 4 : rect.bottom + 4;
+      setCoords({ top, left });
+    }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [open]);
 
   useEffect(() => {
     function handleClickOutside(e: MouseEvent) {
-      if (containerRef.current && !containerRef.current.contains(e.target as Node)) setOpen(false);
+      const target = e.target as Node;
+      if (
+        containerRef.current && !containerRef.current.contains(target) &&
+        (!popupRef.current || !popupRef.current.contains(target))
+      ) {
+        setOpen(false);
+      }
     }
     if (open) document.addEventListener('mousedown', handleClickOutside);
     return () => document.removeEventListener('mousedown', handleClickOutside);
@@ -54,8 +74,12 @@ export default function DateInput({ value, onChange, className }: DateInputProps
         {format(selected, 'dd/MM/yyyy')}
       </button>
 
-      {open && (
-        <div className="absolute z-20 mt-1 right-0 bg-slate-800 border border-slate-600 rounded-lg p-3 shadow-xl w-64">
+      {open && coords && createPortal(
+        <div
+          ref={popupRef}
+          style={{ top: coords.top, left: coords.left, width: POPUP_WIDTH }}
+          className="fixed z-50 bg-slate-800 border border-slate-600 rounded-lg p-3 shadow-xl"
+        >
           <div className="flex items-center justify-between mb-2">
             <button
               type="button"
@@ -107,7 +131,8 @@ export default function DateInput({ value, onChange, className }: DateInputProps
               );
             })}
           </div>
-        </div>
+        </div>,
+        document.body
       )}
     </div>
   );
