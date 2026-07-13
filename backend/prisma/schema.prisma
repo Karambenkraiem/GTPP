@@ -624,3 +624,20 @@ model SeuilAlarme {
   @@map("seuils_alarme")
 }
 
+model ActivityLog {
+  id             String   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  utilisateur_id String?  @db.Uuid
+  matricule      String?  @db.VarChar(20)
+  nom_complet    String?  @db.VarChar(200)
+  role           String?  @db.VarChar(50)
+  methode        String   @db.VarChar(10)
+  route          String   @db.Text
+  statut         Int
+  ip             String?  @db.VarChar(64)
+  cree_le        DateTime @default(now()) @db.Timestamptz(6)
+
+  @@map("activity_logs")
+  @@index([cree_le])
+  @@index([utilisateur_id])
+}
+

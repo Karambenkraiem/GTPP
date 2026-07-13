@@ -15,6 +15,8 @@ import otRouter from './routes/ot';
 import defautsRouter from './routes/defauts';
 import dashboardRouter from './routes/dashboard';
 import rapportRouter from './routes/rapport';
+import activityLogsRouter from './routes/activityLogs';
+import { activityLogger } from './middleware/activityLog';
 import { startReleveCron } from './cron';
 
 const app = express();
@@ -33,6 +35,7 @@ app.use(cors({
   credentials: true,
 }));
 app.use(express.json({ limit: '10mb' }));
+app.use(activityLogger);
 
 app.use('/api/auth', authRouter);
 app.use('/api/users', usersRouter);
@@ -45,6 +48,7 @@ app.use('/api/ot', otRouter);
 app.use('/api/defauts', defautsRouter);
 app.use('/api/dashboard', dashboardRouter);
 app.use('/api/rapport', rapportRouter);
+app.use('/api/activity-logs', activityLogsRouter);
 
 app.get('/api/health', (_, res) => res.json({ status: 'ok', time: new Date() }));
 

@@ -2,7 +2,7 @@ import { NavLink } from 'react-router-dom';
 import {
   LayoutDashboard, BookOpen, ClipboardList, Activity,
   Wrench, Bell, AlertTriangle, Users, Settings, Zap, LogOut, CalendarDays, FileText,
-  Sun, Moon,
+  Sun, Moon, History,
 } from 'lucide-react';
 import { useAuth } from '../contexts/AuthContext';
 import { useTheme } from '../contexts/ThemeContext';
@@ -25,6 +25,7 @@ const navItems: NavItem[] = [
 const adminItems = [
   { to: '/admin/users', icon: Users, label: 'Utilisateurs' },
   { to: '/admin/seuils', icon: Settings, label: 'Seuils d\'alerte' },
+  { to: '/admin/logs', icon: History, label: 'Journal d\'activité' },
 ];
 
 export default function Sidebar({ onClose }: { onClose?: () => void }) {

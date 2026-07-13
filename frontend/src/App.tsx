@@ -33,6 +33,7 @@ import Rapport from './pages/Rapport';
 import Profil from './pages/Profil';
 import Users from './pages/admin/Users';
 import Seuils from './pages/admin/Seuils';
+import ActivityLogs from './pages/admin/ActivityLogs';
 import InstallPrompt from './components/InstallPrompt';
 import AndroidBackButton from './components/AndroidBackButton';
 import UpdateBanner from './components/UpdateBanner';
@@ -82,6 +83,7 @@ export default function App() {
               <Route path="profil" element={<Profil />} />
               <Route path="admin/users" element={<AdminRoute><Users /></AdminRoute>} />
               <Route path="admin/seuils" element={<AdminRoute><Seuils /></AdminRoute>} />
+              <Route path="admin/logs" element={<AdminRoute><ActivityLogs /></AdminRoute>} />
             </Route>
           </Routes>
           <InstallPrompt />
