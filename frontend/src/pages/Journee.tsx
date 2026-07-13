@@ -72,7 +72,6 @@ export default function Journee() {
   const cpt = journeeDetail?.compteurs;
   const REQUIS_OP = [
     'energie_active_00h', 'energie_active_24h',
-    'conso_aux_couplage', 'conso_aux_decouplage',
     'gasoil_00h_l', 'gasoil_24h_l',
   ];
   const REQUIS_BLOC = [
@@ -80,13 +79,20 @@ export default function Journee() {
     'h_flamme_00h', 'h_flamme_24h',
     'puissance_max_mw',
   ];
-  const manquantsOp   = REQUIS_OP.filter(f => !cpt || cpt[f] == null);
+  // La conso. aux. couplage/découplage se saisit désormais via une liste de cycles
+  // (conso_aux_cycles) plutôt que deux champs uniques : on exige au moins un cycle complet.
+  const hasCompleteAuxCycle = Array.isArray(cpt?.conso_aux_cycles)
+    && cpt.conso_aux_cycles.some((c: any) => c?.couplage != null && c?.decouplage != null);
+  const manquantsOp   = [
+    ...REQUIS_OP.filter(f => !cpt || cpt[f] == null),
+    ...(hasCompleteAuxCycle ? [] : ['conso_aux_cycles']),
+  ];
   const manquantsBloc = REQUIS_BLOC.filter(f => !cpt || cpt[f] == null);
   const compteursOk   = manquantsOp.length === 0 && manquantsBloc.length === 0;
 
   const LABELS: Record<string, string> = {
     energie_active_00h: 'Énergie active 00h', energie_active_24h: 'Énergie active 24h',
-    conso_aux_couplage: 'Conso. aux. couplage', conso_aux_decouplage: 'Conso. aux. découplage',
+    conso_aux_cycles: 'Conso. aux. couplage/découplage',
     gasoil_00h_l: 'Gasoil 00h', gasoil_24h_l: 'Gasoil 24h',
     gaz_00h_nm3: 'Gaz 00h', gaz_24h_nm3: 'Gaz 24h',
     h_flamme_00h: 'H. flamme 00h', h_flamme_24h: 'H. flamme 24h',
