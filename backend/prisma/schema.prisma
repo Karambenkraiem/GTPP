@@ -223,6 +223,7 @@ model RelevesChefBloc {
   temp_sortie_ctd           Decimal?  @db.Decimal(6, 2)
   debit_massique_comp       Decimal?  @db.Decimal(8, 3)
   synced                    Boolean   @default(false)
+  deverrouille              Boolean   @default(false)
   cree_le                   DateTime  @default(now()) @db.Timestamptz(6)
 
   journee     Journee              @relation(fields: [journee_id], references: [id], onDelete: Cascade)
@@ -445,6 +446,7 @@ model RelevesOperateur {
   gasoil_24h_l                Decimal? @db.Decimal(10, 2)
   consignes_particulieres     String?  @db.Text
   synced                      Boolean  @default(false)
+  deverrouille                Boolean  @default(false)
   cree_le                     DateTime @default(now()) @db.Timestamptz(6)
 
   journee Journee      @relation(fields: [journee_id], references: [id], onDelete: Cascade)

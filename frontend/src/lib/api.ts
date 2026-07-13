@@ -77,6 +77,7 @@ export const relevesApi = {
   createBloc: (data: any) => api.post('/releves/bloc', data).then((r) => r.data),
   updateBloc: (id: string, data: any) => api.put(`/releves/bloc/${id}`, data).then((r) => r.data),
   deleteBloc: (id: string) => api.delete(`/releves/bloc/${id}`).then((r) => r.data),
+  deverrouillerBloc: (id: string) => api.post(`/releves/bloc/${id}/deverrouiller`).then((r) => r.data),
 
   listOp: (journeeId: string) =>
     api.get(`/releves/operateur/journee/${journeeId}`).then((r) => r.data),
@@ -84,6 +85,7 @@ export const relevesApi = {
   createOp: (data: any) => api.post('/releves/operateur', data).then((r) => r.data),
   updateOp: (id: string, data: any) => api.put(`/releves/operateur/${id}`, data).then((r) => r.data),
   deleteOp: (id: string) => api.delete(`/releves/operateur/${id}`).then((r) => r.data),
+  deverrouillerOp: (id: string) => api.post(`/releves/operateur/${id}/deverrouiller`).then((r) => r.data),
   listJour: (date: string) => api.get(`/releves/jour/${date}`).then((r) => r.data),
 
   getCompteurs: (journeeId: string) =>

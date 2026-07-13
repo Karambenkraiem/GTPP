@@ -4,7 +4,7 @@ import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { relevesApi, journeesApi, postesApi } from '../lib/api';
 import PageHeader from '../components/PageHeader';
 import DateInput from '../components/DateInput';
-import { Save, Trash2, RotateCcw, FlaskConical, Pencil, Plus } from 'lucide-react';
+import { Save, Trash2, RotateCcw, FlaskConical, Pencil, Plus, Unlock } from 'lucide-react';
 import { useToast, ToastContainer } from '../components/Toast';
 import { format } from 'date-fns';
 import { fr } from 'date-fns/locale';
@@ -192,6 +192,7 @@ export default function RelevesOperateurPage() {
   const isOperateur = user?.role === 'operateur';
   const canFill = ['operateur', 'admin', 'chef_exploitation'].includes(user?.role ?? '');
   const canDelete = ['admin', 'chef_exploitation'].includes(user?.role ?? '');
+  const canUnlock = ['chef_quart', 'chef_exploitation', 'admin'].includes(user?.role ?? '');
   const qc = useQueryClient();
   const [searchParams] = useSearchParams();
   const [pageTab, setPageTab] = useState<'saisie' | 'compteurs'>(searchParams.get('tab') === 'compteurs' ? 'compteurs' : 'saisie');
@@ -311,13 +312,19 @@ export default function RelevesOperateurPage() {
     onSuccess: () => qc.invalidateQueries({ queryKey: ['releves-op'] }),
   });
 
+  const unlockMut = useMutation({
+    mutationFn: (id: string) => relevesApi.deverrouillerOp(id),
+    onSuccess: () => { qc.invalidateQueries({ queryKey: ['releves-op'] }); showToast('Créneau déverrouillé pour correction'); },
+    onError: () => showToast('Erreur lors du déverrouillage', 'error'),
+  });
+
   // For operators: slots in the future are disabled; already-filled slots are read-only
   function isSlotFuture(hour: number) {
     if (!isOperateur) return false;
     return new Date(`${selectedDate}T${hour.toString().padStart(2, '0')}:00:00`) > new Date();
   }
   function isSlotLocked(hour: number) {
-    return !!(releveByHour[hour]?.saisi_par);
+    return !!(releveByHour[hour]?.saisi_par) && !releveByHour[hour]?.deverrouille;
   }
   const formDisabled = !canFill || selectedHour === null || (selectedHour !== null && (isSlotFuture(selectedHour) || isSlotLocked(selectedHour)));
 
@@ -425,24 +432,39 @@ export default function RelevesOperateurPage() {
                 {SLOT_HOURS.map(hour => {
                   const releve = releveByHour[hour];
                   const isFilled = !!(releve?.saisi_par);
+                  const isUnlockedForCorrection = isFilled && !!releve.deverrouille;
                   const isSelected = selectedHour === hour;
                   const future = isSlotFuture(hour);
-                  const locked = isFilled;
+                  const locked = isSlotLocked(hour);
                   const disabled = future || locked || !canFill;
+                  const showUnlock = canUnlock && isFilled && !releve.deverrouille;
                   return (
-                    <button key={hour}
-                      onClick={() => { if (disabled) return; setSelectedHour(hour === selectedHour ? null : hour); }}
-                      className={`py-2 px-1 rounded text-xs font-medium transition-colors text-center ${
-                        disabled ? 'bg-slate-900 text-slate-600 border border-slate-800 cursor-not-allowed opacity-50' :
-                        isSelected ? 'bg-amber-500 text-slate-900' :
-                        isFilled ? 'bg-green-500/20 text-green-400 border border-green-500/30 hover:bg-green-500/30' :
-                        'bg-amber-500/10 text-amber-400 border border-amber-500/20 hover:bg-amber-500/20'
-                      }`}>
-                      {hour.toString().padStart(2, '0')}h
-                      <div className="text-[9px] mt-0.5 opacity-80">
-                        {future ? '—' : isFilled ? '✓ Rempli' : '◌ Vide'}
-                      </div>
-                    </button>
+                    <div key={hour} className="relative">
+                      <button
+                        onClick={() => { if (disabled) return; setSelectedHour(hour === selectedHour ? null : hour); }}
+                        className={`w-full py-2 px-1 rounded text-xs font-medium transition-colors text-center ${
+                          disabled ? 'bg-slate-900 text-slate-600 border border-slate-800 cursor-not-allowed opacity-50' :
+                          isSelected ? 'bg-amber-500 text-slate-900' :
+                          isUnlockedForCorrection ? 'bg-blue-500/15 text-blue-400 border border-blue-500/30 hover:bg-blue-500/25' :
+                          isFilled ? 'bg-green-500/20 text-green-400 border border-green-500/30 hover:bg-green-500/30' :
+                          'bg-amber-500/10 text-amber-400 border border-amber-500/20 hover:bg-amber-500/20'
+                        }`}>
+                        {hour.toString().padStart(2, '0')}h
+                        <div className="text-[9px] mt-0.5 opacity-80">
+                          {future ? '—' : isUnlockedForCorrection ? '✎ À corriger' : isFilled ? '✓ Rempli' : '◌ Vide'}
+                        </div>
+                      </button>
+                      {showUnlock && (
+                        <button
+                          onClick={(e) => { e.stopPropagation(); unlockMut.mutate(releve.id); }}
+                          disabled={unlockMut.isPending}
+                          title="Déverrouiller ce créneau pour correction"
+                          className="absolute -top-1.5 -right-1.5 bg-slate-800 border border-slate-600 rounded-full p-0.5 text-slate-400 hover:text-amber-400 hover:border-amber-500 transition-colors disabled:opacity-50"
+                        >
+                          <Unlock size={10} />
+                        </button>
+                      )}
+                    </div>
                   );
                 })}
               </div>

@@ -1,6 +1,6 @@
 import { Router } from 'express';
 import prisma from '../lib/prisma';
-import { authenticate } from '../middleware/auth';
+import { authenticate, requireRole } from '../middleware/auth';
 
 const router = Router();
 router.use(authenticate);
@@ -79,9 +79,9 @@ router.post('/bloc', async (req, res) => {
 
 router.put('/bloc/:id', async (req, res) => {
   try {
-    const { id, journee_id, cree_le, synced, saiseur, journee, poste, heure_releve,
+    const { id, journee_id, cree_le, synced, deverrouille, saiseur, journee, poste, heure_releve,
             generateur, huile, vibrations, echappement, metal_blanc, ...rest } = req.body;
-    const main = { ...rest, saisi_par: req.user!.userId, heure_releve: new Date(heure_releve) };
+    const main = { ...rest, saisi_par: req.user!.userId, heure_releve: new Date(heure_releve), deverrouille: false };
 
     const releve = await prisma.relevesChefBloc.update({
       where: { id: req.params.id },
@@ -109,6 +109,21 @@ router.delete('/bloc/:id', async (req, res) => {
   try {
     await prisma.relevesChefBloc.delete({ where: { id: req.params.id } });
     res.json({ message: 'Relevé supprimé' });
+  } catch {
+    res.status(500).json({ error: 'Erreur serveur' });
+  }
+});
+
+// Permet au chef de quart (ou à un rôle supérieur) de rouvrir temporairement un
+// créneau déjà saisi, le temps d'une correction par le chef de bloc. Le créneau se
+// reverrouille automatiquement à la prochaine sauvegarde (PUT /bloc/:id).
+router.post('/bloc/:id/deverrouiller', requireRole('chef_quart', 'chef_exploitation', 'admin'), async (req, res) => {
+  try {
+    const releve = await prisma.relevesChefBloc.update({
+      where: { id: req.params.id },
+      data: { deverrouille: true },
+    });
+    res.json(releve);
   } catch {
     res.status(500).json({ error: 'Erreur serveur' });
   }
@@ -199,13 +214,14 @@ router.post('/operateur', async (req, res) => {
 router.put('/operateur/:id', async (req, res) => {
   try {
     // Strip non-updatable fields and Prisma relation objects sent by the frontend
-    const { id, journee_id, cree_le, synced, saiseur, journee, poste, heure_releve, ...rest } = req.body;
+    const { id, journee_id, cree_le, synced, deverrouille, saiseur, journee, poste, heure_releve, ...rest } = req.body;
     const releve = await prisma.relevesOperateur.update({
       where: { id: req.params.id },
       data: {
         ...rest,
         saisi_par: req.user!.userId,
         heure_releve: new Date(heure_releve),
+        deverrouille: false,
       },
       include: { saiseur: { select: { nom: true, prenom: true, matricule: true } } },
     });
@@ -219,6 +235,19 @@ router.delete('/operateur/:id', async (req, res) => {
   try {
     await prisma.relevesOperateur.delete({ where: { id: req.params.id } });
     res.json({ message: 'Relevé supprimé' });
+  } catch {
+    res.status(500).json({ error: 'Erreur serveur' });
+  }
+});
+
+// Voir le commentaire équivalent sur /bloc/:id/deverrouiller.
+router.post('/operateur/:id/deverrouiller', requireRole('chef_quart', 'chef_exploitation', 'admin'), async (req, res) => {
+  try {
+    const releve = await prisma.relevesOperateur.update({
+      where: { id: req.params.id },
+      data: { deverrouille: true },
+    });
+    res.json(releve);
   } catch {
     res.status(500).json({ error: 'Erreur serveur' });
   }
