@@ -77,6 +77,15 @@ router.post('/bloc', async (req, res) => {
   }
 });
 
+// Un sous-objet relu depuis l'API (generateur, huile, ...) contient son propre id et
+// releve_id ; Prisma gère ce lien implicitement dans un upsert imbriqué et rejette ces
+// champs s'ils sont présents dans les données envoyées.
+function stripRelationMeta(obj: any) {
+  if (!obj || typeof obj !== 'object') return obj;
+  const { id, releve_id, ...clean } = obj;
+  return clean;
+}
+
 router.put('/bloc/:id', async (req, res) => {
   try {
     const { id, journee_id, cree_le, synced, deverrouille, saiseur, journee, poste, heure_releve,
@@ -89,19 +98,20 @@ router.put('/bloc/:id', async (req, res) => {
         ...main,
         ...(generateur && {
           generateur: {
-            upsert: { create: generateur, update: generateur },
+            upsert: { create: stripRelationMeta(generateur), update: stripRelationMeta(generateur) },
           },
         }),
-        ...(huile && { huile: { upsert: { create: huile, update: huile } } }),
-        ...(vibrations && { vibrations: { upsert: { create: vibrations, update: vibrations } } }),
-        ...(echappement && { echappement: { upsert: { create: echappement, update: echappement } } }),
-        ...(metal_blanc && { metal_blanc: { upsert: { create: metal_blanc, update: metal_blanc } } }),
+        ...(huile && { huile: { upsert: { create: stripRelationMeta(huile), update: stripRelationMeta(huile) } } }),
+        ...(vibrations && { vibrations: { upsert: { create: stripRelationMeta(vibrations), update: stripRelationMeta(vibrations) } } }),
+        ...(echappement && { echappement: { upsert: { create: stripRelationMeta(echappement), update: stripRelationMeta(echappement) } } }),
+        ...(metal_blanc && { metal_blanc: { upsert: { create: stripRelationMeta(metal_blanc), update: stripRelationMeta(metal_blanc) } } }),
       },
       include: { generateur: true, huile: true, vibrations: true, echappement: true, metal_blanc: true },
     });
     res.json(releve);
-  } catch {
-    res.status(500).json({ error: 'Erreur serveur' });
+  } catch (err: any) {
+    console.error('[PUT /bloc/:id]', err);
+    res.status(500).json({ error: err.message ?? 'Erreur serveur' });
   }
 });
 
