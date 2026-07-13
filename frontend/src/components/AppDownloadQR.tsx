@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react';
-import { Smartphone, Download } from 'lucide-react';
+import { Smartphone, Download, Share } from 'lucide-react';
 import { Capacitor } from '@capacitor/core';
 import Modal from './Modal';
 import QRCode from './QRCode';
@@ -12,23 +12,51 @@ function isMobileBrowser() {
   return isMobileUA && !Capacitor.isNativePlatform();
 }
 
+function isIOS() {
+  return /iphone|ipad|ipod/i.test(window.navigator.userAgent);
+}
+
 export default function AppDownloadQR() {
   const isNativeApp = Capacitor.isNativePlatform();
+  const isMobileWeb = isMobileBrowser();
   const [popupOpen, setPopupOpen] = useState(false);
 
   useEffect(() => {
-    if (isMobileBrowser() || isNativeApp || localStorage.getItem(SEEN_KEY)) return;
+    if (isMobileWeb || isNativeApp || localStorage.getItem(SEEN_KEY)) return;
     setPopupOpen(true);
-  }, [isNativeApp]);
+  }, [isMobileWeb, isNativeApp]);
 
   const closePopup = () => {
     localStorage.setItem(SEEN_KEY, '1');
     setPopupOpen(false);
   };
 
-  if (isMobileBrowser()) return null;
-
   const apkUrl = APK_PATH.startsWith('http') ? APK_PATH : `${window.location.origin}${APK_PATH}`;
+
+  if (isMobileWeb) {
+    return (
+      <div className="w-full max-w-xs mt-6 bg-slate-900 border border-slate-700 rounded-xl p-4">
+        <p className="flex items-center gap-1.5 text-sm font-semibold text-white">
+          {isIOS() ? <Share size={15} className="text-amber-400" /> : <Smartphone size={15} className="text-amber-400" />}
+          Installer l'application
+        </p>
+        <p className="text-xs text-slate-400 mt-1">
+          {isIOS()
+            ? "Appuyez sur le bouton de partage de votre navigateur puis « Sur l'écran d'accueil » pour installer GTpp."
+            : "Ajoutez GTpp à votre écran d'accueil depuis le menu de votre navigateur (⋮ → « Ajouter à l'écran d'accueil »)."}
+        </p>
+        {!isIOS() && (
+          <a
+            href={apkUrl}
+            className="inline-flex items-center gap-1.5 mt-2 text-xs font-medium text-amber-400 hover:text-amber-300 transition-colors"
+          >
+            <Download size={12} />
+            Ou télécharger l'APK Android
+          </a>
+        )}
+      </div>
+    );
+  }
 
   return (
     <>
