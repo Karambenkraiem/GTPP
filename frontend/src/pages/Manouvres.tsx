@@ -5,6 +5,7 @@ import { manouvresApi, journeesApi } from '../lib/api';
 import { useAuth } from '../contexts/AuthContext';
 import PageHeader from '../components/PageHeader';
 import DateInput from '../components/DateInput';
+import TimeInput from '../components/TimeInput';
 import { Trash2 } from 'lucide-react';
 import { format } from 'date-fns';
 import { fr } from 'date-fns/locale';
@@ -287,8 +288,8 @@ export default function Manouvres() {
                   editingId === m.id ? (
                     <tr key={m.id} className="border-b border-amber-500/40 bg-amber-500/5">
                       <td className="px-2 py-1.5 w-24">
-                        <input type="time" value={editRow.heure}
-                          onChange={e => setEditRow(r => ({ ...r, heure: e.target.value }))}
+                        <TimeInput value={editRow.heure}
+                          onChange={v => setEditRow(r => ({ ...r, heure: v }))}
                           onKeyDown={e => {
                             if (e.key === 'Enter') { e.preventDefault(); editDescRef.current?.focus(); }
                             if (e.key === 'Escape') setEditingId(null);
@@ -335,8 +336,8 @@ export default function Manouvres() {
                 {canEdit && (
                   <tr className="border-t-2 border-amber-500/30 bg-slate-800/40">
                     <td className="px-2 py-2 w-24">
-                      <input ref={newHeureRef} type="time" value={newRow.heure}
-                        onChange={e => setNewRow(r => ({ ...r, heure: e.target.value }))}
+                      <TimeInput ref={newHeureRef} value={newRow.heure}
+                        onChange={v => setNewRow(r => ({ ...r, heure: v }))}
                         onKeyDown={e => { if (e.key === 'Enter') { e.preventDefault(); newDescRef.current?.focus(); } }}
                         className="w-full bg-slate-800 border border-slate-600 rounded px-2 py-1.5 text-white text-sm font-mono text-center focus:outline-none focus:border-amber-500" />
                     </td>
