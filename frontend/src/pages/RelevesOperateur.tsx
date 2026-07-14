@@ -221,7 +221,7 @@ export default function RelevesOperateurPage() {
     enabled: !!journee?.id,
   });
 
-  const { data: compteurs } = useQuery({
+  const { data: compteurs, isFetching: cptFetching } = useQuery({
     queryKey: ['compteurs', journee?.id],
     queryFn: () => relevesApi.getCompteurs(journee!.id),
     enabled: !!journee?.id,
@@ -236,12 +236,15 @@ export default function RelevesOperateurPage() {
   useEffect(() => {
     // Un refetch en arrière-plan (polling) renvoie un nouvel objet pour la même
     // journée : on ne resynchronise le formulaire qu'une fois par journée pour
-    // ne pas écraser une saisie en cours.
-    if (!journee?.id || cptSyncedJourneeRef.current === journee.id) return;
+    // ne pas écraser une saisie en cours. On attend la fin du chargement (cptFetching)
+    // avant de marquer "synchronisé", sinon le tout premier passage (données pas
+    // encore arrivées, ex. report du 24h de la veille) verrouillait le formulaire
+    // sur un état vide et ignorait les vraies données à leur arrivée.
+    if (!journee?.id || cptFetching || cptSyncedJourneeRef.current === journee.id) return;
     cptSyncedJourneeRef.current = journee.id;
     setCptForm({ ...(compteurs ?? {}), conso_aux_cycles: normalizeConsoAuxCycles(compteurs) });
     setCptLocked(!!compteurs?.id);
-  }, [journee?.id, compteurs]);
+  }, [journee?.id, compteurs, cptFetching]);
 
   function setConsoAuxCycle(i: number, field: keyof ConsoAuxCycle, value: number | null) {
     setCptForm((s: any) => {
