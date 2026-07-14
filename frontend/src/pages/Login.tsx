@@ -34,7 +34,7 @@ export default function Login() {
     setLoading(true);
     try {
       await login(m, p);
-      navigate('/');
+      navigate('/', { replace: true });
     } catch (err: any) {
       setError(err.response?.data?.error || 'Erreur de connexion');
     } finally {

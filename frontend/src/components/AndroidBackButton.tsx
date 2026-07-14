@@ -53,7 +53,7 @@ export default function AndroidBackButton() {
 
   return (
     <div className="fixed bottom-20 left-1/2 -translate-x-1/2 z-50 w-[calc(100%-2rem)] max-w-xs bg-slate-900/95 border border-slate-700 rounded-xl shadow-lg px-4 py-3 text-center">
-      <p className="text-sm text-slate-200">Voulez-vous vous déconnecter ?</p>
+      <p className="text-sm text-slate-200">Êtes-vous sûr de vouloir vous déconnecter ?</p>
       <p className="text-xs text-slate-500 mt-1">Ou appuyez de nouveau sur retour pour quitter l'application.</p>
       <button
         onClick={handleLogout}
