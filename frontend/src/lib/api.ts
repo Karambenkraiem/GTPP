@@ -146,6 +146,17 @@ export const rapportApi = {
   get: (date: string) => api.get('/rapport', { params: { date } }).then((r) => r.data),
 };
 
+// Analyse & Diagnostic
+export const analyseApi = {
+  getSerie: (metricId: string, from: string, to: string) =>
+    api.get(`/releves/serie/${metricId}`, { params: { from, to } }).then((r) => r.data),
+};
+
+export const rechercheApi = {
+  manouvres: (params: { type: string; texte: string; from: string; to: string }) =>
+    api.get('/manouvres/recherche', { params }).then((r) => r.data),
+};
+
 // Journal d'activité (admin)
 export const activityLogApi = {
   list: () => api.get('/activity-logs').then((r) => r.data),

@@ -3,7 +3,7 @@ import { NavLink } from 'react-router-dom';
 import {
   LayoutDashboard, BookOpen, ClipboardList, Activity,
   Wrench, Bell, AlertTriangle, Users, Settings, Zap, LogOut, CalendarDays, FileText,
-  Sun, Moon, History, ChevronLeft, ChevronRight,
+  Sun, Moon, History, ChevronLeft, ChevronRight, LineChart,
 } from 'lucide-react';
 import { useAuth } from '../contexts/AuthContext';
 import { useTheme } from '../contexts/ThemeContext';
@@ -21,6 +21,7 @@ const navItems: NavItem[] = [
   { to: '/defauts', icon: AlertTriangle, label: 'Matériels Défectueux' },
   { to: '/releves-jour', icon: CalendarDays, label: 'Visualisation' },
   { to: '/rapport', icon: FileText, label: 'Rapport Journalier' },
+  { to: '/analyse', icon: LineChart, label: 'Analyse & Diagnostic', roles: ['chef_quart', 'chef_exploitation', 'admin'] },
 ];
 
 const adminItems = [

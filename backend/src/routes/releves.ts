@@ -263,6 +263,83 @@ router.post('/operateur/:id/deverrouiller', requireRole('chef_quart', 'chef_expl
   }
 });
 
+// ===== ANALYSE & DIAGNOSTIC (courbes) =====
+
+// Catalogue fermé des mesures exposées à la page d'analyse : la clé publique (envoyée
+// par le frontend) est mappée ici vers l'extraction réelle de la valeur, pour ne jamais
+// laisser le client piloter directement une requête Prisma.
+type MetricSource = 'bloc' | 'operateur';
+const METRICS: Record<string, { source: MetricSource; get: (r: any) => number | null | undefined }> = {
+  // Chef de bloc
+  bloc_puissance_active: { source: 'bloc', get: (r) => r.generateur?.puissance_active_mw },
+  bloc_puissance_reactive: { source: 'bloc', get: (r) => r.generateur?.puissance_reactive_mvar },
+  bloc_frequence: { source: 'bloc', get: (r) => r.generateur?.frequence_hz },
+  bloc_cos_phi: { source: 'bloc', get: (r) => r.generateur?.cos_phi },
+  bloc_tension_alternateur: { source: 'bloc', get: (r) => r.generateur?.tension_alt_dvx_kv },
+  bloc_tension_ligne: { source: 'bloc', get: (r) => r.generateur?.tension_svlx_kv },
+  bloc_temp_echappement: { source: 'bloc', get: (r) => r.echappement?.ttxm_moyenne },
+  bloc_spread: { source: 'bloc', get: (r) => r.echappement?.spread_calcule },
+  bloc_ecart_ttxspl: { source: 'bloc', get: (r) => r.echappement?.ttxspl_ecart },
+  bloc_vibration_maxi: { source: 'bloc', get: (r) => r.vibrations?.vibration_maxi },
+  bloc_temp_ambiante: { source: 'bloc', get: (r) => r.temp_ambiante_ctim },
+  bloc_pression_atm: { source: 'bloc', get: (r) => r.pression_atm_afpap },
+  bloc_vitesse_turbine: { source: 'bloc', get: (r) => r.vitesse_turbine_rpm },
+  bloc_niveau_huile: { source: 'bloc', get: (r) => r.huile?.niveau_bac_huile_mm },
+  bloc_temp_huile_collecteur: { source: 'bloc', get: (r) => r.huile?.temp_collecteur_ltth },
+  // Opérateur
+  op_pression_refoul_pompe: { source: 'operateur', get: (r) => r.pression_refoul_pompe_bar },
+  op_temp_entree_ref: { source: 'operateur', get: (r) => r.temp_entree_ref_wtad1 },
+  op_temp_sortie_ref: { source: 'operateur', get: (r) => r.temp_sortie_ref_wtad2 },
+  op_pression_retour_eau_ref: { source: 'operateur', get: (r) => r.pression_retour_eau_ref },
+  op_niveau_reservoir_expansion: { source: 'operateur', get: (r) => r.niveau_reservoir_expansion },
+  op_temp_gaz: { source: 'operateur', get: (r) => r.temp_gaz_ftg_tkg },
+  op_pression_gaz: { source: 'operateur', get: (r) => r.pression_gaz_fpgi_bar },
+  op_niveau_huile_reservoir: { source: 'operateur', get: (r) => r.niveau_huile_reservoir },
+  op_pression_air_atomisation: { source: 'operateur', get: (r) => r.pression_air_atomisation },
+  op_pression_air_comprime: { source: 'operateur', get: (r) => r.pression_air_comprime_bar },
+  op_temp_huile_tp: { source: 'operateur', get: (r) => r.temp_huile_tp },
+  op_temp_enroulement_tp: { source: 'operateur', get: (r) => r.temp_enroulement_tp },
+  op_temp_huile_ts: { source: 'operateur', get: (r) => r.temp_huile_ts },
+  op_temp_enroulement_ts: { source: 'operateur', get: (r) => r.temp_enroulement_ts },
+  op_pression_circuit_incendie: { source: 'operateur', get: (r) => r.pression_circuit_incendie },
+  op_niveau_gasoil_ppe: { source: 'operateur', get: (r) => r.niveau_gasoil_ppe_pct },
+  op_stock_gasoil: { source: 'operateur', get: (r) => r.stock_gasoil_l },
+  op_temp_eau_primaire: { source: 'operateur', get: (r) => r.temp_eau_primaire_ge },
+  op_temp_eau_secondaire: { source: 'operateur', get: (r) => r.temp_eau_secondaire_ge },
+  op_pression_air_demarrage: { source: 'operateur', get: (r) => r.pression_air_demarrage_ge },
+  op_nb_heures_marche: { source: 'operateur', get: (r) => r.nb_heures_marche_ge },
+};
+
+router.get('/serie/:metricId', requireRole('chef_quart', 'chef_exploitation', 'admin'), async (req, res) => {
+  try {
+    const metric = METRICS[req.params.metricId];
+    if (!metric) return res.status(400).json({ error: 'Mesure inconnue' });
+
+    const { from, to } = req.query;
+    if (!from || !to || typeof from !== 'string' || typeof to !== 'string') {
+      return res.status(400).json({ error: 'Paramètres from/to requis (yyyy-MM-dd)' });
+    }
+    const where = { heure_releve: { gte: new Date(`${from}T00:00:00.000Z`), lte: new Date(`${to}T23:59:59.999Z`) } };
+
+    const rows = metric.source === 'bloc'
+      ? await prisma.relevesChefBloc.findMany({
+          where,
+          include: { generateur: true, huile: true, vibrations: true, echappement: true },
+          orderBy: { heure_releve: 'asc' },
+        })
+      : await prisma.relevesOperateur.findMany({ where, orderBy: { heure_releve: 'asc' } });
+
+    const serie = rows
+      .map((r) => ({ heure_releve: r.heure_releve, value: metric.get(r) }))
+      .filter((p) => p.value !== null && p.value !== undefined);
+
+    res.json(serie);
+  } catch (err: any) {
+    console.error('[GET /releves/serie]', err);
+    res.status(500).json({ error: err.message ?? 'Erreur serveur' });
+  }
+});
+
 // ===== COMPTEURS JOURNALIERS =====
 
 // Chaque compteur cumulatif est relevé à des heures fixes dans la journée ; la valeur

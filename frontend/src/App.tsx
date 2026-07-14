@@ -34,6 +34,8 @@ import Profil from './pages/Profil';
 import Users from './pages/admin/Users';
 import Seuils from './pages/admin/Seuils';
 import ActivityLogs from './pages/admin/ActivityLogs';
+import AnalyseDiagnostic from './pages/AnalyseDiagnostic';
+import RechercheManoeuvres from './pages/RechercheManoeuvres';
 import InstallPrompt from './components/InstallPrompt';
 import AndroidBackButton from './components/AndroidBackButton';
 import UpdateBanner from './components/UpdateBanner';
@@ -55,6 +57,14 @@ function ProtectedRoute({ children }: { children: JSX.Element }) {
 function AdminRoute({ children }: { children: JSX.Element }) {
   const { user } = useAuth();
   if (!user || !['admin', 'chef_exploitation'].includes(user.role)) {
+    return <Navigate to="/" replace />;
+  }
+  return children;
+}
+
+function AnalyseRoute({ children }: { children: JSX.Element }) {
+  const { user } = useAuth();
+  if (!user || !['chef_quart', 'chef_exploitation', 'admin'].includes(user.role)) {
     return <Navigate to="/" replace />;
   }
   return children;
@@ -84,6 +94,8 @@ export default function App() {
               <Route path="admin/users" element={<AdminRoute><Users /></AdminRoute>} />
               <Route path="admin/seuils" element={<AdminRoute><Seuils /></AdminRoute>} />
               <Route path="admin/logs" element={<AdminRoute><ActivityLogs /></AdminRoute>} />
+              <Route path="analyse" element={<AnalyseRoute><AnalyseDiagnostic /></AnalyseRoute>} />
+              <Route path="analyse/recherche" element={<AnalyseRoute><RechercheManoeuvres /></AnalyseRoute>} />
             </Route>
           </Routes>
           <InstallPrompt />
