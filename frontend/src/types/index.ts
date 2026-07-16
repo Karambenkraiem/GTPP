@@ -31,6 +31,7 @@ export interface Journee {
   postes?: Poste[];
   compteurs?: CompteursJournaliers;
   _count?: { releves_bloc: number; manouvres: number; alarmes: number; ordres_travaux: number };
+  incidents_count?: number;
 }
 
 export interface Poste {

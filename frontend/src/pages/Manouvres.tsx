@@ -6,7 +6,7 @@ import { useAuth } from '../contexts/AuthContext';
 import PageHeader from '../components/PageHeader';
 import DateInput from '../components/DateInput';
 import TimeInput from '../components/TimeInput';
-import { Trash2 } from 'lucide-react';
+import { Trash2, AlertTriangle } from 'lucide-react';
 import { format } from 'date-fns';
 import { fr } from 'date-fns/locale';
 import type { TypeManouvre } from '../types';
@@ -214,7 +214,18 @@ export default function Manouvres() {
         title="Manœuvres & Incidents"
         subtitle="Journal chronologique des manœuvres et incidents"
         actions={
-          <DateInput value={selectedDate} onChange={setSelectedDate} />
+          <div className="flex items-center gap-2">
+            <DateInput value={selectedDate} onChange={setSelectedDate} />
+            {!!journee?.incidents_count && tab !== 'incident' && (
+              <button
+                onClick={() => setTab('incident')}
+                title={`${journee.incidents_count} incident(s) saisi(s) ce jour`}
+                className="inline-flex items-center gap-1 text-xs font-medium px-2 py-1 rounded-full bg-red-500/10 text-red-400 border border-red-500/30 hover:bg-red-500/20 transition-colors"
+              >
+                <AlertTriangle size={12} /> {journee.incidents_count}
+              </button>
+            )}
+          </div>
         }
       />
 

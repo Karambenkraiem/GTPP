@@ -3,7 +3,8 @@ import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { journeesApi, postesApi, usersApi } from '../lib/api';
 import PageHeader from '../components/PageHeader';
 import Modal from '../components/Modal';
-import { Plus, Pencil, CheckCircle, ChevronDown } from 'lucide-react';
+import { Plus, Pencil, CheckCircle, ChevronDown, AlertTriangle } from 'lucide-react';
+import { Link } from 'react-router-dom';
 import DateInput from '../components/DateInput';
 import { format } from 'date-fns';
 import { fr } from 'date-fns/locale';
@@ -175,8 +176,17 @@ export default function Journee() {
             <div className="bg-slate-900 border border-slate-700 rounded-lg p-4">
               <div className="flex items-center justify-between flex-wrap gap-3">
                 <div>
-                  <h2 className="text-white font-semibold">
+                  <h2 className="text-white font-semibold flex items-center gap-2">
                     {format(new Date(selectedJournee.jour.split('T')[0] + 'T12:00:00'), "EEEE d MMMM yyyy", { locale: fr })}
+                    {!!selectedJournee.incidents_count && (
+                      <Link
+                        to="/manouvres?tab=incident"
+                        title={`${selectedJournee.incidents_count} incident(s) saisi(s) ce jour`}
+                        className="inline-flex items-center gap-1 text-xs font-medium px-2 py-0.5 rounded-full bg-red-500/10 text-red-400 border border-red-500/30 hover:bg-red-500/20 transition-colors"
+                      >
+                        <AlertTriangle size={12} /> {selectedJournee.incidents_count} incident{selectedJournee.incidents_count > 1 ? 's' : ''}
+                      </Link>
+                    )}
                   </h2>
                   <span className={`inline-flex items-center gap-1 text-xs px-2 py-0.5 rounded-full mt-1 ${
                     selectedJournee.statut === 'transmis' ? 'bg-green-500/10 text-green-400' :

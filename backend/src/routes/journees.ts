@@ -81,7 +81,15 @@ router.get('/', async (req, res) => {
       },
       take: 30,
     });
-    res.json(journees);
+
+    const incidentCounts = await prisma.manouvre.groupBy({
+      by: ['journee_id'],
+      where: { type_manouvre: 'incident', journee_id: { in: journees.map((j) => j.id) } },
+      _count: { _all: true },
+    });
+    const incidentsByJournee = new Map(incidentCounts.map((c) => [c.journee_id, c._count._all]));
+
+    res.json(journees.map((j) => ({ ...j, incidents_count: incidentsByJournee.get(j.id) ?? 0 })));
   } catch {
     res.status(500).json({ error: 'Erreur serveur' });
   }
