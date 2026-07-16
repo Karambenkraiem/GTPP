@@ -36,7 +36,7 @@ function hourToTranche(h: number) {
 // Recherche textuelle dans les manœuvres/incidents sur un intervalle, avec le chef de
 // quart en poste au moment de chaque résultat (retrouvé via la tranche horaire, car
 // poste_id n'est jamais renseigné par le formulaire de saisie).
-router.get('/recherche', requireRole('chef_quart', 'chef_exploitation', 'admin'), async (req, res) => {
+router.get('/recherche', requireRole('chef_quart', 'chef_exploitation', 'directeur', 'admin'), async (req, res) => {
   try {
     const { texte, type, from, to } = req.query;
     if (!from || !to || typeof from !== 'string' || typeof to !== 'string') {

@@ -310,7 +310,7 @@ const METRICS: Record<string, { source: MetricSource; get: (r: any) => number | 
   op_nb_heures_marche: { source: 'operateur', get: (r) => r.nb_heures_marche_ge },
 };
 
-router.get('/serie/:metricId', requireRole('chef_quart', 'chef_exploitation', 'admin'), async (req, res) => {
+router.get('/serie/:metricId', requireRole('chef_quart', 'chef_exploitation', 'directeur', 'admin'), async (req, res) => {
   try {
     const metric = METRICS[req.params.metricId];
     if (!metric) return res.status(400).json({ error: 'Mesure inconnue' });

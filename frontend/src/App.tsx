@@ -65,7 +65,7 @@ function AdminRoute({ children }: { children: JSX.Element }) {
 
 function AnalyseRoute({ children }: { children: JSX.Element }) {
   const { user } = useAuth();
-  if (!user || !['chef_quart', 'chef_exploitation', 'admin'].includes(user.role)) {
+  if (!user || !['chef_quart', 'chef_exploitation', 'directeur', 'admin'].includes(user.role)) {
     return <Navigate to="/" replace />;
   }
   return children;
