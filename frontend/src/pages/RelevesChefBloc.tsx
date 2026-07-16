@@ -43,7 +43,8 @@ function consoAuxTotal(cycles: ConsoAuxCycle[] | undefined): number | null {
       hasPair = true;
     }
   }
-  return hasPair ? sum : null;
+  // Compteurs couplage/découplage relevés en kWh -> conversion en MWh
+  return hasPair ? sum / 1000 : null;
 }
 
 function onEnter(e: React.KeyboardEvent<HTMLInputElement>) {
@@ -534,7 +535,7 @@ export default function RelevesChefBloc() {
                 {/* Consommation Auxiliaire — lecture seule (saisie par l'opérateur) */}
                 <div className="border border-slate-700 rounded-lg overflow-hidden">
                   <div className="bg-slate-800 text-center text-xs font-bold text-slate-300 uppercase tracking-wider py-2 border-b border-slate-700">
-                    Consommation Auxiliaire en Charge (MWh)
+                    Consommation Auxiliaire en Charge (kWh)
                   </div>
                   <div className="p-3 space-y-2">
                     {((cptForm.conso_aux_cycles as ConsoAuxCycle[]) || []).length === 0 ? (
@@ -558,7 +559,7 @@ export default function RelevesChefBloc() {
                       ))
                     )}
                     <div className="pt-2 border-t border-slate-800">
-                      <label className="block text-xs text-slate-500 mb-0.5">Consommation en charge totale (calculée)</label>
+                      <label className="block text-xs text-slate-500 mb-0.5">Consommation en charge totale (calculée, MWh)</label>
                       <div className="bg-slate-800/50 border border-slate-700 rounded px-2 py-1.5 text-amber-400 text-xs font-bold text-center">
                         {(() => { const t = consoAuxTotal(cptForm.conso_aux_cycles); return t != null ? t.toFixed(3) : '—'; })()}
                       </div>

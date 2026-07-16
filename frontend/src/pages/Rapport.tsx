@@ -42,7 +42,8 @@ function consoAuxTotal(cycles: ConsoAuxCycle[] | undefined): number | null {
       hasPair = true;
     }
   }
-  return hasPair ? sum : null;
+  // Compteurs couplage/découplage relevés en kWh -> conversion en MWh
+  return hasPair ? sum / 1000 : null;
 }
 
 function safeDate(val: any, pattern: string, fallback = '—') {

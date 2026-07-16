@@ -43,7 +43,8 @@ function consoAuxTotal(cycles: ConsoAuxCycle[] | undefined): number | null {
       hasPair = true;
     }
   }
-  return hasPair ? sum : null;
+  // Compteurs couplage/découplage relevés en kWh -> conversion en MWh
+  return hasPair ? sum / 1000 : null;
 }
 
 function onEnter(e: React.KeyboardEvent<HTMLInputElement | HTMLSelectElement | HTMLTextAreaElement>) {
@@ -720,7 +721,7 @@ export default function RelevesOperateurPage() {
             {/* Consommation Auxiliaire en Charge */}
             <div className={`mt-4 border border-slate-700 rounded-lg overflow-hidden ${cptLocked ? 'pointer-events-none opacity-50' : ''}`}>
               <div className="bg-slate-800 px-4 py-2 text-xs font-bold text-slate-300 uppercase tracking-wider border-b border-slate-700">
-                Consommation Auxiliaire en Charge (MWh)
+                Consommation Auxiliaire en Charge (kWh)
               </div>
               <div className="p-3 space-y-2">
                 {(cptForm.conso_aux_cycles as ConsoAuxCycle[] || []).map((c, i) => (
@@ -750,7 +751,7 @@ export default function RelevesOperateurPage() {
                   <Plus size={13} /> Ajouter un couplage/découplage
                 </button>
                 <div className="pt-2 border-t border-slate-800">
-                  <label className="block text-xs text-slate-500 mb-0.5">Consommation en charge totale (calculée)</label>
+                  <label className="block text-xs text-slate-500 mb-0.5">Consommation en charge totale (calculée, MWh)</label>
                   <div className="bg-slate-800/50 border border-slate-700 rounded px-2 py-1.5 text-amber-400 text-sm font-bold text-center">
                     {(() => { const t = consoAuxTotal(cptForm.conso_aux_cycles); return t != null ? t.toFixed(3) : '—'; })()}
                   </div>
@@ -776,8 +777,8 @@ export default function RelevesOperateurPage() {
                     auxiliaires_00h: 4820, auxiliaires_07h: 4860, auxiliaires_18h: 4920, auxiliaires_22h: 4940, auxiliaires_24h: 4950,
                     gasoil_00h_l: 12450, gasoil_07h_l: 12520, gasoil_18h_l: 12620, gasoil_22h_l: 12660, gasoil_24h_l: 12680,
                     conso_aux_cycles: [
-                      { couplage: 4820.250, decouplage: 4870.500 },
-                      { couplage: 4900.000, decouplage: 4950.750 },
+                      { couplage: 4820250, decouplage: 4870500 },
+                      { couplage: 4900000, decouplage: 4950750 },
                     ],
                   })}
                     className="flex items-center gap-1.5 text-violet-400 hover:text-violet-300 border border-violet-500/30 rounded px-3 py-1.5 text-xs transition-colors">
