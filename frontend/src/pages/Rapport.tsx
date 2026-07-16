@@ -21,6 +21,30 @@ const DISCIPLINE_LABELS: Record<string, string> = {
 
 const fmt = (v: any, d = 1) => (v != null ? Number(v).toFixed(d) : '—');
 
+type ConsoAuxCycle = { couplage: number | null; decouplage: number | null };
+
+/** Reconstitue la liste des cycles couplage/découplage, avec repli sur les anciens champs uniques. */
+function normalizeConsoAuxCycles(data: any): ConsoAuxCycle[] {
+  if (Array.isArray(data?.conso_aux_cycles) && data.conso_aux_cycles.length) return data.conso_aux_cycles;
+  if (data?.conso_aux_couplage != null || data?.conso_aux_decouplage != null) {
+    return [{ couplage: data.conso_aux_couplage ?? null, decouplage: data.conso_aux_decouplage ?? null }];
+  }
+  return [{ couplage: null, decouplage: null }];
+}
+
+function consoAuxTotal(cycles: ConsoAuxCycle[] | undefined): number | null {
+  if (!cycles?.length) return null;
+  let sum = 0;
+  let hasPair = false;
+  for (const c of cycles) {
+    if (c?.couplage != null && c?.decouplage != null) {
+      sum += Number(c.decouplage) - Number(c.couplage);
+      hasPair = true;
+    }
+  }
+  return hasPair ? sum : null;
+}
+
 function safeDate(val: any, pattern: string, fallback = '—') {
   if (!val) return fallback;
   try {
@@ -307,8 +331,7 @@ export default function Rapport() {
                   {(() => {
                     const energieBrute = compteurs.energie_active_00h != null && compteurs.energie_active_24h != null
                       ? Number(compteurs.energie_active_24h) - Number(compteurs.energie_active_00h) : null;
-                    const consoAuxCharge = compteurs.conso_aux_couplage != null && compteurs.conso_aux_decouplage != null
-                      ? Math.abs(Number(compteurs.conso_aux_decouplage) - Number(compteurs.conso_aux_couplage)) : null;
+                    const consoAuxCharge = consoAuxTotal(normalizeConsoAuxCycles(compteurs));
                     const productionNette = energieBrute != null && consoAuxCharge != null
                       ? energieBrute - consoAuxCharge : null;
                     const consoAux24h = compteurs.auxiliaires_00h != null && compteurs.auxiliaires_24h != null
