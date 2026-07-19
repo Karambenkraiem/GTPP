@@ -87,6 +87,8 @@ export const relevesApi = {
   deleteOp: (id: string) => api.delete(`/releves/operateur/${id}`).then((r) => r.data),
   deverrouillerOp: (id: string) => api.post(`/releves/operateur/${id}/deverrouiller`).then((r) => r.data),
   listJour: (date: string) => api.get(`/releves/jour/${date}`).then((r) => r.data),
+  range: (source: 'bloc' | 'operateur', from: string, to: string) =>
+    api.get('/releves/plage', { params: { source, from, to } }).then((r) => r.data),
 
   getCompteurs: (journeeId: string) =>
     api.get(`/releves/compteurs/${journeeId}`).then((r) => r.data),

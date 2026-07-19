@@ -2,10 +2,13 @@ import { useState } from 'react';
 import { useQuery } from '@tanstack/react-query';
 import { relevesApi, journeesApi } from '../lib/api';
 import PageHeader from '../components/PageHeader';
+import Modal from '../components/Modal';
 import { format } from 'date-fns';
 import { fr } from 'date-fns/locale';
+import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer } from 'recharts';
 import DateInput from '../components/DateInput';
-import { getTunisHour } from '../lib/tz';
+import TimeInput from '../components/TimeInput';
+import { getTunisHour, tunisLocalToISOString } from '../lib/tz';
 
 const SLOT_HOURS = [0, 2, 4, 6, 8, 10, 12, 14, 16, 18, 20, 22];
 
@@ -251,9 +254,37 @@ const BLOC_SECTIONS: BSection[] = [
 ];
 
 // ─── Page principale ─────────────────────────────────────────────────────────
+type ChartTarget = { label: string; unit: string; get: (r: any) => any; source: 'op' | 'bloc' };
+
 export default function RelevesDuJour() {
   const [selectedDate, setSelectedDate] = useState(format(new Date(), 'yyyy-MM-dd'));
   const [activeTab, setActiveTab] = useState<'op' | 'bloc'>('op');
+  const [chartTarget, setChartTarget] = useState<ChartTarget | null>(null);
+  const [rangeFrom, setRangeFrom] = useState('');
+  const [rangeTo, setRangeTo] = useState('');
+
+  function openChart(row: FRow | BRow, source: 'op' | 'bloc') {
+    setChartTarget({ ...row, source });
+    setRangeFrom(`${selectedDate}T00:00`);
+    setRangeTo(`${selectedDate}T23:59`);
+  }
+
+  const apiSource = chartTarget?.source === 'bloc' ? 'bloc' : 'operateur';
+  const fromISO = rangeFrom ? tunisLocalToISOString(rangeFrom) : '';
+  const toISO = rangeTo ? tunisLocalToISOString(rangeTo) : '';
+  const { data: chartRows, isLoading: chartLoading } = useQuery({
+    queryKey: ['releves-plage', apiSource, fromISO, toISO],
+    queryFn: () => relevesApi.range(apiSource, fromISO, toISO),
+    enabled: !!chartTarget && !!fromISO && !!toISO,
+  });
+  const chartData = chartTarget
+    ? (chartRows || [])
+        .map((r: any) => ({
+          date: format(new Date(r.heure_releve), 'dd/MM HH:mm', { locale: fr }),
+          value: Number(chartTarget.get(r)),
+        }))
+        .filter((p: any) => p.value != null && !Number.isNaN(p.value))
+    : [];
 
   const { data: journees } = useQuery({
     queryKey: ['journees'],
@@ -369,11 +400,17 @@ export default function RelevesDuJour() {
                             const r = opByHour[h];
                             const val = row.get(r);
                             const filled = r?.saisi_par;
+                            const hasVal = val != null && val !== '';
                             return (
                               <td key={h} className={`text-center px-1 py-1.5 border-r border-slate-800 ${
                                 filled ? 'text-white' : 'text-slate-600'
                               }`}>
-                                {val != null && val !== '' ? String(val) : '—'}
+                                {hasVal ? (
+                                  <button type="button" onClick={() => openChart(row, 'op')}
+                                    className="hover:text-amber-400 hover:underline underline-offset-2 transition-colors">
+                                    {String(val)}
+                                  </button>
+                                ) : '—'}
                               </td>
                             );
                           })}
@@ -495,9 +532,15 @@ export default function RelevesDuJour() {
                           {SLOT_HOURS.map(h => {
                             const r = blocByHour[h];
                             const val = row.get(r);
+                            const hasVal = val != null && val !== '';
                             return (
                               <td key={h} className={`text-center px-1 py-1.5 border-r border-slate-800 ${r ? 'text-white' : 'text-slate-600'}`}>
-                                {val != null && val !== '' ? String(val) : '—'}
+                                {hasVal ? (
+                                  <button type="button" onClick={() => openChart(row, 'bloc')}
+                                    className="hover:text-amber-400 hover:underline underline-offset-2 transition-colors">
+                                    {String(val)}
+                                  </button>
+                                ) : '—'}
                               </td>
                             );
                           })}
@@ -525,6 +568,50 @@ export default function RelevesDuJour() {
           </div>
         )}
       </div>
+
+      <Modal open={!!chartTarget} onClose={() => setChartTarget(null)} title={chartTarget?.label ?? ''} size="xl">
+        {chartTarget && (
+          <>
+            <div className="flex flex-wrap items-end gap-4 mb-4">
+              <div>
+                <label className="block text-xs text-slate-500 mb-1">Début</label>
+                <div className="flex gap-2">
+                  <DateInput value={rangeFrom.slice(0, 10)} onChange={(d) => setRangeFrom(`${d}T${rangeFrom.slice(11) || '00:00'}`)} />
+                  <TimeInput value={rangeFrom.slice(11)} onChange={(t) => setRangeFrom(`${rangeFrom.slice(0, 10)}T${t}`)} />
+                </div>
+              </div>
+              <div>
+                <label className="block text-xs text-slate-500 mb-1">Fin</label>
+                <div className="flex gap-2">
+                  <DateInput value={rangeTo.slice(0, 10)} onChange={(d) => setRangeTo(`${d}T${rangeTo.slice(11) || '23:59'}`)} />
+                  <TimeInput value={rangeTo.slice(11)} onChange={(t) => setRangeTo(`${rangeTo.slice(0, 10)}T${t}`)} />
+                </div>
+              </div>
+            </div>
+
+            {chartLoading ? (
+              <div className="h-72 flex items-center justify-center text-slate-500 text-sm">Chargement...</div>
+            ) : chartData.length === 0 ? (
+              <div className="h-72 flex items-center justify-center text-slate-500 text-sm">Aucune donnée sur cette période</div>
+            ) : (
+              <ResponsiveContainer width="100%" height={360}>
+                <LineChart data={chartData}>
+                  <CartesianGrid strokeDasharray="3 3" stroke="#1e293b" />
+                  <XAxis dataKey="date" tick={{ fill: '#94a3b8', fontSize: 10 }} />
+                  <YAxis domain={['dataMin', 'dataMax']} tick={{ fill: '#94a3b8', fontSize: 11 }} />
+                  <Tooltip
+                    contentStyle={{ background: '#1e293b', border: '1px solid #334155', borderRadius: 8 }}
+                    labelStyle={{ color: '#f1f5f9' }}
+                    itemStyle={{ color: '#f59e0b' }}
+                    formatter={(v: number) => [`${v}${chartTarget.unit && chartTarget.unit !== '—' ? ' ' + chartTarget.unit : ''}`, chartTarget.label]}
+                  />
+                  <Line type="monotone" dataKey="value" stroke="#f59e0b" strokeWidth={2} dot={false} connectNulls />
+                </LineChart>
+              </ResponsiveContainer>
+            )}
+          </>
+        )}
+      </Modal>
     </div>
   );
 }

@@ -174,6 +174,34 @@ router.get('/jour/:date', async (req, res) => {
   }
 });
 
+// Relevés bruts sur une plage date/heure libre, pour tracer la courbe d'un
+// paramètre précis depuis la page Visualisation (indépendamment des metricId
+// figés utilisés par /serie, qui ne couvrent qu'un sous-ensemble des champs).
+router.get('/plage', async (req, res) => {
+  try {
+    const { source, from, to } = req.query;
+    if (source !== 'bloc' && source !== 'operateur') {
+      return res.status(400).json({ error: 'Paramètre source invalide (bloc|operateur)' });
+    }
+    if (!from || !to || typeof from !== 'string' || typeof to !== 'string') {
+      return res.status(400).json({ error: 'Paramètres from/to requis (ISO datetime)' });
+    }
+    const where = { heure_releve: { gte: new Date(from), lte: new Date(to) } };
+
+    const rows = source === 'bloc'
+      ? await prisma.relevesChefBloc.findMany({
+          where,
+          include: { generateur: true, echappement: true, vibrations: true, huile: true, metal_blanc: true },
+          orderBy: { heure_releve: 'asc' },
+        })
+      : await prisma.relevesOperateur.findMany({ where, orderBy: { heure_releve: 'asc' } });
+
+    res.json(rows);
+  } catch {
+    res.status(500).json({ error: 'Erreur serveur' });
+  }
+});
+
 // ===== RELEVES OPERATEUR =====
 
 router.get('/operateur/journee/:journeeId', async (req, res) => {
