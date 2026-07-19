@@ -8,7 +8,7 @@ import PageHeader from '../components/PageHeader';
 import DateInput from '../components/DateInput';
 import Modal from '../components/Modal';
 import { analyseApi } from '../lib/api';
-import { Search, ListPlus } from 'lucide-react';
+import { Search, ListPlus, LayoutGrid, Rows3 } from 'lucide-react';
 
 interface MetricDef {
   id: string;
@@ -56,7 +56,9 @@ const METRICS: MetricDef[] = [
   { id: 'op_nb_heures_marche', label: 'Nb. Heures de Marche', unit: 'h', source: 'operateur' },
 ];
 
-const MAX_METRICS = 6;
+const MAX_METRICS = 15;
+const VIEW_KEY = 'gtpp_analyse_view';
+type ViewMode = 'grid' | 'list';
 
 function MetricChart({ metric, from, to }: { metric: MetricDef; from: string; to: string }) {
   const { data, isLoading } = useQuery({
@@ -107,6 +109,14 @@ export default function AnalyseDiagnostic() {
   const [pickerOpen, setPickerOpen] = useState(false);
   const [from, setFrom] = useState(format(new Date(Date.now() - 6 * 86400000), 'yyyy-MM-dd'));
   const [to, setTo] = useState(format(new Date(), 'yyyy-MM-dd'));
+  const [viewMode, setViewMode] = useState<ViewMode>(
+    () => (localStorage.getItem(VIEW_KEY) as ViewMode) || 'grid'
+  );
+
+  function changeViewMode(mode: ViewMode) {
+    setViewMode(mode);
+    localStorage.setItem(VIEW_KEY, mode);
+  }
 
   function toggleMetric(id: string) {
     setSelected((prev) => {
@@ -151,6 +161,29 @@ export default function AnalyseDiagnostic() {
             <ListPlus size={15} />
             Choisir les mesures ({selected.length}/{MAX_METRICS})
           </button>
+          <div>
+            <label className="block text-xs text-slate-500 mb-1">Affichage</label>
+            <div className="flex rounded-lg border border-slate-700 overflow-hidden">
+              <button
+                onClick={() => changeViewMode('grid')}
+                title="Grille"
+                className={`flex items-center gap-1.5 px-3 py-2 text-sm transition-colors ${
+                  viewMode === 'grid' ? 'bg-amber-500 text-slate-900 font-medium' : 'bg-slate-800 text-slate-400 hover:text-slate-200'
+                }`}
+              >
+                <LayoutGrid size={15} />
+              </button>
+              <button
+                onClick={() => changeViewMode('list')}
+                title="Liste (une courbe par ligne)"
+                className={`flex items-center gap-1.5 px-3 py-2 text-sm transition-colors border-l border-slate-700 ${
+                  viewMode === 'list' ? 'bg-amber-500 text-slate-900 font-medium' : 'bg-slate-800 text-slate-400 hover:text-slate-200'
+                }`}
+              >
+                <Rows3 size={15} />
+              </button>
+            </div>
+          </div>
         </div>
 
         {selectedDefs.length === 0 ? (
@@ -158,7 +191,7 @@ export default function AnalyseDiagnostic() {
             Choisissez au moins une mesure à afficher.
           </div>
         ) : (
-          <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
+          <div className={viewMode === 'grid' ? 'grid grid-cols-1 lg:grid-cols-2 gap-4' : 'flex flex-col gap-4'}>
             {selectedDefs.map((m) => (
               <MetricChart key={m.id} metric={m} from={from} to={to} />
             ))}
