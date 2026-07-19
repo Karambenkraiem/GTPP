@@ -3,7 +3,7 @@ import { NavLink } from 'react-router-dom';
 import {
   LayoutDashboard, BookOpen, ClipboardList, Activity,
   Wrench, Bell, AlertTriangle, Users, Settings, Zap, LogOut, CalendarDays, FileText,
-  Sun, Moon, History, ChevronLeft, ChevronRight, LineChart,
+  Sun, Moon, History, ChevronLeft, ChevronRight, LineChart, BarChart3,
 } from 'lucide-react';
 import { useAuth } from '../contexts/AuthContext';
 import { useTheme } from '../contexts/ThemeContext';
@@ -22,6 +22,7 @@ const navItems: NavItem[] = [
   { to: '/releves-jour', icon: CalendarDays, label: 'Visualisation' },
   { to: '/rapport', icon: FileText, label: 'Rapport Journalier' },
   { to: '/analyse', icon: LineChart, label: 'Analyse & Diagnostic', roles: ['chef_quart', 'chef_exploitation', 'directeur', 'admin'] },
+  { to: '/statistique', icon: BarChart3, label: 'Statistique', roles: ['statistique', 'admin'] },
 ];
 
 const adminItems = [

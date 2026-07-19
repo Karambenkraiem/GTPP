@@ -36,6 +36,7 @@ import Seuils from './pages/admin/Seuils';
 import ActivityLogs from './pages/admin/ActivityLogs';
 import AnalyseDiagnostic from './pages/AnalyseDiagnostic';
 import RechercheManoeuvres from './pages/RechercheManoeuvres';
+import Statistique from './pages/Statistique';
 import InstallPrompt from './components/InstallPrompt';
 import AndroidBackButton from './components/AndroidBackButton';
 import UpdateBanner from './components/UpdateBanner';
@@ -71,6 +72,14 @@ function AnalyseRoute({ children }: { children: JSX.Element }) {
   return children;
 }
 
+function StatistiqueRoute({ children }: { children: JSX.Element }) {
+  const { user } = useAuth();
+  if (!user || !['statistique', 'admin'].includes(user.role)) {
+    return <Navigate to="/" replace />;
+  }
+  return children;
+}
+
 export default function App() {
   return (
     <ErrorBoundary>
@@ -97,6 +106,7 @@ export default function App() {
               <Route path="admin/logs" element={<AdminRoute><ActivityLogs /></AdminRoute>} />
               <Route path="analyse" element={<AnalyseRoute><AnalyseDiagnostic /></AnalyseRoute>} />
               <Route path="analyse/recherche" element={<AnalyseRoute><RechercheManoeuvres /></AnalyseRoute>} />
+              <Route path="statistique" element={<StatistiqueRoute><Statistique /></StatistiqueRoute>} />
             </Route>
           </Routes>
           <InstallPrompt />

@@ -13,7 +13,7 @@ export default function Profil() {
   const { user, updateUser } = useAuth();
   const { theme, toggle } = useTheme();
   const { toasts, show: showToast, dismiss } = useToast();
-  const isGuest = user?.role === 'guest';
+  const isGuest = user?.role === 'guest' || user?.role === 'statistique';
 
   const [nom, setNom] = useState(user?.nom || '');
   const [prenom, setPrenom] = useState(user?.prenom || '');
