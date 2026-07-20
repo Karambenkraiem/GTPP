@@ -56,6 +56,20 @@ export default function Dashboard() {
       />
 
       <div className="p-3 sm:p-6 space-y-4 sm:space-y-6">
+        {/* Alerte incident */}
+        {(data?.incidentsAujourdhui ?? 0) > 0 && (
+          <Link to="/manouvres?tab=incident"
+            className="flex items-center gap-3 bg-red-500/15 border border-red-500/40 rounded-lg p-4 animate-pulse hover:bg-red-500/25 transition-colors">
+            <AlertTriangle size={20} className="text-red-400 flex-shrink-0" />
+            <div>
+              <p className="text-sm font-semibold text-red-300">
+                {data.incidentsAujourdhui} incident{data.incidentsAujourdhui > 1 ? 's' : ''} signalé{data.incidentsAujourdhui > 1 ? 's' : ''} {dayLabel}
+              </p>
+              <p className="text-xs text-red-400/70">Cliquez pour consulter</p>
+            </div>
+          </Link>
+        )}
+
         {/* Accès rapide — opérateur / chef de bloc */}
         {user?.role && RELEVE_ROUTE[user.role] && (
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
