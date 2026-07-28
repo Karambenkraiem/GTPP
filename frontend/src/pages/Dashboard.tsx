@@ -6,7 +6,7 @@ import PageHeader from '../components/PageHeader';
 import Modal from '../components/Modal';
 import DateInput from '../components/DateInput';
 import DashboardMetrics from '../components/DashboardMetrics';
-import { Activity, AlertTriangle, Wrench, Gauge, ClipboardList } from 'lucide-react';
+import { Activity, AlertTriangle, Wrench, Gauge, ClipboardList, Fan } from 'lucide-react';
 import { format, parse, startOfWeek, endOfWeek } from 'date-fns';
 import { fr } from 'date-fns/locale';
 import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer } from 'recharts';
@@ -55,12 +55,15 @@ export default function Dashboard() {
         actions={
           <div className="flex items-center gap-3">
             {data?.turbineStatus && data.turbineStatus !== 'unknown' && (
-              <span className={`flex items-center gap-1.5 text-xs font-bold px-3 py-1.5 rounded-full border ${
+              <span className={`flex items-center gap-2 text-xs font-bold px-3 py-1.5 rounded-full border ${
                 data.turbineStatus === 'running'
                   ? 'bg-green-500/15 border-green-500/40 text-green-400'
                   : 'bg-slate-800 border-slate-600 text-slate-300'
               }`}>
-                <span className={`w-2 h-2 rounded-full ${data.turbineStatus === 'running' ? 'bg-green-400 animate-pulse' : 'bg-red-400'}`} />
+                <Fan
+                  size={14}
+                  className={data.turbineStatus === 'running' ? 'text-green-400 animate-[spin_1.1s_linear_infinite]' : 'text-slate-500'}
+                />
                 TURBINE {data.turbineStatus === 'running' ? 'RUNNING' : 'STOPPED'}
               </span>
             )}
