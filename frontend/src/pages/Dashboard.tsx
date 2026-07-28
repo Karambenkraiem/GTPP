@@ -6,7 +6,7 @@ import PageHeader from '../components/PageHeader';
 import Modal from '../components/Modal';
 import DateInput from '../components/DateInput';
 import DashboardMetrics from '../components/DashboardMetrics';
-import { Activity, AlertTriangle, Wrench, Gauge, ClipboardList, Fan } from 'lucide-react';
+import { Activity, AlertTriangle, Wrench, Gauge, ClipboardList } from 'lucide-react';
 import { format, parse, startOfWeek, endOfWeek } from 'date-fns';
 import { fr } from 'date-fns/locale';
 import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer } from 'recharts';
@@ -52,24 +52,7 @@ export default function Dashboard() {
       <PageHeader
         title="Tableau de Bord"
         subtitle={`${format(selectedDateObj, "EEEE d MMMM yyyy", { locale: fr })} — Journée ${journee ? STATUT_JOURNEE_LABELS[journee.statut as keyof typeof STATUT_JOURNEE_LABELS] : 'non créée'}`}
-        actions={
-          <div className="flex items-center gap-3">
-            {data?.turbineStatus && data.turbineStatus !== 'unknown' && (
-              <span className={`flex items-center gap-2 text-xs font-bold px-3 py-1.5 rounded-full border ${
-                data.turbineStatus === 'running'
-                  ? 'bg-green-500/15 border-green-500/40 text-green-400'
-                  : 'bg-slate-800 border-slate-600 text-slate-300'
-              }`}>
-                <Fan
-                  size={14}
-                  className={data.turbineStatus === 'running' ? 'text-green-400 animate-[spin_1.1s_linear_infinite]' : 'text-slate-500'}
-                />
-                TURBINE {data.turbineStatus === 'running' ? 'RUNNING' : 'STOPPED'}
-              </span>
-            )}
-            <DateInput value={selectedDate} onChange={setSelectedDate} />
-          </div>
-        }
+        actions={<DateInput value={selectedDate} onChange={setSelectedDate} />}
       />
 
       <div className="p-3 sm:p-6 space-y-4 sm:space-y-6">
@@ -114,7 +97,7 @@ export default function Dashboard() {
         )}
 
         {/* Mesures temps réel */}
-        <DashboardMetrics dernierReleve={dernierReleve} />
+        <DashboardMetrics dernierReleve={dernierReleve} turbineStatus={data?.turbineStatus} />
 
         {/* Graphique puissance active de la semaine */}
         {chartData.length > 0 && (

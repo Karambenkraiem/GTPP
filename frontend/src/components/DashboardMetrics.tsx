@@ -1,6 +1,6 @@
 import { ReactNode, useEffect, useState } from 'react';
 import { format } from 'date-fns';
-import { Zap, Activity, Thermometer, Gauge, Clock, Plus, Pencil, X } from 'lucide-react';
+import { Zap, Activity, Thermometer, Gauge, Clock, Plus, Pencil, X, Fan } from 'lucide-react';
 import StatCard from './StatCard';
 import Modal from './Modal';
 import { formatTunisHM } from '../lib/tz';
@@ -160,9 +160,10 @@ function loadSelection(): string[] {
 
 interface Props {
   dernierReleve: any;
+  turbineStatus?: 'running' | 'stopped' | 'unknown';
 }
 
-export default function DashboardMetrics({ dernierReleve }: Props) {
+export default function DashboardMetrics({ dernierReleve, turbineStatus }: Props) {
   const [selected, setSelected] = useState<string[]>(loadSelection);
   const [pickerSlot, setPickerSlot] = useState<number | null>(null);
 
@@ -192,6 +193,20 @@ export default function DashboardMetrics({ dernierReleve }: Props) {
     <div>
       <h2 className="text-xs font-medium text-slate-400 uppercase tracking-wider mb-3">Mesures temps réel</h2>
       <div className="grid grid-cols-2 lg:grid-cols-3 xl:grid-cols-6 gap-3">
+        {turbineStatus && turbineStatus !== 'unknown' && (
+          <div className="bg-slate-900 border border-slate-700 rounded-lg p-4 flex items-center justify-between">
+            <div>
+              <p className="text-xs text-slate-400 mb-1">Turbine</p>
+              <p className={`text-2xl font-bold ${turbineStatus === 'running' ? 'text-green-400' : 'text-slate-300'}`}>
+                {turbineStatus === 'running' ? 'RUNNING' : 'STOPPED'}
+              </p>
+            </div>
+            <Fan
+              size={40}
+              className={turbineStatus === 'running' ? 'text-green-400 animate-[spin_1.1s_linear_infinite]' : 'text-slate-600'}
+            />
+          </div>
+        )}
         {selected.map((id, index) => {
           const metric = METRICS.find((m) => m.id === id);
           if (!metric) return null;
