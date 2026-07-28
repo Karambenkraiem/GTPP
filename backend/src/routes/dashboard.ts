@@ -5,6 +5,37 @@ import { authenticate } from '../middleware/auth';
 const router = Router();
 router.use(authenticate);
 
+function normalize(s: string): string {
+  return s.normalize('NFD').replace(/[̀-ͯ]/g, '').toLowerCase();
+}
+
+type TurbineStatus = 'running' | 'stopped' | 'unknown';
+
+/**
+ * Statut turbine déduit des manœuvres de la journée (ordre chronologique) :
+ * - "Ordre de démarrage" -> running, jusqu'à un "Ordre d'arrêt" ou "virage" (arrêt turbine/mise sur virage).
+ * - Si la toute première manœuvre du jour est "Groupe en production", on part de running (le groupe
+ *   tournait déjà avant minuit) — mais seul un "Ordre d'arrêt"/"virage" peut ensuite repasser à stopped.
+ */
+function computeTurbineStatus(manouvres: { heure_manouvre: Date; description: string }[]): TurbineStatus {
+  if (manouvres.length === 0) return 'unknown';
+  const sorted = [...manouvres].sort((a, b) => a.heure_manouvre.getTime() - b.heure_manouvre.getTime());
+
+  let status: TurbineStatus = 'unknown';
+  if (normalize(sorted[0].description).includes('groupe en production')) {
+    status = 'running';
+  }
+
+  for (const m of sorted) {
+    const d = normalize(m.description);
+    if (d.includes('ordre de demarrage')) status = 'running';
+    else if (d.includes("ordre d'arret") || d.includes('ordre d arret')) status = 'stopped';
+    else if (d.includes('virage')) status = 'stopped';
+  }
+
+  return status;
+}
+
 router.get('/', async (req, res) => {
   try {
     const { date } = req.query;
@@ -110,12 +141,22 @@ router.get('/', async (req, res) => {
       ? await prisma.manouvre.count({ where: { journee_id: journeeAujourdhui.id, type_manouvre: 'incident' } })
       : 0;
 
+    const manouvresDuJour = journeeAujourdhui
+      ? await prisma.manouvre.findMany({
+          where: { journee_id: journeeAujourdhui.id },
+          select: { heure_manouvre: true, description: true },
+          orderBy: { heure_manouvre: 'asc' },
+        })
+      : [];
+    const turbineStatus = computeTurbineStatus(manouvresDuJour);
+
     res.json({
       journeeAujourdhui,
       defautsActifs,
       otsEnCours,
       dernierReleve,
       puissance7Jours,
+      turbineStatus,
       incidentsAujourdhui,
     });
   } catch {

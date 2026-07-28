@@ -52,7 +52,21 @@ export default function Dashboard() {
       <PageHeader
         title="Tableau de Bord"
         subtitle={`${format(selectedDateObj, "EEEE d MMMM yyyy", { locale: fr })} — Journée ${journee ? STATUT_JOURNEE_LABELS[journee.statut as keyof typeof STATUT_JOURNEE_LABELS] : 'non créée'}`}
-        actions={<DateInput value={selectedDate} onChange={setSelectedDate} />}
+        actions={
+          <div className="flex items-center gap-3">
+            {data?.turbineStatus && data.turbineStatus !== 'unknown' && (
+              <span className={`flex items-center gap-1.5 text-xs font-bold px-3 py-1.5 rounded-full border ${
+                data.turbineStatus === 'running'
+                  ? 'bg-green-500/15 border-green-500/40 text-green-400'
+                  : 'bg-slate-800 border-slate-600 text-slate-300'
+              }`}>
+                <span className={`w-2 h-2 rounded-full ${data.turbineStatus === 'running' ? 'bg-green-400 animate-pulse' : 'bg-red-400'}`} />
+                TURBINE {data.turbineStatus === 'running' ? 'RUNNING' : 'STOPPED'}
+              </span>
+            )}
+            <DateInput value={selectedDate} onChange={setSelectedDate} />
+          </div>
+        }
       />
 
       <div className="p-3 sm:p-6 space-y-4 sm:space-y-6">
