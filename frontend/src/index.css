@@ -144,6 +144,34 @@ html.light .text-amber-400,
 html.light .text-amber-500,
 html.light .text-amber-600 { color: #010c17 !important; }
 
+/* ── Autres couleurs sémantiques (badges, statuts, valeurs) ──
+   Les teintes -300/-400 sont calibrées pour un fond sombre ; sur fond clair
+   elles manquent de contraste. On les assombrit (équivalent Tailwind -700/-800)
+   en conservant la teinte, pour garder le sens (rouge=danger, vert=succès…). */
+html.light .text-red-300,
+html.light .text-red-400    { color: #b91c1c !important; }
+html.light .text-green-300,
+html.light .text-green-400  { color: #15803d !important; }
+html.light .text-blue-300,
+html.light .text-blue-400   { color: #1d4ed8 !important; }
+html.light .text-purple-400 { color: #7e22ce !important; }
+html.light .text-violet-300,
+html.light .text-violet-400 { color: #6d28d9 !important; }
+html.light .text-teal-400   { color: #0f766e !important; }
+html.light .text-indigo-400 { color: #4338ca !important; }
+html.light .text-orange-400 { color: #c2410c !important; }
+html.light .text-cyan-300,
+html.light .text-cyan-400   { color: #155e75 !important; }
+
+/* Toast : fond volontairement sombre quel que soit le thème → texte clair conservé */
+html.light .text-green-300.bg-green-900\/90 { color: #86efac !important; }
+html.light .text-red-300.bg-red-900\/90     { color: #fca5a5 !important; }
+
+/* Boutons pleins (fond saturé) : le texte blanc doit rester blanc, pas noirci */
+html.light .bg-blue-500.text-white,
+html.light .bg-green-500.text-white,
+html.light .bg-red-500.text-white { color: #fff !important; }
+
 /* ── Tables ── */
 html.light tbody tr:hover { background-color: rgba(186,209,224,0.45) !important; }
 
