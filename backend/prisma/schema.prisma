@@ -553,6 +553,7 @@ model Alarme {
   heure      DateTime? @db.Timestamptz(6)
   origine    String    @default("HMI") @db.VarChar(20)
   repetitive Boolean   @default(false)
+  premiere_apparition DateTime? @db.Date
   cree_le    DateTime  @default(now()) @db.Timestamptz(6)
 
   journee Journee @relation(fields: [journee_id], references: [id], onDelete: Cascade)

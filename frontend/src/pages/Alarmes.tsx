@@ -15,8 +15,8 @@ const TextInput = forwardRef<HTMLInputElement, React.InputHTMLAttributes<HTMLInp
   }
 );
 
-type RowState = { tag: string; designation: string };
-const EMPTY_ROW: RowState = { tag: '', designation: '' };
+type RowState = { tag: string; designation: string; premiere_apparition: string };
+const EMPTY_ROW: RowState = { tag: '', designation: '', premiere_apparition: '' };
 
 type SortCol = 'tag' | 'designation' | 'premiere_apparition';
 
@@ -26,7 +26,7 @@ export default function Alarmes() {
   const qc = useQueryClient();
   const today = format(new Date(), 'yyyy-MM-dd');
   const [selectedDate, setSelectedDate] = useState(today);
-  const [newRow, setNewRow] = useState<RowState>(EMPTY_ROW);
+  const [newRow, setNewRow] = useState<RowState>({ ...EMPTY_ROW, premiere_apparition: today });
   const [editingId, setEditingId] = useState<string | null>(null);
   const [editRow, setEditRow] = useState<RowState>(EMPTY_ROW);
   const [sort, setSort] = useState<{ col: SortCol; dir: 'asc' | 'desc' } | null>(null);
@@ -104,6 +104,7 @@ export default function Alarmes() {
           designation: a.designation,
           repetitive: true,
           origine: a.origine || 'HMI',
+          premiere_apparition: a.premiere_apparition || null,
         });
       }
       qc.invalidateQueries({ queryKey: ['alarmes', journee.id] });
@@ -114,7 +115,7 @@ export default function Alarmes() {
     mutationFn: (data: any) => alarmesApi.create(data),
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: ['alarmes'] });
-      setNewRow(EMPTY_ROW);
+      setNewRow({ ...EMPTY_ROW, premiere_apparition: today });
       setTimeout(() => newTagRef.current?.focus(), 50);
     },
   });
@@ -137,13 +138,18 @@ export default function Alarmes() {
       designation: newRow.designation.trim(),
       repetitive: true,
       origine: 'HMI',
+      premiere_apparition: newRow.premiere_apparition || null,
     });
   }
 
   function startEdit(a: any) {
     if (!canEdit) return;
     setEditingId(a.id);
-    setEditRow({ tag: a.tag ?? '', designation: a.designation ?? '' });
+    setEditRow({
+      tag: a.tag ?? '',
+      designation: a.designation ?? '',
+      premiere_apparition: a.premiere_apparition ? format(new Date(a.premiere_apparition), 'yyyy-MM-dd') : '',
+    });
   }
 
   function handleUpdate(id: string) {
@@ -156,6 +162,7 @@ export default function Alarmes() {
         designation: editRow.designation.trim(),
         repetitive: current?.repetitive ?? true,
         origine: current?.origine ?? 'HMI',
+        premiere_apparition: editRow.premiere_apparition || null,
       },
     });
   }
@@ -249,8 +256,10 @@ export default function Alarmes() {
                           }}
                           className={inputCls} />
                       </td>
-                      <td className="px-2 py-1.5 text-center text-xs text-slate-500 font-mono">
-                        {a.premiere_apparition ? format(new Date(a.premiere_apparition), 'dd/MM/yyyy') : '—'}
+                      <td className="px-2 py-1.5 w-40">
+                        <input type="date" value={editRow.premiere_apparition}
+                          onChange={e => setEditRow(r => ({ ...r, premiere_apparition: e.target.value }))}
+                          className={`${inputCls} text-center`} />
                       </td>
                       <td className="px-2 py-1.5 text-center">
                         <button onClick={() => setEditingId(null)}
@@ -295,7 +304,11 @@ export default function Alarmes() {
                         onKeyDown={e => { if (e.key === 'Enter') { e.preventDefault(); handleAdd(); } }}
                         className={newInputCls} />
                     </td>
-                    <td className="px-2 py-2 text-center text-xs text-slate-600">—</td>
+                    <td className="px-2 py-2 w-40">
+                      <input type="date" value={newRow.premiere_apparition}
+                        onChange={e => setNewRow(r => ({ ...r, premiere_apparition: e.target.value }))}
+                        className={newInputCls} />
+                    </td>
                     <td className="px-2 py-2 text-center">
                       <button onClick={handleAdd}
                         disabled={!newRow.designation.trim() || createMut.isPending}

@@ -12,11 +12,12 @@ router.get('/journee/:journeeId', async (req, res) => {
       orderBy: { heure: 'asc' },
     });
 
-    // Date de première apparition : la même alarme répétitive est recopiée chaque
-    // jour (nouvelle ligne), donc on cherche la plus ancienne occurrence partageant
-    // le même tag (ou la même désignation si pas de tag), tous journées confondues.
-    const tags = alarmes.filter(a => a.tag).map(a => a.tag as string);
-    const designationsSansTag = alarmes.filter(a => !a.tag).map(a => a.designation);
+    // Date de première apparition : normalement saisie à la main, mais si elle
+    // n'a jamais été renseignée pour cette alarme (même tag, ou même désignation si
+    // pas de tag) on retombe sur la plus ancienne occurrence connue, tous journées confondues.
+    const sansDate = alarmes.filter(a => !a.premiere_apparition);
+    const tags = sansDate.filter(a => a.tag).map(a => a.tag as string);
+    const designationsSansTag = sansDate.filter(a => !a.tag).map(a => a.designation);
 
     const candidats = (tags.length || designationsSansTag.length)
       ? await prisma.alarme.findMany({
@@ -26,20 +27,21 @@ router.get('/journee/:journeeId', async (req, res) => {
               ...(designationsSansTag.length ? [{ tag: null, designation: { in: designationsSansTag } }] : []),
             ],
           },
-          select: { tag: true, designation: true, journee: { select: { jour: true } } },
+          select: { tag: true, designation: true, premiere_apparition: true, journee: { select: { jour: true } } },
           orderBy: { journee: { jour: 'asc' as const } },
         })
       : [];
 
-    const premiereApparition = new Map<string, Date>();
+    const premiereApparitionCalculee = new Map<string, Date>();
     for (const c of candidats) {
       const cle = c.tag || c.designation;
-      if (!premiereApparition.has(cle)) premiereApparition.set(cle, c.journee.jour);
+      const date = c.premiere_apparition ?? c.journee.jour;
+      if (!premiereApparitionCalculee.has(cle)) premiereApparitionCalculee.set(cle, date);
     }
 
     const result = alarmes.map(a => ({
       ...a,
-      premiere_apparition: premiereApparition.get(a.tag || a.designation) ?? null,
+      premiere_apparition: a.premiere_apparition ?? premiereApparitionCalculee.get(a.tag || a.designation) ?? null,
     }));
 
     res.json(result);
@@ -50,7 +52,7 @@ router.get('/journee/:journeeId', async (req, res) => {
 
 router.post('/', async (req, res) => {
   try {
-    const { journee_id, poste_id, tag, designation, heure, origine, repetitive } = req.body;
+    const { journee_id, poste_id, tag, designation, heure, origine, repetitive, premiere_apparition } = req.body;
     const alarme = await prisma.alarme.create({
       data: {
         journee_id,
@@ -60,6 +62,7 @@ router.post('/', async (req, res) => {
         heure: heure ? new Date(heure) : undefined,
         origine: origine || 'HMI',
         repetitive: repetitive || false,
+        premiere_apparition: premiere_apparition ? new Date(premiere_apparition) : undefined,
       },
     });
     res.status(201).json(alarme);
@@ -70,7 +73,7 @@ router.post('/', async (req, res) => {
 
 router.put('/:id', async (req, res) => {
   try {
-    const { tag, designation, heure, origine, repetitive } = req.body;
+    const { tag, designation, heure, origine, repetitive, premiere_apparition } = req.body;
     const alarme = await prisma.alarme.update({
       where: { id: req.params.id },
       data: {
@@ -79,6 +82,7 @@ router.put('/:id', async (req, res) => {
         heure: heure ? new Date(heure) : undefined,
         origine,
         repetitive,
+        premiere_apparition: premiere_apparition ? new Date(premiere_apparition) : premiere_apparition === null ? null : undefined,
       },
     });
     res.json(alarme);
