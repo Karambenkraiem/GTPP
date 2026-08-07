@@ -18,6 +18,7 @@ enum RoleUtilisateur {
   directeur
   guest
   statistique
+  md_center_assistant
   admin
 
   @@map("role_utilisateur")

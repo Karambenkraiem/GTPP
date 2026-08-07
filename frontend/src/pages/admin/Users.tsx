@@ -8,8 +8,8 @@ import { useAuth } from '../../contexts/AuthContext';
 import { ROLE_LABELS } from '../../types';
 import type { User, Role } from '../../types';
 
-const ROLES: Role[] = ['operateur', 'chef_bloc', 'chef_quart', 'chef_exploitation', 'chef_centrale', 'chef_maintenance', 'directeur', 'guest', 'statistique', 'admin'];
-const ROLE_ORDER: Record<Role, number> = { operateur: 0, chef_bloc: 1, chef_quart: 2, chef_exploitation: 3, chef_centrale: 4, chef_maintenance: 5, directeur: 6, guest: 7, statistique: 8, admin: 9 };
+const ROLES: Role[] = ['operateur', 'chef_bloc', 'chef_quart', 'chef_exploitation', 'chef_centrale', 'chef_maintenance', 'directeur', 'guest', 'statistique', 'md_center_assistant', 'admin'];
+const ROLE_ORDER: Record<Role, number> = { operateur: 0, chef_bloc: 1, chef_quart: 2, chef_exploitation: 3, chef_centrale: 4, chef_maintenance: 5, directeur: 6, guest: 7, statistique: 8, md_center_assistant: 9, admin: 10 };
 const EMPTY_FORM = { role: 'operateur' as Role };
 
 type SortCol = 'nom' | 'matricule' | 'role' | 'actif';
@@ -91,6 +91,7 @@ export default function Users() {
     directeur: 'bg-indigo-400/10 text-indigo-400',
     guest: 'bg-slate-500/10 text-slate-400',
     statistique: 'bg-cyan-400/10 text-cyan-400',
+    md_center_assistant: 'bg-slate-500/10 text-slate-400',
     admin: 'bg-red-400/10 text-red-400',
   };
 
