@@ -1,10 +1,10 @@
-import { useState, useRef, forwardRef, useEffect } from 'react';
+import { useState, useRef, useMemo, forwardRef, useEffect } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { alarmesApi, journeesApi } from '../lib/api';
 import { useAuth } from '../contexts/AuthContext';
 import PageHeader from '../components/PageHeader';
 import DateInput from '../components/DateInput';
-import { Trash2 } from 'lucide-react';
+import { Trash2, ChevronUp, ChevronDown, ChevronsUpDown } from 'lucide-react';
 import { format, subDays, parseISO } from 'date-fns';
 import { fr } from 'date-fns/locale';
 
@@ -18,6 +18,8 @@ const TextInput = forwardRef<HTMLInputElement, React.InputHTMLAttributes<HTMLInp
 type RowState = { tag: string; designation: string };
 const EMPTY_ROW: RowState = { tag: '', designation: '' };
 
+type SortCol = 'tag' | 'designation' | 'premiere_apparition';
+
 export default function Alarmes() {
   const { user } = useAuth();
   const canEdit = ['chef_quart', 'chef_exploitation', 'admin'].includes(user?.role ?? '');
@@ -27,6 +29,7 @@ export default function Alarmes() {
   const [newRow, setNewRow] = useState<RowState>(EMPTY_ROW);
   const [editingId, setEditingId] = useState<string | null>(null);
   const [editRow, setEditRow] = useState<RowState>(EMPTY_ROW);
+  const [sort, setSort] = useState<{ col: SortCol; dir: 'asc' | 'desc' } | null>(null);
 
   /* refs — nouvelle ligne */
   const newTagRef  = useRef<HTMLInputElement>(null);
@@ -53,6 +56,29 @@ export default function Alarmes() {
     queryFn: () => alarmesApi.list(journee!.id),
     enabled: !!journee?.id,
   });
+
+  const sortedAlarmes = useMemo(() => {
+    if (!alarmes) return alarmes;
+    if (!sort) return alarmes;
+    const { col, dir } = sort;
+    return [...alarmes].sort((a: any, b: any) => {
+      const va = a[col] ?? '';
+      const vb = b[col] ?? '';
+      const cmp = String(va).localeCompare(String(vb), 'fr');
+      return dir === 'asc' ? cmp : -cmp;
+    });
+  }, [alarmes, sort]);
+
+  function toggleSort(col: SortCol) {
+    setSort(s => s?.col === col ? { col, dir: s.dir === 'asc' ? 'desc' : 'asc' } : { col, dir: 'asc' });
+  }
+
+  function SortIcon({ col }: { col: SortCol }) {
+    if (sort?.col !== col) return <ChevronsUpDown size={11} className="text-slate-600 ml-1 inline" />;
+    return sort.dir === 'asc'
+      ? <ChevronUp size={11} className="text-amber-400 ml-1 inline" />
+      : <ChevronDown size={11} className="text-amber-400 ml-1 inline" />;
+  }
 
   /* alarmes de la veille */
   const { data: prevAlarmes } = useQuery({
@@ -173,29 +199,39 @@ export default function Alarmes() {
             <table className="w-full text-sm border-collapse">
               <thead>
                 <tr className="bg-cyan-500/15 border-b border-cyan-500/30">
-                  <th className="text-center px-4 py-2 text-cyan-300 font-semibold w-36">TAG</th>
-                  <th className="text-left   px-4 py-2 text-cyan-300 font-semibold">Désignation</th>
+                  <th onClick={() => toggleSort('tag')}
+                    className="text-center px-4 py-2 text-cyan-300 font-semibold w-36 cursor-pointer hover:text-white select-none whitespace-nowrap">
+                    TG<SortIcon col="tag" />
+                  </th>
+                  <th onClick={() => toggleSort('designation')}
+                    className="text-left px-4 py-2 text-cyan-300 font-semibold cursor-pointer hover:text-white select-none whitespace-nowrap">
+                    Désignation<SortIcon col="designation" />
+                  </th>
+                  <th onClick={() => toggleSort('premiere_apparition')}
+                    className="text-center px-4 py-2 text-cyan-300 font-semibold w-40 cursor-pointer hover:text-white select-none whitespace-nowrap">
+                    1re apparition<SortIcon col="premiere_apparition" />
+                  </th>
                   <th className="w-10" />
                 </tr>
               </thead>
               <tbody>
                 {isLoading && (
-                  <tr><td colSpan={3} className="text-center text-slate-500 py-6 text-xs">Chargement...</td></tr>
+                  <tr><td colSpan={4} className="text-center text-slate-500 py-6 text-xs">Chargement...</td></tr>
                 )}
                 {!isLoading && (!alarmes || alarmes.length === 0) && (
                   <tr>
-                    <td colSpan={3} className="text-center text-slate-600 py-8 text-xs italic">
+                    <td colSpan={4} className="text-center text-slate-600 py-8 text-xs italic">
                       Aucune alarme enregistrée pour cette journée
                     </td>
                   </tr>
                 )}
 
-                {alarmes?.map((a: any) =>
+                {sortedAlarmes?.map((a: any) =>
                   editingId === a.id ? (
                     <tr key={a.id} className="border-b border-amber-500/40 bg-amber-500/5">
                       <td className="px-2 py-1.5 w-36">
                         <input type="text" value={editRow.tag} autoFocus
-                          placeholder="TAG"
+                          placeholder="TG"
                           onChange={e => setEditRow(r => ({ ...r, tag: e.target.value }))}
                           onKeyDown={e => {
                             if (e.key === 'Enter')  { e.preventDefault(); editDescRef.current?.focus(); }
@@ -213,6 +249,9 @@ export default function Alarmes() {
                           }}
                           className={inputCls} />
                       </td>
+                      <td className="px-2 py-1.5 text-center text-xs text-slate-500 font-mono">
+                        {a.premiere_apparition ? format(new Date(a.premiere_apparition), 'dd/MM/yyyy') : '—'}
+                      </td>
                       <td className="px-2 py-1.5 text-center">
                         <button onClick={() => setEditingId(null)}
                           className="text-slate-500 hover:text-slate-300 text-xs transition-colors">✕</button>
@@ -224,6 +263,9 @@ export default function Alarmes() {
                       className={`border-b border-slate-800 transition-colors ${canEdit ? 'cursor-pointer hover:bg-slate-800/50' : ''}`}>
                       <td className="text-center px-4 py-3 font-mono text-amber-400 font-bold text-xs">{a.tag || '—'}</td>
                       <td className="px-4 py-3 text-slate-200">{a.designation}</td>
+                      <td className="text-center px-4 py-3 font-mono text-xs text-slate-400">
+                        {a.premiere_apparition ? format(new Date(a.premiere_apparition), 'dd/MM/yyyy') : '—'}
+                      </td>
                       <td className="px-2 py-3 text-center" onClick={e => e.stopPropagation()}>
                         {canEdit && (
                           <button onClick={() => deleteMut.mutate(a.id)} disabled={deleteMut.isPending}
@@ -241,7 +283,7 @@ export default function Alarmes() {
                   <tr className="border-t-2 border-amber-500/30 bg-slate-800/40">
                     <td className="px-2 py-2 w-36">
                       <input ref={newTagRef} type="text" value={newRow.tag}
-                        placeholder="TAG"
+                        placeholder="TG"
                         onChange={e => setNewRow(r => ({ ...r, tag: e.target.value }))}
                         onKeyDown={e => { if (e.key === 'Enter') { e.preventDefault(); newDescRef.current?.focus(); } }}
                         className={`${newInputCls} font-mono text-center text-amber-400`} />
@@ -253,6 +295,7 @@ export default function Alarmes() {
                         onKeyDown={e => { if (e.key === 'Enter') { e.preventDefault(); handleAdd(); } }}
                         className={newInputCls} />
                     </td>
+                    <td className="px-2 py-2 text-center text-xs text-slate-600">—</td>
                     <td className="px-2 py-2 text-center">
                       <button onClick={handleAdd}
                         disabled={!newRow.designation.trim() || createMut.isPending}

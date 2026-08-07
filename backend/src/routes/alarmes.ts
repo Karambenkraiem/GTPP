@@ -11,7 +11,38 @@ router.get('/journee/:journeeId', async (req, res) => {
       where: { journee_id: req.params.journeeId },
       orderBy: { heure: 'asc' },
     });
-    res.json(alarmes);
+
+    // Date de première apparition : la même alarme répétitive est recopiée chaque
+    // jour (nouvelle ligne), donc on cherche la plus ancienne occurrence partageant
+    // le même tag (ou la même désignation si pas de tag), tous journées confondues.
+    const tags = alarmes.filter(a => a.tag).map(a => a.tag as string);
+    const designationsSansTag = alarmes.filter(a => !a.tag).map(a => a.designation);
+
+    const candidats = (tags.length || designationsSansTag.length)
+      ? await prisma.alarme.findMany({
+          where: {
+            OR: [
+              ...(tags.length ? [{ tag: { in: tags } }] : []),
+              ...(designationsSansTag.length ? [{ tag: null, designation: { in: designationsSansTag } }] : []),
+            ],
+          },
+          select: { tag: true, designation: true, journee: { select: { jour: true } } },
+          orderBy: { journee: { jour: 'asc' as const } },
+        })
+      : [];
+
+    const premiereApparition = new Map<string, Date>();
+    for (const c of candidats) {
+      const cle = c.tag || c.designation;
+      if (!premiereApparition.has(cle)) premiereApparition.set(cle, c.journee.jour);
+    }
+
+    const result = alarmes.map(a => ({
+      ...a,
+      premiere_apparition: premiereApparition.get(a.tag || a.designation) ?? null,
+    }));
+
+    res.json(result);
   } catch {
     res.status(500).json({ error: 'Erreur serveur' });
   }
