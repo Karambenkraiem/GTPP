@@ -47,12 +47,23 @@ router.get('/bloc/:id', async (req, res) => {
   }
 });
 
+// Le spread est l'écart max-min entre les 24 thermocouples d'échappement (ttxd_01..24) ;
+// il n'est jamais saisi à la main, on le recalcule côté serveur à chaque enregistrement.
+function withSpreadCalcule(ec: any) {
+  if (!ec || typeof ec !== 'object') return ec;
+  const temps = Array.from({ length: 24 }, (_, i) => ec[`ttxd_${String(i + 1).padStart(2, '0')}`])
+    .map((v) => (v === null || v === undefined || v === '' ? null : Number(v)))
+    .filter((v): v is number => v !== null && !Number.isNaN(v));
+  return { ...ec, spread_calcule: temps.length >= 2 ? Math.max(...temps) - Math.min(...temps) : null };
+}
+
 router.post('/bloc', async (req, res) => {
   try {
     const { journee_id, poste_id, heure_releve, generateur, huile, vibrations, echappement, metal_blanc, ...main } = req.body;
 
     // Strip empty sub-objects to avoid creating useless DB rows
     const hasValues = (obj: any) => obj && typeof obj === 'object' && Object.values(obj).some(v => v !== null && v !== undefined && v !== '');
+    const echappementCalc = withSpreadCalcule(echappement);
 
     const releve = await prisma.relevesChefBloc.create({
       data: {
@@ -64,7 +75,7 @@ router.post('/bloc', async (req, res) => {
         ...(hasValues(generateur) && { generateur: { create: generateur } }),
         ...(hasValues(huile) && { huile: { create: huile } }),
         ...(hasValues(vibrations) && { vibrations: { create: vibrations } }),
-        ...(hasValues(echappement) && { echappement: { create: echappement } }),
+        ...(hasValues(echappementCalc) && { echappement: { create: echappementCalc } }),
         ...(hasValues(metal_blanc) && { metal_blanc: { create: metal_blanc } }),
       },
       include: { generateur: true, huile: true, vibrations: true, echappement: true, metal_blanc: true },
@@ -91,6 +102,7 @@ router.put('/bloc/:id', async (req, res) => {
     const { id, journee_id, cree_le, synced, deverrouille, saiseur, journee, poste, heure_releve,
             generateur, huile, vibrations, echappement, metal_blanc, ...rest } = req.body;
     const main = { ...rest, saisi_par: req.user!.userId, heure_releve: new Date(heure_releve), deverrouille: false };
+    const echappementCalc = echappement ? withSpreadCalcule(echappement) : echappement;
 
     const releve = await prisma.relevesChefBloc.update({
       where: { id: req.params.id },
@@ -103,7 +115,7 @@ router.put('/bloc/:id', async (req, res) => {
         }),
         ...(huile && { huile: { upsert: { create: stripRelationMeta(huile), update: stripRelationMeta(huile) } } }),
         ...(vibrations && { vibrations: { upsert: { create: stripRelationMeta(vibrations), update: stripRelationMeta(vibrations) } } }),
-        ...(echappement && { echappement: { upsert: { create: stripRelationMeta(echappement), update: stripRelationMeta(echappement) } } }),
+        ...(echappementCalc && { echappement: { upsert: { create: stripRelationMeta(echappementCalc), update: stripRelationMeta(echappementCalc) } } }),
         ...(metal_blanc && { metal_blanc: { upsert: { create: stripRelationMeta(metal_blanc), update: stripRelationMeta(metal_blanc) } } }),
       },
       include: { generateur: true, huile: true, vibrations: true, echappement: true, metal_blanc: true },
