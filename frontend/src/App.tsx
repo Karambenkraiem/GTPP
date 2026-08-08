@@ -37,6 +37,9 @@ import ActivityLogs from './pages/admin/ActivityLogs';
 import AnalyseDiagnostic from './pages/AnalyseDiagnostic';
 import RechercheManoeuvres from './pages/RechercheManoeuvres';
 import Statistique from './pages/Statistique';
+import Essai from './pages/Essai';
+import EssaiHistorique from './pages/EssaiHistorique';
+import EssaisConfig from './pages/admin/EssaisConfig';
 import InstallPrompt from './components/InstallPrompt';
 import AndroidBackButton from './components/AndroidBackButton';
 import UpdateBanner from './components/UpdateBanner';
@@ -107,6 +110,9 @@ export default function App() {
               <Route path="analyse" element={<AnalyseRoute><AnalyseDiagnostic /></AnalyseRoute>} />
               <Route path="analyse/recherche" element={<AnalyseRoute><RechercheManoeuvres /></AnalyseRoute>} />
               <Route path="statistique" element={<StatistiqueRoute><Statistique /></StatistiqueRoute>} />
+              <Route path="essai" element={<Essai />} />
+              <Route path="essai/:essaiId" element={<EssaiHistorique />} />
+              <Route path="admin/essais" element={<AdminRoute><EssaisConfig /></AdminRoute>} />
             </Route>
           </Routes>
           <InstallPrompt />

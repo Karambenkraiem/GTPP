@@ -8,6 +8,44 @@ export type DisciplineOT = 'mec' | 'elec' | 'inst' | 'civil' | 'autre';
 export type TypeMaintenance = 'curatif' | 'systematique' | 'preventif';
 export type ZoneMateriel = 'site' | 'tg' | 'alternateur' | 'auxiliaires';
 export type StatutDefaut = 'ouvert' | 'en_cours' | 'cloture';
+export type FrequenceEssai = 'journalier' | 'hebdomadaire' | 'mensuelle' | 'semestrielle' | 'annuelle';
+export type TypeReleveEssai = 'valeur' | 'potentiometre' | 'niveaumetre' | 'selection';
+export type StatutEssai = 'a_faire' | 'effectue' | 'annule';
+
+export interface EssaiReleveConfig {
+  id: string;
+  essai_id: string;
+  nom: string;
+  type: TypeReleveEssai;
+  unite?: string | null;
+  options?: string[] | null;
+  ordre: number;
+}
+
+export interface EssaiConfig {
+  id: string;
+  nom: string;
+  frequence: FrequenceEssai;
+  jours_semaine?: number[];
+  actif: boolean;
+  derniere_execution?: string | null;
+  releves: EssaiReleveConfig[];
+}
+
+export interface EssaiInstanceT {
+  id: string;
+  essai_id: string;
+  journee_id: string;
+  statut: StatutEssai;
+  motif_annulation?: string | null;
+  effectue_par?: string | null;
+  effectue_le?: string | null;
+  valeurs: Record<string, string>;
+  deverrouille: boolean;
+  essai: EssaiConfig;
+  journee?: { jour: string };
+  executant?: { nom: string; prenom: string } | null;
+}
 
 export interface User {
   id: string;
@@ -164,6 +202,7 @@ export interface Alarme {
   journee_id: string;
   tag?: string;
   designation: string;
+  equipement?: string;
   heure?: string;
   origine: string;
   repetitive: boolean;
@@ -252,6 +291,27 @@ export const ETAT_OT_LABELS: Record<EtatOT, string> = {
   en_cours: 'En cours',
   termine: 'Terminé',
   reporte: 'Reporté',
+  annule: 'Annulé',
+};
+
+export const FREQUENCE_ESSAI_LABELS: Record<FrequenceEssai, string> = {
+  journalier: 'Journalière',
+  hebdomadaire: 'Hebdomadaire',
+  mensuelle: 'Mensuelle',
+  semestrielle: 'Semestrielle',
+  annuelle: 'Annuelle',
+};
+
+export const TYPE_RELEVE_ESSAI_LABELS: Record<TypeReleveEssai, string> = {
+  valeur: 'Valeur',
+  potentiometre: 'Potentiomètre',
+  niveaumetre: 'Niveaumètre',
+  selection: 'Sélection',
+};
+
+export const STATUT_ESSAI_LABELS: Record<StatutEssai, string> = {
+  a_faire: 'À faire',
+  effectue: 'Effectué',
   annule: 'Annulé',
 };
 

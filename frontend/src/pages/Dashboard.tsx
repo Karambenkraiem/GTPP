@@ -6,7 +6,7 @@ import PageHeader from '../components/PageHeader';
 import Modal from '../components/Modal';
 import DateInput from '../components/DateInput';
 import DashboardMetrics from '../components/DashboardMetrics';
-import { Activity, AlertTriangle, Wrench, Gauge, ClipboardList } from 'lucide-react';
+import { Activity, AlertTriangle, Wrench, Gauge, ClipboardList, ClipboardCheck } from 'lucide-react';
 import { format, parse, startOfWeek, endOfWeek } from 'date-fns';
 import { fr } from 'date-fns/locale';
 import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer } from 'recharts';
@@ -66,6 +66,20 @@ export default function Dashboard() {
                 {data.incidentsAujourdhui} incident{data.incidentsAujourdhui > 1 ? 's' : ''} signalé{data.incidentsAujourdhui > 1 ? 's' : ''} {dayLabel}
               </p>
               <p className="text-xs text-red-400/70">Cliquez pour consulter</p>
+            </div>
+          </Link>
+        )}
+
+        {/* Alerte essais à faire */}
+        {(data?.essaisAFaire?.length ?? 0) > 0 && (
+          <Link to="/essai"
+            className="flex items-center gap-3 bg-amber-500/15 border border-amber-500/40 rounded-lg p-4 hover:bg-amber-500/25 transition-colors">
+            <ClipboardCheck size={20} className="text-amber-400 flex-shrink-0" />
+            <div>
+              <p className="text-sm font-semibold text-amber-300">
+                Essai{data.essaisAFaire.length > 1 ? 's' : ''} à faire {dayLabel} : {data.essaisAFaire.map((e: any) => e.nom).join(', ')}
+              </p>
+              <p className="text-xs text-amber-400/70">Cliquez pour saisir les relevés</p>
             </div>
           </Link>
         )}

@@ -15,10 +15,10 @@ const TextInput = forwardRef<HTMLInputElement, React.InputHTMLAttributes<HTMLInp
   }
 );
 
-type RowState = { tag: string; designation: string; premiere_apparition: string };
-const EMPTY_ROW: RowState = { tag: '', designation: '', premiere_apparition: '' };
+type RowState = { tag: string; designation: string; equipement: string; premiere_apparition: string };
+const EMPTY_ROW: RowState = { tag: '', designation: '', equipement: '', premiere_apparition: '' };
 
-type SortCol = 'tag' | 'designation' | 'premiere_apparition';
+type SortCol = 'tag' | 'designation' | 'equipement' | 'premiere_apparition';
 
 export default function Alarmes() {
   const { user } = useAuth();
@@ -34,9 +34,11 @@ export default function Alarmes() {
   /* refs — nouvelle ligne */
   const newTagRef  = useRef<HTMLInputElement>(null);
   const newDescRef = useRef<HTMLInputElement>(null);
+  const newEquipRef = useRef<HTMLInputElement>(null);
 
   /* refs — ligne en édition */
   const editDescRef = useRef<HTMLInputElement>(null);
+  const editEquipRef = useRef<HTMLInputElement>(null);
 
   /* ref pour éviter la double-copie */
   const hasCopied = useRef<string | null>(null);
@@ -102,6 +104,7 @@ export default function Alarmes() {
           journee_id: journee.id,
           tag: a.tag,
           designation: a.designation,
+          equipement: a.equipement || null,
           repetitive: true,
           origine: a.origine || 'HMI',
           premiere_apparition: a.premiere_apparition || null,
@@ -136,6 +139,7 @@ export default function Alarmes() {
       journee_id: journee.id,
       tag: newRow.tag.trim() || null,
       designation: newRow.designation.trim(),
+      equipement: newRow.equipement.trim() || null,
       repetitive: true,
       origine: 'HMI',
       premiere_apparition: newRow.premiere_apparition || null,
@@ -148,6 +152,7 @@ export default function Alarmes() {
     setEditRow({
       tag: a.tag ?? '',
       designation: a.designation ?? '',
+      equipement: a.equipement ?? '',
       premiere_apparition: a.premiere_apparition ? format(new Date(a.premiere_apparition), 'yyyy-MM-dd') : '',
     });
   }
@@ -160,6 +165,7 @@ export default function Alarmes() {
       data: {
         tag: editRow.tag.trim() || null,
         designation: editRow.designation.trim(),
+        equipement: editRow.equipement.trim() || null,
         repetitive: current?.repetitive ?? true,
         origine: current?.origine ?? 'HMI',
         premiere_apparition: editRow.premiere_apparition || null,
@@ -214,6 +220,10 @@ export default function Alarmes() {
                     className="text-left px-4 py-2 text-cyan-300 font-semibold cursor-pointer hover:text-white select-none whitespace-nowrap">
                     Désignation<SortIcon col="designation" />
                   </th>
+                  <th onClick={() => toggleSort('equipement')}
+                    className="text-left px-4 py-2 text-cyan-300 font-semibold w-44 cursor-pointer hover:text-white select-none whitespace-nowrap">
+                    Équipement<SortIcon col="equipement" />
+                  </th>
                   <th onClick={() => toggleSort('premiere_apparition')}
                     className="text-center px-4 py-2 text-cyan-300 font-semibold w-40 cursor-pointer hover:text-white select-none whitespace-nowrap">
                     1re apparition<SortIcon col="premiere_apparition" />
@@ -223,11 +233,11 @@ export default function Alarmes() {
               </thead>
               <tbody>
                 {isLoading && (
-                  <tr><td colSpan={4} className="text-center text-slate-500 py-6 text-xs">Chargement...</td></tr>
+                  <tr><td colSpan={5} className="text-center text-slate-500 py-6 text-xs">Chargement...</td></tr>
                 )}
                 {!isLoading && (!alarmes || alarmes.length === 0) && (
                   <tr>
-                    <td colSpan={4} className="text-center text-slate-600 py-8 text-xs italic">
+                    <td colSpan={5} className="text-center text-slate-600 py-8 text-xs italic">
                       Aucune alarme enregistrée pour cette journée
                     </td>
                   </tr>
@@ -251,6 +261,16 @@ export default function Alarmes() {
                           placeholder="Désignation..."
                           onChange={e => setEditRow(r => ({ ...r, designation: e.target.value }))}
                           onKeyDown={e => {
+                            if (e.key === 'Enter')  { e.preventDefault(); editEquipRef.current?.focus(); }
+                            if (e.key === 'Escape') setEditingId(null);
+                          }}
+                          className={inputCls} />
+                      </td>
+                      <td className="px-2 py-1.5 w-44">
+                        <input ref={editEquipRef} type="text" value={editRow.equipement}
+                          placeholder="Équipement..."
+                          onChange={e => setEditRow(r => ({ ...r, equipement: e.target.value }))}
+                          onKeyDown={e => {
                             if (e.key === 'Enter')  { e.preventDefault(); handleUpdate(a.id); }
                             if (e.key === 'Escape') setEditingId(null);
                           }}
@@ -272,6 +292,7 @@ export default function Alarmes() {
                       className={`border-b border-slate-800 transition-colors ${canEdit ? 'cursor-pointer hover:bg-slate-800/50' : ''}`}>
                       <td className="text-center px-4 py-3 font-mono text-amber-400 font-bold text-xs">{a.tag || '—'}</td>
                       <td className="px-4 py-3 text-slate-200">{a.designation}</td>
+                      <td className="px-4 py-3 text-slate-400 text-xs">{a.equipement || '—'}</td>
                       <td className="text-center px-4 py-3 font-mono text-xs text-slate-400">
                         {a.premiere_apparition ? format(new Date(a.premiere_apparition), 'dd/MM/yyyy') : '—'}
                       </td>
@@ -301,6 +322,13 @@ export default function Alarmes() {
                       <input ref={newDescRef} type="text" value={newRow.designation}
                         placeholder="Désignation de l'alarme..."
                         onChange={e => setNewRow(r => ({ ...r, designation: e.target.value }))}
+                        onKeyDown={e => { if (e.key === 'Enter') { e.preventDefault(); newEquipRef.current?.focus(); } }}
+                        className={newInputCls} />
+                    </td>
+                    <td className="px-2 py-2 w-44">
+                      <input ref={newEquipRef} type="text" value={newRow.equipement}
+                        placeholder="Équipement..."
+                        onChange={e => setNewRow(r => ({ ...r, equipement: e.target.value }))}
                         onKeyDown={e => { if (e.key === 'Enter') { e.preventDefault(); handleAdd(); } }}
                         className={newInputCls} />
                     </td>

@@ -16,6 +16,7 @@ import defautsRouter from './routes/defauts';
 import dashboardRouter from './routes/dashboard';
 import rapportRouter from './routes/rapport';
 import activityLogsRouter from './routes/activityLogs';
+import essaisRouter from './routes/essais';
 import { activityLogger } from './middleware/activityLog';
 import { startReleveCron } from './cron';
 
@@ -49,6 +50,7 @@ app.use('/api/defauts', defautsRouter);
 app.use('/api/dashboard', dashboardRouter);
 app.use('/api/rapport', rapportRouter);
 app.use('/api/activity-logs', activityLogsRouter);
+app.use('/api/essais', essaisRouter);
 
 app.get('/api/health', (_, res) => res.json({ status: 'ok', time: new Date() }));
 

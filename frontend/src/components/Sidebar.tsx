@@ -1,12 +1,15 @@
 import { useEffect, useState } from 'react';
 import { NavLink } from 'react-router-dom';
+import { useQuery } from '@tanstack/react-query';
 import {
   LayoutDashboard, BookOpen, ClipboardList, Activity,
   Wrench, Bell, AlertTriangle, Users, Settings, Zap, LogOut, CalendarDays, FileText,
-  Sun, Moon, History, ChevronLeft, ChevronRight, LineChart, BarChart3,
+  Sun, Moon, History, ChevronLeft, ChevronRight, ChevronDown, LineChart, BarChart3, ClipboardCheck,
 } from 'lucide-react';
 import { useAuth } from '../contexts/AuthContext';
 import { useTheme } from '../contexts/ThemeContext';
+import { essaisApi } from '../lib/api';
+import type { EssaiConfig } from '../types';
 
 type NavItem = { to: string; icon: any; label: string; roles?: string[] };
 
@@ -29,18 +32,28 @@ const adminItems = [
   { to: '/admin/users', icon: Users, label: 'Utilisateurs' },
   { to: '/admin/seuils', icon: Settings, label: 'Seuils d\'alerte' },
   { to: '/admin/logs', icon: History, label: 'Journal d\'activité' },
+  { to: '/admin/essais', icon: ClipboardCheck, label: 'Essais (paramétrage)' },
 ];
 
 const COLLAPSE_KEY = 'gtpp_sidebar_collapsed';
+const ESSAI_ROLES = ['operateur', 'chef_bloc', 'chef_quart', 'chef_exploitation', 'admin'];
 
 export default function Sidebar({ onClose }: { onClose?: () => void }) {
   const { user, logout } = useAuth();
   const { theme, toggle } = useTheme();
   const [collapsed, setCollapsed] = useState(() => localStorage.getItem(COLLAPSE_KEY) === '1');
+  const [essaisOpen, setEssaisOpen] = useState(false);
 
   useEffect(() => {
     localStorage.setItem(COLLAPSE_KEY, collapsed ? '1' : '0');
   }, [collapsed]);
+
+  const canSeeEssais = ESSAI_ROLES.includes(user?.role ?? '');
+  const { data: essais } = useQuery({
+    queryKey: ['essais-config'],
+    queryFn: essaisApi.list,
+    enabled: canSeeEssais,
+  });
 
   return (
     <aside className={`${collapsed ? 'w-16' : 'w-64 md:w-60'} flex-shrink-0 bg-slate-900 border-r border-slate-700 flex flex-col h-screen sticky top-0 print:hidden transition-[width] duration-200`}>
@@ -86,6 +99,52 @@ export default function Sidebar({ onClose }: { onClose?: () => void }) {
               {!collapsed && label}
             </NavLink>
           ))}
+
+          {canSeeEssais && (
+            collapsed ? (
+              <NavLink to="/essai" title="Essais"
+                className={({ isActive }) =>
+                  `flex items-center justify-center gap-3 px-3 py-2 rounded text-sm transition-colors ${
+                    isActive ? 'bg-blue-500/15 text-blue-300 font-medium' : 'text-slate-400 hover:text-white hover:bg-slate-800'
+                  }`
+                }>
+                <ClipboardCheck size={15} />
+              </NavLink>
+            ) : (
+              <div>
+                <button onClick={() => setEssaisOpen((o) => !o)}
+                  className="w-full flex items-center justify-between gap-2 px-3 py-2 rounded text-sm text-slate-400 hover:text-white hover:bg-slate-800 transition-colors">
+                  <span className="flex items-center gap-3">
+                    <ClipboardCheck size={15} />
+                    Essais
+                  </span>
+                  <ChevronDown size={13} className={`transition-transform ${essaisOpen ? 'rotate-180' : ''}`} />
+                </button>
+                {essaisOpen && (
+                  <div className="ml-6 space-y-0.5 mt-0.5">
+                    <NavLink to="/essai" end onClick={onClose}
+                      className={({ isActive }) =>
+                        `block px-3 py-1.5 rounded text-xs transition-colors ${
+                          isActive ? 'bg-blue-500/15 text-blue-300 font-medium' : 'text-slate-500 hover:text-white hover:bg-slate-800'
+                        }`
+                      }>
+                      Aujourd'hui
+                    </NavLink>
+                    {essais?.map((e: EssaiConfig) => (
+                      <NavLink key={e.id} to={`/essai/${e.id}`} onClick={onClose}
+                        className={({ isActive }) =>
+                          `block px-3 py-1.5 rounded text-xs truncate transition-colors ${
+                            isActive ? 'bg-blue-500/15 text-blue-300 font-medium' : 'text-slate-500 hover:text-white hover:bg-slate-800'
+                          }`
+                        }>
+                        {e.nom}
+                      </NavLink>
+                    ))}
+                  </div>
+                )}
+              </div>
+            )
+          )}
         </div>
 
         {(user?.role === 'admin' || user?.role === 'chef_exploitation') && (

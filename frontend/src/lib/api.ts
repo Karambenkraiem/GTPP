@@ -163,3 +163,17 @@ export const rechercheApi = {
 export const activityLogApi = {
   list: () => api.get('/activity-logs').then((r) => r.data),
 };
+
+// Essais périodiques
+export const essaisApi = {
+  list: () => api.get('/essais').then((r) => r.data),
+  create: (data: any) => api.post('/essais', data).then((r) => r.data),
+  update: (id: string, data: any) => api.put(`/essais/${id}`, data).then((r) => r.data),
+  remove: (id: string) => api.delete(`/essais/${id}`).then((r) => r.data),
+  dates: () => api.get('/essais/dates').then((r) => r.data),
+  listByJournee: (journeeId: string) => api.get(`/essais/journee/${journeeId}`).then((r) => r.data),
+  updateInstance: (id: string, data: any) => api.put(`/essais/instance/${id}`, data).then((r) => r.data),
+  deverrouillerInstance: (id: string) => api.post(`/essais/instance/${id}/deverrouiller`).then((r) => r.data),
+  historique: (essaiId: string) => api.get(`/essais/${essaiId}/instances`).then((r) => r.data),
+  getInstance: (essaiId: string, instanceId: string) => api.get(`/essais/${essaiId}/instances/${instanceId}`).then((r) => r.data),
+};

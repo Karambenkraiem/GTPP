@@ -1,6 +1,7 @@
 import { Router } from 'express';
 import prisma from '../lib/prisma';
 import { authenticate, requireRole } from '../middleware/auth';
+import { triggerDueEssais } from './essais';
 
 const router = Router();
 router.use(authenticate);
@@ -133,6 +134,7 @@ router.get('/today', async (req, res) => {
       });
       await carryPreviousCompteurs(journee.id, today).catch(() => {});
       await carryPreviousAlarmes(journee.id, today).catch(() => {});
+      await triggerDueEssais(journee.id, today).catch(() => {});
     }
     res.json(journee);
   } catch {
@@ -173,6 +175,7 @@ router.post('/', async (req, res) => {
     });
     await carryPreviousCompteurs(journee.id, jourDate).catch(() => {});
     await carryPreviousAlarmes(journee.id, jourDate).catch(() => {});
+    await triggerDueEssais(journee.id, jourDate).catch(() => {});
     res.status(201).json(journee);
   } catch (err: any) {
     if (err.code === 'P2002') return res.status(409).json({ error: 'Journée déjà existante pour cette date' });

@@ -150,6 +150,13 @@ router.get('/', async (req, res) => {
       : [];
     const turbineStatus = computeTurbineStatus(manouvresDuJour);
 
+    const essaisAFaire = journeeAujourdhui
+      ? await prisma.essaiInstance.findMany({
+          where: { journee_id: journeeAujourdhui.id, statut: 'a_faire' },
+          select: { id: true, essai: { select: { nom: true } } },
+        })
+      : [];
+
     res.json({
       journeeAujourdhui,
       defautsActifs,
@@ -158,6 +165,7 @@ router.get('/', async (req, res) => {
       puissance7Jours,
       turbineStatus,
       incidentsAujourdhui,
+      essaisAFaire: essaisAFaire.map((e) => ({ id: e.id, nom: e.essai.nom })),
     });
   } catch {
     res.status(500).json({ error: 'Erreur serveur' });

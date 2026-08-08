@@ -52,13 +52,14 @@ router.get('/journee/:journeeId', async (req, res) => {
 
 router.post('/', async (req, res) => {
   try {
-    const { journee_id, poste_id, tag, designation, heure, origine, repetitive, premiere_apparition } = req.body;
+    const { journee_id, poste_id, tag, designation, equipement, heure, origine, repetitive, premiere_apparition } = req.body;
     const alarme = await prisma.alarme.create({
       data: {
         journee_id,
         poste_id,
         tag,
         designation,
+        equipement,
         heure: heure ? new Date(heure) : undefined,
         origine: origine || 'HMI',
         repetitive: repetitive || false,
@@ -73,12 +74,13 @@ router.post('/', async (req, res) => {
 
 router.put('/:id', async (req, res) => {
   try {
-    const { tag, designation, heure, origine, repetitive, premiere_apparition } = req.body;
+    const { tag, designation, equipement, heure, origine, repetitive, premiere_apparition } = req.body;
     const alarme = await prisma.alarme.update({
       where: { id: req.params.id },
       data: {
         tag,
         designation,
+        equipement,
         heure: heure ? new Date(heure) : undefined,
         origine,
         repetitive,

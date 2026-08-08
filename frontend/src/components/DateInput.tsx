@@ -8,6 +8,7 @@ interface DateInputProps {
   value: string;
   onChange: (value: string) => void;
   className?: string;
+  markedDates?: string[];
 }
 
 const WEEKDAYS = ['L', 'M', 'M', 'J', 'V', 'S', 'D'];
@@ -15,7 +16,7 @@ const POPUP_WIDTH = 256; // w-64
 const POPUP_HEIGHT = 300; // hauteur approximative du calendrier
 const MARGIN = 8;
 
-export default function DateInput({ value, onChange, className }: DateInputProps) {
+export default function DateInput({ value, onChange, className, markedDates }: DateInputProps) {
   const [open, setOpen] = useState(false);
   const selected = value ? parse(value, 'yyyy-MM-dd', new Date()) : new Date();
   const [viewMonth, setViewMonth] = useState(startOfMonth(selected));
@@ -111,12 +112,14 @@ export default function DateInput({ value, onChange, className }: DateInputProps
               const inMonth = isSameMonth(d, viewMonth);
               const isSelected = isSameDay(d, selected);
               const isToday = isSameDay(d, new Date());
+              const hasEssai = markedDates?.includes(format(d, 'yyyy-MM-dd'));
               return (
                 <button
                   key={d.toISOString()}
                   type="button"
                   onClick={() => pick(d)}
-                  className={`text-xs rounded py-1 transition-colors ${
+                  title={hasEssai ? 'Essai ce jour-là' : undefined}
+                  className={`relative text-xs rounded py-1 transition-colors ${
                     isSelected
                       ? 'bg-amber-500 text-slate-900 font-semibold'
                       : isToday
@@ -127,6 +130,11 @@ export default function DateInput({ value, onChange, className }: DateInputProps
                   }`}
                 >
                   {format(d, 'd')}
+                  {hasEssai && (
+                    <span className={`absolute bottom-0.5 left-1/2 -translate-x-1/2 w-1 h-1 rounded-full ${
+                      isSelected ? 'bg-slate-900' : 'bg-cyan-400'
+                    }`} />
+                  )}
                 </button>
               );
             })}
