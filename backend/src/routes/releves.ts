@@ -47,14 +47,13 @@ router.get('/bloc/:id', async (req, res) => {
   }
 });
 
-// Le spread est l'écart max-min entre les 24 thermocouples d'échappement (ttxd_01..24) ;
-// il n'est jamais saisi à la main, on le recalcule côté serveur à chaque enregistrement.
+// Le spread affiché est directement l'écart admissible TTXSPL saisi à la main,
+// pas une valeur recalculée à partir des thermocouples.
 function withSpreadCalcule(ec: any) {
   if (!ec || typeof ec !== 'object') return ec;
-  const temps = Array.from({ length: 24 }, (_, i) => ec[`ttxd_${String(i + 1).padStart(2, '0')}`])
-    .map((v) => (v === null || v === undefined || v === '' ? null : Number(v)))
-    .filter((v): v is number => v !== null && !Number.isNaN(v));
-  return { ...ec, spread_calcule: temps.length >= 2 ? Math.max(...temps) - Math.min(...temps) : null };
+  const v = ec.ttxspl_ecart;
+  const n = v === null || v === undefined || v === '' ? null : Number(v);
+  return { ...ec, spread_calcule: n !== null && !Number.isNaN(n) ? n : null };
 }
 
 router.post('/bloc', async (req, res) => {
