@@ -31,6 +31,8 @@ const UTILISATEURS: { nom: string; prenom: string; matricule: string; role: stri
   { nom: 'FEKIH', prenom: 'Zied', matricule: '60111', role: 'chef_centrale' },
   { nom: 'BEN MANSOUR', prenom: 'Ali', matricule: '63164', role: 'chef_exploitation' },
   { nom: 'KHAMMASSI', prenom: 'Maher', matricule: '60999', role: 'operateur' },
+  { nom: 'Center', prenom: 'MD Assistant', matricule: '60500', role: 'md_center_assistant' },
+  { nom: 'JELASSI', prenom: 'Sami', matricule: '60600', role: 'chef_maintenance' },
 ];
 
 async function main() {

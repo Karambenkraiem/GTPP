@@ -40,6 +40,9 @@ import Statistique from './pages/Statistique';
 import Essai from './pages/Essai';
 import EssaiHistorique from './pages/EssaiHistorique';
 import EssaisConfig from './pages/admin/EssaisConfig';
+import Consignes from './pages/Consignes';
+import Reclamations from './pages/Reclamations';
+import ReclamationDetail from './pages/ReclamationDetail';
 import InstallPrompt from './components/InstallPrompt';
 import AndroidBackButton from './components/AndroidBackButton';
 import UpdateBanner from './components/UpdateBanner';
@@ -83,6 +86,22 @@ function StatistiqueRoute({ children }: { children: JSX.Element }) {
   return children;
 }
 
+function ConsigneRoute({ children }: { children: JSX.Element }) {
+  const { user } = useAuth();
+  if (!user || !['operateur', 'chef_bloc', 'chef_quart', 'chef_exploitation', 'chef_centrale', 'admin'].includes(user.role)) {
+    return <Navigate to="/" replace />;
+  }
+  return children;
+}
+
+function ReclamationRoute({ children }: { children: JSX.Element }) {
+  const { user } = useAuth();
+  if (!user || user.role === 'guest') {
+    return <Navigate to="/" replace />;
+  }
+  return children;
+}
+
 export default function App() {
   return (
     <ErrorBoundary>
@@ -113,6 +132,9 @@ export default function App() {
               <Route path="essai" element={<Essai />} />
               <Route path="essai/:essaiId" element={<EssaiHistorique />} />
               <Route path="admin/essais" element={<AdminRoute><EssaisConfig /></AdminRoute>} />
+              <Route path="consignes" element={<ConsigneRoute><Consignes /></ConsigneRoute>} />
+              <Route path="reclamations" element={<ReclamationRoute><Reclamations /></ReclamationRoute>} />
+              <Route path="reclamations/:id" element={<ReclamationRoute><ReclamationDetail /></ReclamationRoute>} />
             </Route>
           </Routes>
           <InstallPrompt />

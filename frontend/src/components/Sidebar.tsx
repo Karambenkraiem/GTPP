@@ -5,6 +5,7 @@ import {
   LayoutDashboard, BookOpen, ClipboardList, Activity,
   Wrench, Bell, AlertTriangle, Users, Settings, Zap, LogOut, CalendarDays, FileText,
   Sun, Moon, History, ChevronLeft, ChevronRight, ChevronDown, LineChart, BarChart3, ClipboardCheck,
+  NotebookPen, LifeBuoy,
 } from 'lucide-react';
 import { useAuth } from '../contexts/AuthContext';
 import { useTheme } from '../contexts/ThemeContext';
@@ -26,6 +27,8 @@ const navItems: NavItem[] = [
   { to: '/rapport', icon: FileText, label: 'Rapport Journalier' },
   { to: '/analyse', icon: LineChart, label: 'Analyse & Diagnostic', roles: ['chef_quart', 'chef_exploitation', 'directeur', 'admin'] },
   { to: '/statistique', icon: BarChart3, label: 'Statistique', roles: ['statistique', 'admin'] },
+  { to: '/consignes', icon: NotebookPen, label: 'Consignes', roles: ['operateur', 'chef_bloc', 'chef_quart', 'chef_exploitation', 'chef_centrale', 'admin'] },
+  { to: '/reclamations', icon: LifeBuoy, label: 'Réclamations & Assistance', roles: ['operateur', 'chef_bloc', 'chef_quart', 'chef_exploitation', 'chef_centrale', 'chef_maintenance', 'directeur', 'statistique', 'md_center_assistant', 'admin'] },
 ];
 
 const adminItems = [

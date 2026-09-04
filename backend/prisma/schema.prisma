@@ -164,6 +164,12 @@ model Utilisateur {
   seuilsModifies        SeuilAlarme[]
   defautsCommentes      MaterielDefectueux[] @relation("CommentaireAuteur")
   essaisEffectues       EssaiInstance[]      @relation("EssaiExecutant")
+  messagesEnvoyes       Message[]            @relation("MessagesEnvoyes")
+  messagesRecus         Message[]            @relation("MessagesRecus")
+  consignesCreees       Consigne[]
+  reclamationsDemandees Reclamation[]            @relation("ReclamationDemandeur")
+  reclamationsCloturees Reclamation[]            @relation("ReclamationCloture")
+  reclamationsCommentees ReclamationCommentaire[]
 
   @@map("utilisateurs")
 }
@@ -727,5 +733,87 @@ model EssaiInstance {
 
   @@unique([essai_id, journee_id])
   @@map("essais_instance")
+}
+
+// ── Messagerie interne (chat privé entre agents) ──
+model Message {
+  id              String   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  expediteur_id   String   @db.Uuid
+  destinataire_id String   @db.Uuid
+  contenu         String   @db.Text
+  piece_jointe_nom  String? @db.VarChar(255)
+  piece_jointe_type String? @db.VarChar(100)
+  piece_jointe_data Bytes?
+  lu              Boolean  @default(false)
+  cree_le         DateTime @default(now()) @db.Timestamptz(6)
+
+  expediteur   Utilisateur @relation("MessagesEnvoyes", fields: [expediteur_id], references: [id])
+  destinataire Utilisateur @relation("MessagesRecus", fields: [destinataire_id], references: [id])
+
+  @@index([expediteur_id, destinataire_id])
+  @@index([destinataire_id, lu])
+  @@map("messages")
+}
+
+// ── Consignes du jour (chef exploitation / chef de quart) ──
+model Consigne {
+  id         String   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  texte      String   @db.Text
+  terminee   Boolean  @default(false)
+  cree_par   String   @db.Uuid
+  date       DateTime @default(now()) @db.Timestamptz(6)
+  cree_le    DateTime @default(now()) @db.Timestamptz(6)
+  modifie_le DateTime @default(now()) @db.Timestamptz(6)
+
+  auteur Utilisateur @relation(fields: [cree_par], references: [id])
+
+  @@map("consignes")
+}
+
+enum StatutReclamation {
+  ouverte
+  en_cours
+  cloturee
+
+  @@map("statut_reclamation")
+}
+
+// ── Réclamations / demandes d'assistance MD Center ──
+model Reclamation {
+  id           String            @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  titre        String            @db.VarChar(200)
+  description  String            @db.Text
+  statut       StatutReclamation @default(ouverte)
+  demandeur_id String            @db.Uuid
+  cloture_par  String?           @db.Uuid
+  cloture_le   DateTime?         @db.Timestamptz(6)
+  motif_cloture String?          @db.Text
+  piece_jointe_nom  String?      @db.VarChar(255)
+  piece_jointe_type String?      @db.VarChar(100)
+  piece_jointe_data Bytes?
+  cree_le      DateTime          @default(now()) @db.Timestamptz(6)
+  modifie_le   DateTime          @default(now()) @db.Timestamptz(6)
+
+  demandeur    Utilisateur              @relation("ReclamationDemandeur", fields: [demandeur_id], references: [id])
+  clotureur    Utilisateur?             @relation("ReclamationCloture", fields: [cloture_par], references: [id])
+  commentaires ReclamationCommentaire[]
+
+  @@map("reclamations")
+}
+
+model ReclamationCommentaire {
+  id             String   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  reclamation_id String   @db.Uuid
+  auteur_id      String   @db.Uuid
+  contenu        String   @db.Text
+  piece_jointe_nom  String?  @db.VarChar(255)
+  piece_jointe_type String?  @db.VarChar(100)
+  piece_jointe_data Bytes?
+  cree_le        DateTime @default(now()) @db.Timestamptz(6)
+
+  reclamation Reclamation @relation(fields: [reclamation_id], references: [id], onDelete: Cascade)
+  auteur      Utilisateur @relation(fields: [auteur_id], references: [id])
+
+  @@map("reclamations_commentaires")
 }
 

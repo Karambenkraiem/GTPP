@@ -165,6 +165,64 @@ export const activityLogApi = {
 };
 
 // Essais périodiques
+// Messagerie interne
+export const messagesApi = {
+  contacts: () => api.get('/messages/contacts').then((r) => r.data),
+  unreadCount: () => api.get('/messages/unread-count').then((r) => r.data),
+  conversation: (userId: string) => api.get(`/messages/conversation/${userId}`).then((r) => r.data),
+  send: (destinataire_id: string, contenu: string, fichier?: File | null) => {
+    if (fichier) {
+      const fd = new FormData();
+      fd.append('destinataire_id', destinataire_id);
+      fd.append('contenu', contenu);
+      fd.append('fichier', fichier);
+      return api.post('/messages', fd).then((r) => r.data);
+    }
+    return api.post('/messages', { destinataire_id, contenu }).then((r) => r.data);
+  },
+  pieceJointeUrl: (messageId: string) => `/messages/${messageId}/piece-jointe`,
+};
+
+// Consignes
+export const consignesApi = {
+  list: () => api.get('/consignes').then((r) => r.data),
+  create: (data: any) => api.post('/consignes', data).then((r) => r.data),
+  update: (id: string, data: any) => api.put(`/consignes/${id}`, data).then((r) => r.data),
+  relancer: (id: string) => api.post(`/consignes/${id}/relancer`).then((r) => r.data),
+  remove: (id: string) => api.delete(`/consignes/${id}`).then((r) => r.data),
+};
+
+// Réclamations / assistance MD Center
+export const reclamationsApi = {
+  list: () => api.get('/reclamations').then((r) => r.data),
+  get: (id: string) => api.get(`/reclamations/${id}`).then((r) => r.data),
+  create: (data: { titre: string; description: string; fichier?: File | null }) => {
+    if (data.fichier) {
+      const fd = new FormData();
+      fd.append('titre', data.titre);
+      fd.append('description', data.description);
+      fd.append('fichier', data.fichier);
+      return api.post('/reclamations', fd).then((r) => r.data);
+    }
+    return api.post('/reclamations', { titre: data.titre, description: data.description }).then((r) => r.data);
+  },
+  commenter: (id: string, contenu: string, fichier?: File | null) => {
+    if (fichier) {
+      const fd = new FormData();
+      fd.append('contenu', contenu);
+      fd.append('fichier', fichier);
+      return api.post(`/reclamations/${id}/commentaires`, fd).then((r) => r.data);
+    }
+    return api.post(`/reclamations/${id}/commentaires`, { contenu }).then((r) => r.data);
+  },
+  cloturer: (id: string, motif: string) => api.post(`/reclamations/${id}/cloturer`, { motif }).then((r) => r.data),
+  pieceJointeUrl: (id: string) => `/reclamations/${id}/piece-jointe`,
+  commentairePieceJointeUrl: (commentId: string) => `/reclamations/commentaires/${commentId}/piece-jointe`,
+};
+
+// Récupère une pièce jointe protégée (image/vidéo/PDF) en blob, quel que soit son endpoint d'origine
+export const getAttachmentBlob = (url: string) => api.get(url, { responseType: 'blob' }).then((r) => r.data as Blob);
+
 export const essaisApi = {
   list: () => api.get('/essais').then((r) => r.data),
   create: (data: any) => api.post('/essais', data).then((r) => r.data),

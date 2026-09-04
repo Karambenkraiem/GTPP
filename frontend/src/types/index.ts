@@ -234,6 +234,77 @@ export interface MaterielDefectueux {
   actif?: boolean;
 }
 
+export interface Message {
+  id: string;
+  expediteur_id: string;
+  destinataire_id: string;
+  contenu: string;
+  piece_jointe_nom?: string | null;
+  piece_jointe_type?: string | null;
+  lu: boolean;
+  cree_le: string;
+}
+
+export interface Contact {
+  id: string;
+  nom: string;
+  prenom: string;
+  matricule: string;
+  role: Role;
+  unread: number;
+  dernierMessage?: string | null;
+  dernierMessageLe?: string | null;
+}
+
+export interface Consigne {
+  id: string;
+  texte: string;
+  terminee: boolean;
+  cree_par: string;
+  date: string;
+  cree_le: string;
+  modifie_le: string;
+  auteur?: { nom: string; prenom: string };
+}
+
+export type StatutReclamation = 'ouverte' | 'en_cours' | 'cloturee';
+
+export interface ReclamationCommentaire {
+  id: string;
+  reclamation_id: string;
+  auteur_id: string;
+  contenu: string;
+  piece_jointe_nom?: string | null;
+  piece_jointe_type?: string | null;
+  cree_le: string;
+  auteur?: { id: string; nom: string; prenom: string; role: Role };
+}
+
+export interface Reclamation {
+  id: string;
+  titre: string;
+  description: string;
+  statut: StatutReclamation;
+  demandeur_id: string;
+  cloture_par?: string | null;
+  cloture_le?: string | null;
+  motif_cloture?: string | null;
+  piece_jointe_nom?: string | null;
+  piece_jointe_type?: string | null;
+  cree_le: string;
+  modifie_le: string;
+  demandeur?: { id?: string; nom: string; prenom: string; role: Role };
+  clotureur?: { nom: string; prenom: string } | null;
+  commentaires?: ReclamationCommentaire[];
+  _count?: { commentaires: number };
+}
+
+export const STATUT_RECLAMATION_LABELS: Record<StatutReclamation, string> = {
+  ouverte: 'Ouverte',
+  en_cours: 'En cours',
+  cloturee: 'Clôturée',
+};
+
 export interface SeuilAlarme {
   id: string;
   parametre: string;
