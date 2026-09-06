@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
-import { MessageCircle, X, ArrowLeft, Send, Paperclip } from 'lucide-react';
+import { MessageCircle, X, ArrowLeft, Send, Paperclip, Camera, Video, Plus } from 'lucide-react';
 import { format, isToday } from 'date-fns';
 import { useAuth } from '../contexts/AuthContext';
 import { messagesApi } from '../lib/api';
@@ -19,7 +19,10 @@ export default function ChatWidget() {
   const [activeContact, setActiveContact] = useState<Contact | null>(null);
   const [draft, setDraft] = useState('');
   const [fichier, setFichier] = useState<File | null>(null);
+  const [attachMenuOpen, setAttachMenuOpen] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
+  const photoInputRef = useRef<HTMLInputElement>(null);
+  const videoInputRef = useRef<HTMLInputElement>(null);
   const qc = useQueryClient();
   const scrollRef = useRef<HTMLDivElement>(null);
 
@@ -150,7 +153,7 @@ export default function ChatWidget() {
                     </button>
                   </div>
                 )}
-                <div className="flex items-center gap-2 px-2.5 py-2">
+                <div className="flex items-center gap-2 px-2.5 py-2 relative">
                   <input
                     ref={fileInputRef}
                     type="file"
@@ -158,12 +161,54 @@ export default function ChatWidget() {
                     className="hidden"
                     onChange={(e) => setFichier(e.target.files?.[0] ?? null)}
                   />
+                  <input
+                    ref={photoInputRef}
+                    type="file"
+                    accept="image/*"
+                    capture="environment"
+                    className="hidden"
+                    onChange={(e) => setFichier(e.target.files?.[0] ?? null)}
+                  />
+                  <input
+                    ref={videoInputRef}
+                    type="file"
+                    accept="video/*"
+                    capture="environment"
+                    className="hidden"
+                    onChange={(e) => setFichier(e.target.files?.[0] ?? null)}
+                  />
+
+                  {attachMenuOpen && (
+                    <>
+                      <div className="fixed inset-0 z-10" onClick={() => setAttachMenuOpen(false)} />
+                      <div className="absolute bottom-full left-2.5 mb-2 z-20 bg-slate-800 border border-slate-600 rounded-lg shadow-xl overflow-hidden w-44">
+                        <button
+                          onClick={() => { photoInputRef.current?.click(); setAttachMenuOpen(false); }}
+                          className="w-full flex items-center gap-2.5 px-3 py-2 text-sm text-slate-200 hover:bg-slate-700 transition-colors"
+                        >
+                          <Camera size={15} className="text-amber-400" /> Prendre une photo
+                        </button>
+                        <button
+                          onClick={() => { videoInputRef.current?.click(); setAttachMenuOpen(false); }}
+                          className="w-full flex items-center gap-2.5 px-3 py-2 text-sm text-slate-200 hover:bg-slate-700 transition-colors"
+                        >
+                          <Video size={15} className="text-amber-400" /> Filmer une vidéo
+                        </button>
+                        <button
+                          onClick={() => { fileInputRef.current?.click(); setAttachMenuOpen(false); }}
+                          className="w-full flex items-center gap-2.5 px-3 py-2 text-sm text-slate-200 hover:bg-slate-700 transition-colors"
+                        >
+                          <Paperclip size={15} className="text-amber-400" /> Choisir un fichier
+                        </button>
+                      </div>
+                    </>
+                  )}
                   <button
-                    onClick={() => fileInputRef.current?.click()}
-                    title="Joindre une image, une vidéo ou un PDF"
-                    className="text-slate-400 hover:text-amber-400 flex-shrink-0 transition-colors"
+                    onClick={() => setAttachMenuOpen((o) => !o)}
+                    title="Joindre une photo, une vidéo ou un fichier"
+                    className="text-slate-400 hover:text-amber-400 flex-shrink-0 transition-colors relative z-20"
                   >
-                    <Paperclip size={16} />
+                    <Plus size={18} />
                   </button>
                   <input
                     type="text"
