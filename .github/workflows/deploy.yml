@@ -49,7 +49,26 @@ jobs:
           java-version: '21'
 
       - name: Set up Android SDK
-        uses: android-actions/setup-android@v3
+        # android-actions/setup-android tries to install the long-deprecated
+        # "tools" package, which Google has since removed from the SDK
+        # repository entirely, so sdkmanager now fails outright. Set up the
+        # command-line tools ourselves instead, skipping that package — the
+        # Android Gradle Plugin downloads whatever platform/build-tools the
+        # project needs on its own once licenses are accepted.
+        run: |
+          export ANDROID_HOME="$HOME/android-sdk"
+          mkdir -p "$ANDROID_HOME/cmdline-tools"
+          cd "$ANDROID_HOME/cmdline-tools"
+          curl -sSLo cmdline-tools.zip https://dl.google.com/android/repository/commandlinetools-linux-11076708_latest.zip
+          unzip -q cmdline-tools.zip
+          rm cmdline-tools.zip
+          mv cmdline-tools latest
+          echo "ANDROID_HOME=$ANDROID_HOME" >> "$GITHUB_ENV"
+          echo "ANDROID_SDK_ROOT=$ANDROID_HOME" >> "$GITHUB_ENV"
+          echo "$ANDROID_HOME/cmdline-tools/latest/bin" >> "$GITHUB_PATH"
+          echo "$ANDROID_HOME/platform-tools" >> "$GITHUB_PATH"
+          yes | "$ANDROID_HOME/cmdline-tools/latest/bin/sdkmanager" --licenses > /dev/null
+          "$ANDROID_HOME/cmdline-tools/latest/bin/sdkmanager" "platform-tools"
 
       - name: Decode release keystore
         working-directory: frontend/android/app
@@ -84,8 +103,28 @@ jobs:
             version.json
           retention-days: 5
 
-  deploy:
-    needs: [test-build, build-android]
+  # Séparé du déploiement APK : un échec du build Android ne doit jamais
+  # empêcher le site/backend de partir en prod.
+  deploy-backend:
+    needs: [test-build]
+    runs-on: ubuntu-latest
+    steps:
+      - name: Deploy over SSH
+        uses: appleboy/ssh-action@v1.0.3
+        with:
+          host: ${{ secrets.VPS_HOST }}
+          username: ${{ secrets.VPS_USER }}
+          key: ${{ secrets.VPS_SSH_KEY }}
+          port: ${{ secrets.VPS_SSH_PORT || 22 }}
+          script: |
+            cd ${{ secrets.VPS_PROJECT_PATH }}
+            git pull origin main
+            docker compose -f docker-compose.prod.yml build
+            docker compose -f docker-compose.prod.yml up -d
+            docker image prune -f
+
+  deploy-android:
+    needs: [build-android]
     runs-on: ubuntu-latest
     steps:
       - name: Download APK artifact
@@ -102,17 +141,3 @@ jobs:
           port: ${{ secrets.VPS_SSH_PORT || 22 }}
           source: gtpp.apk,version.json
           target: ${{ secrets.VPS_PROJECT_PATH }}/apk-downloads
-
-      - name: Deploy over SSH
-        uses: appleboy/ssh-action@v1.0.3
-        with:
-          host: ${{ secrets.VPS_HOST }}
-          username: ${{ secrets.VPS_USER }}
-          key: ${{ secrets.VPS_SSH_KEY }}
-          port: ${{ secrets.VPS_SSH_PORT || 22 }}
-          script: |
-            cd ${{ secrets.VPS_PROJECT_PATH }}
-            git pull origin main
-            docker compose -f docker-compose.prod.yml build
-            docker compose -f docker-compose.prod.yml up -d
-            docker image prune -f
