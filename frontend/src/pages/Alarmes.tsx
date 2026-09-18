@@ -43,9 +43,12 @@ export default function Alarmes() {
   /* ref pour éviter la double-copie */
   const hasCopied = useRef<string | null>(null);
 
+  const journeesFrom = selectedDate < format(new Date(Date.now() - 30 * 86400000), 'yyyy-MM-dd')
+    ? selectedDate
+    : format(new Date(Date.now() - 30 * 86400000), 'yyyy-MM-dd');
   const { data: journees } = useQuery({
-    queryKey: ['journees'],
-    queryFn: () => journeesApi.list({ from: format(new Date(Date.now() - 30 * 86400000), 'yyyy-MM-dd') }),
+    queryKey: ['journees', journeesFrom],
+    queryFn: () => journeesApi.list({ from: journeesFrom }),
   });
   const journee = journees?.find((j: any) => (j.jour as string).slice(0, 10) === selectedDate);
 

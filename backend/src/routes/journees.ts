@@ -80,7 +80,10 @@ router.get('/', async (req, res) => {
         postes: { include: { chefQuart: { select: { nom: true, prenom: true } } } },
         _count: { select: { releves_bloc: true, manouvres: true, alarmes: true, ordres_travaux: true } },
       },
-      take: 30,
+      // La limite de 30 ne s'applique qu'à la liste "récente" par défaut ; une
+      // plage explicite (from/to) doit renvoyer tout ce qu'elle couvre, sinon
+      // une date ancienne demandée explicitement peut être exclue à tort.
+      ...(from || to ? {} : { take: 30 }),
     });
 
     const incidentCounts = await prisma.manouvre.groupBy({

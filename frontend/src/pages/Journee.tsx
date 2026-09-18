@@ -32,7 +32,10 @@ export default function Journee() {
   const [posteForm, setPosteForm] = useState<any>({ tranche: 'h07_14h' });
   const [showValiderConfirm, setShowValiderConfirm] = useState(false);
 
-  const { data: journees } = useQuery({ queryKey: ['journees'], queryFn: () => journeesApi.list({ from: format(new Date(Date.now() - 30 * 86400000), 'yyyy-MM-dd') }) });
+  const journeesFrom = selectedDate < format(new Date(Date.now() - 30 * 86400000), 'yyyy-MM-dd')
+    ? selectedDate
+    : format(new Date(Date.now() - 30 * 86400000), 'yyyy-MM-dd');
+  const { data: journees } = useQuery({ queryKey: ['journees', journeesFrom], queryFn: () => journeesApi.list({ from: journeesFrom }) });
   const { data: users } = useQuery({ queryKey: ['users'], queryFn: usersApi.list });
 
   const selectedJournee = journees?.find((j: any) => (j.jour as string).slice(0, 10) === selectedDate);
