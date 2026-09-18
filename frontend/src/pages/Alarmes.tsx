@@ -2,6 +2,7 @@ import { useState, useRef, useMemo, forwardRef, useEffect } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { alarmesApi, journeesApi } from '../lib/api';
 import { useAuth } from '../contexts/AuthContext';
+import { useSelectedDate } from '../contexts/SelectedDateContext';
 import PageHeader from '../components/PageHeader';
 import DateInput from '../components/DateInput';
 import { Trash2, ChevronUp, ChevronDown, ChevronsUpDown } from 'lucide-react';
@@ -25,7 +26,7 @@ export default function Alarmes() {
   const canEdit = ['chef_quart', 'chef_exploitation', 'admin'].includes(user?.role ?? '');
   const qc = useQueryClient();
   const today = format(new Date(), 'yyyy-MM-dd');
-  const [selectedDate, setSelectedDate] = useState(today);
+  const { selectedDate, setSelectedDate } = useSelectedDate();
   const [newRow, setNewRow] = useState<RowState>({ ...EMPTY_ROW, premiere_apparition: today });
   const [editingId, setEditingId] = useState<string | null>(null);
   const [editRow, setEditRow] = useState<RowState>(EMPTY_ROW);
@@ -43,12 +44,9 @@ export default function Alarmes() {
   /* ref pour éviter la double-copie */
   const hasCopied = useRef<string | null>(null);
 
-  const journeesFrom = selectedDate < format(new Date(Date.now() - 30 * 86400000), 'yyyy-MM-dd')
-    ? selectedDate
-    : format(new Date(Date.now() - 30 * 86400000), 'yyyy-MM-dd');
   const { data: journees } = useQuery({
-    queryKey: ['journees', journeesFrom],
-    queryFn: () => journeesApi.list({ from: journeesFrom }),
+    queryKey: ['journees'],
+    queryFn: () => journeesApi.list(),
   });
   const journee = journees?.find((j: any) => (j.jour as string).slice(0, 10) === selectedDate);
 

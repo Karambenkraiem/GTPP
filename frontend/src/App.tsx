@@ -3,6 +3,7 @@ import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { Component, ReactNode } from 'react';
 import { AuthProvider, useAuth } from './contexts/AuthContext';
 import { ThemeProvider } from './contexts/ThemeContext';
+import { SelectedDateProvider } from './contexts/SelectedDateContext';
 
 class ErrorBoundary extends Component<{ children: ReactNode }, { error: Error | null }> {
   state = { error: null };
@@ -108,6 +109,7 @@ export default function App() {
     <QueryClientProvider client={queryClient}>
       <ThemeProvider>
       <AuthProvider>
+      <SelectedDateProvider>
         <BrowserRouter future={{ v7_startTransition: true, v7_relativeSplatPath: true }}>
           <Routes>
             <Route path="/login" element={<Login />} />
@@ -142,6 +144,7 @@ export default function App() {
           <UpdateBanner />
           <InactivityLogout />
         </BrowserRouter>
+      </SelectedDateProvider>
       </AuthProvider>
       </ThemeProvider>
     </QueryClientProvider>

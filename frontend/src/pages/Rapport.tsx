@@ -9,6 +9,7 @@ import {
 import PageHeader from '../components/PageHeader';
 import DateInput from '../components/DateInput';
 import { rapportApi } from '../lib/api';
+import { useSelectedDate } from '../contexts/SelectedDateContext';
 import {
   TRANCHE_LABELS,
   ZONE_LABELS, STATUT_JOURNEE_LABELS,
@@ -140,7 +141,7 @@ function SectionTitle({ icon: Icon, title, count }: { icon: any; title: string; 
 }
 
 export default function Rapport() {
-  const [selectedDate, setSelectedDate] = useState(format(new Date(), 'yyyy-MM-dd'));
+  const { selectedDate, setSelectedDate } = useSelectedDate();
 
   const { data, isLoading } = useQuery({
     queryKey: ['rapport', selectedDate],

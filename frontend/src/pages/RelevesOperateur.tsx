@@ -11,6 +11,7 @@ import { fr } from 'date-fns/locale';
 import type { Poste } from '../types';
 import { TRANCHE_LABELS } from '../types';
 import { useAuth } from '../contexts/AuthContext';
+import { useSelectedDate } from '../contexts/SelectedDateContext';
 import { tunisLocalToISOString, formatTunisHM, getTunisHour, formatTunisDateTimeLocal } from '../lib/tz';
 
 const SLOT_HOURS = [0, 2, 4, 6, 8, 10, 12, 14, 16, 18, 20, 22];
@@ -197,19 +198,16 @@ export default function RelevesOperateurPage() {
   const qc = useQueryClient();
   const [searchParams] = useSearchParams();
   const [pageTab, setPageTab] = useState<'saisie' | 'compteurs'>(searchParams.get('tab') === 'compteurs' ? 'compteurs' : 'saisie');
-  const [selectedDate, setSelectedDate] = useState(format(new Date(), 'yyyy-MM-dd'));
+  const { selectedDate, setSelectedDate } = useSelectedDate();
   const [selectedHour, setSelectedHour] = useState<number | null>(null);
   const [form, setForm] = useState<any>(EMPTY(format(new Date(), 'yyyy-MM-dd')));
   const [cptForm, setCptForm] = useState<any>({});
   const [cptLocked, setCptLocked] = useState(false);
   const [cptConfirm, setCptConfirm] = useState(false);
 
-  const journeesFrom = selectedDate < format(new Date(Date.now() - 30 * 86400000), 'yyyy-MM-dd')
-    ? selectedDate
-    : format(new Date(Date.now() - 30 * 86400000), 'yyyy-MM-dd');
   const { data: journees } = useQuery({
-    queryKey: ['journees', journeesFrom],
-    queryFn: () => journeesApi.list({ from: journeesFrom }),
+    queryKey: ['journees'],
+    queryFn: () => journeesApi.list(),
   });
   const journee = journees?.find((j: any) => (j.jour as string).slice(0, 10) === selectedDate);
 

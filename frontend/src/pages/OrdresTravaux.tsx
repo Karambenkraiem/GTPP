@@ -2,6 +2,7 @@ import { useState, useRef } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { otApi, journeesApi } from '../lib/api';
 import { useAuth } from '../contexts/AuthContext';
+import { useSelectedDate } from '../contexts/SelectedDateContext';
 import PageHeader from '../components/PageHeader';
 import DateInput from '../components/DateInput';
 import { Trash2 } from 'lucide-react';
@@ -23,8 +24,7 @@ export default function OrdresTravaux() {
   const { user } = useAuth();
   const canEdit = ['chef_bloc', 'chef_quart', 'chef_exploitation', 'admin'].includes(user?.role ?? '');
   const qc = useQueryClient();
-  const today = format(new Date(), 'yyyy-MM-dd');
-  const [selectedDate, setSelectedDate] = useState(today);
+  const { selectedDate, setSelectedDate } = useSelectedDate();
   const [activeTab, setActiveTab] = useState<TabType>('curatif');
   const [newRow, setNewRow] = useState<RowState>(EMPTY_ROW);
   const [editingId, setEditingId] = useState<string | null>(null);
@@ -41,12 +41,9 @@ export default function OrdresTravaux() {
   const editDescRef = useRef<HTMLInputElement>(null);
   const editDiscRef = useRef<HTMLSelectElement>(null);
 
-  const journeesFrom = selectedDate < format(new Date(Date.now() - 30 * 86400000), 'yyyy-MM-dd')
-    ? selectedDate
-    : format(new Date(Date.now() - 30 * 86400000), 'yyyy-MM-dd');
   const { data: journees } = useQuery({
-    queryKey: ['journees', journeesFrom],
-    queryFn: () => journeesApi.list({ from: journeesFrom }),
+    queryKey: ['journees'],
+    queryFn: () => journeesApi.list(),
   });
   const journee = journees?.find((j: any) => (j.jour as string).slice(0, 10) === selectedDate);
 

@@ -3,6 +3,7 @@ import { useSearchParams } from 'react-router-dom';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { manouvresApi, journeesApi } from '../lib/api';
 import { useAuth } from '../contexts/AuthContext';
+import { useSelectedDate } from '../contexts/SelectedDateContext';
 import PageHeader from '../components/PageHeader';
 import DateInput from '../components/DateInput';
 import TimeInput from '../components/TimeInput';
@@ -126,20 +127,16 @@ export default function Manouvres() {
   const canEdit = tab === 'manoeuvre' ? canEditManoeuvre : canEditIncident;
 
   const qc = useQueryClient();
-  const today = format(new Date(), 'yyyy-MM-dd');
-  const [selectedDate, setSelectedDate] = useState(today);
+  const { selectedDate, setSelectedDate } = useSelectedDate();
   const [newRow, setNewRow] = useState<RowState>({ heure: format(new Date(), 'HH:mm'), description: '' });
   const [editingId, setEditingId] = useState<string | null>(null);
   const [editRow, setEditRow] = useState<RowState>({ heure: '', description: '' });
   const newDescRef = useRef<HTMLInputElement>(null);
   const editDescRef = useRef<HTMLInputElement>(null);
 
-  const journeesFrom = selectedDate < format(new Date(Date.now() - 30 * 86400000), 'yyyy-MM-dd')
-    ? selectedDate
-    : format(new Date(Date.now() - 30 * 86400000), 'yyyy-MM-dd');
   const { data: journees } = useQuery({
-    queryKey: ['journees', journeesFrom],
-    queryFn: () => journeesApi.list({ from: journeesFrom }),
+    queryKey: ['journees'],
+    queryFn: () => journeesApi.list(),
   });
   const journee = journees?.find((j: any) => (j.jour as string).slice(0, 10) === selectedDate);
 

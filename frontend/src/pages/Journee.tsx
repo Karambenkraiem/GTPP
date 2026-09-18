@@ -11,6 +11,7 @@ import { fr } from 'date-fns/locale';
 import { STATUT_JOURNEE_LABELS, TRANCHE_LABELS } from '../types';
 import type { TrancheHoraire } from '../types';
 import { useAuth } from '../contexts/AuthContext';
+import { useSelectedDate } from '../contexts/SelectedDateContext';
 import { useToast, ToastContainer } from '../components/Toast';
 
 const TRANCHES: TrancheHoraire[] = ['h00_07h', 'h07_14h', 'h14_20h', 'h20_00h'];
@@ -26,16 +27,13 @@ export default function Journee() {
   const { user } = useAuth();
   const { toasts, show: showToast, dismiss } = useToast();
   const qc = useQueryClient();
-  const [selectedDate, setSelectedDate] = useState(format(new Date(), 'yyyy-MM-dd'));
+  const { selectedDate, setSelectedDate } = useSelectedDate();
   const [showPosteModal, setShowPosteModal] = useState(false);
   const [editingPoste, setEditingPoste] = useState<any | null>(null);
   const [posteForm, setPosteForm] = useState<any>({ tranche: 'h07_14h' });
   const [showValiderConfirm, setShowValiderConfirm] = useState(false);
 
-  const journeesFrom = selectedDate < format(new Date(Date.now() - 30 * 86400000), 'yyyy-MM-dd')
-    ? selectedDate
-    : format(new Date(Date.now() - 30 * 86400000), 'yyyy-MM-dd');
-  const { data: journees } = useQuery({ queryKey: ['journees', journeesFrom], queryFn: () => journeesApi.list({ from: journeesFrom }) });
+  const { data: journees } = useQuery({ queryKey: ['journees'], queryFn: () => journeesApi.list() });
   const { data: users } = useQuery({ queryKey: ['users'], queryFn: usersApi.list });
 
   const selectedJournee = journees?.find((j: any) => (j.jour as string).slice(0, 10) === selectedDate);

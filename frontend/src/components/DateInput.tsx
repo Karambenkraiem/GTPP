@@ -2,7 +2,7 @@ import { useEffect, useRef, useState } from 'react';
 import { createPortal } from 'react-dom';
 import { format, addMonths, subMonths, startOfMonth, endOfMonth, startOfWeek, endOfWeek, addDays, isSameDay, isSameMonth, parse } from 'date-fns';
 import { fr } from 'date-fns/locale';
-import { Calendar, ChevronLeft, ChevronRight } from 'lucide-react';
+import { Calendar, ChevronLeft, ChevronRight, CalendarCheck } from 'lucide-react';
 
 interface DateInputProps {
   value: string;
@@ -61,21 +61,25 @@ export default function DateInput({ value, onChange, className, markedDates }: D
     setOpen(false);
   };
 
-  return (
-    <div className="relative" ref={containerRef}>
-      <button
-        type="button"
-        onClick={() => setOpen((o) => !o)}
-        className={
-          className ||
-          'flex items-center gap-2 bg-slate-800 border border-slate-600 rounded-lg px-3 py-1.5 text-white text-sm hover:border-slate-500 focus:outline-none focus:border-amber-500 transition-colors'
-        }
-      >
-        <Calendar size={15} className="text-slate-400" />
-        {format(selected, 'dd/MM/yyyy')}
-      </button>
+  const todayStr = format(new Date(), 'yyyy-MM-dd');
+  const isViewingToday = value === todayStr;
 
-      {open && coords && createPortal(
+  return (
+    <div className="flex items-center gap-1.5">
+      <div className="relative" ref={containerRef}>
+        <button
+          type="button"
+          onClick={() => setOpen((o) => !o)}
+          className={
+            className ||
+            'flex items-center gap-2 bg-slate-800 border border-slate-600 rounded-lg px-3 py-1.5 text-white text-sm hover:border-slate-500 focus:outline-none focus:border-amber-500 transition-colors'
+          }
+        >
+          <Calendar size={15} className="text-slate-400" />
+          {format(selected, 'dd/MM/yyyy')}
+        </button>
+
+        {open && coords && createPortal(
         <div
           ref={popupRef}
           style={{ top: coords.top, left: coords.left, width: POPUP_WIDTH }}
@@ -141,7 +145,18 @@ export default function DateInput({ value, onChange, className, markedDates }: D
           </div>
         </div>,
         document.body
-      )}
+        )}
+      </div>
+
+      <button
+        type="button"
+        onClick={() => onChange(todayStr)}
+        disabled={isViewingToday}
+        title="Revenir à aujourd'hui"
+        className="flex items-center justify-center w-8 h-8 rounded-lg border border-slate-600 text-slate-400 hover:text-amber-400 hover:border-amber-500/50 disabled:opacity-30 disabled:hover:text-slate-400 disabled:hover:border-slate-600 transition-colors flex-shrink-0"
+      >
+        <CalendarCheck size={15} />
+      </button>
     </div>
   );
 }

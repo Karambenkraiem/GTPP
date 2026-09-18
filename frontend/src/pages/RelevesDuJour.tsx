@@ -1,6 +1,7 @@
 import { useState } from 'react';
 import { useQuery } from '@tanstack/react-query';
 import { relevesApi, journeesApi } from '../lib/api';
+import { useSelectedDate } from '../contexts/SelectedDateContext';
 import PageHeader from '../components/PageHeader';
 import Modal from '../components/Modal';
 import { format } from 'date-fns';
@@ -257,7 +258,7 @@ const BLOC_SECTIONS: BSection[] = [
 type ChartTarget = { label: string; unit: string; get: (r: any) => any; source: 'op' | 'bloc' };
 
 export default function RelevesDuJour() {
-  const [selectedDate, setSelectedDate] = useState(format(new Date(), 'yyyy-MM-dd'));
+  const { selectedDate, setSelectedDate } = useSelectedDate();
   const [activeTab, setActiveTab] = useState<'op' | 'bloc'>('op');
   const [chartTarget, setChartTarget] = useState<ChartTarget | null>(null);
   const [rangeFrom, setRangeFrom] = useState('');
@@ -286,12 +287,9 @@ export default function RelevesDuJour() {
         .filter((p: any) => p.value != null && !Number.isNaN(p.value))
     : [];
 
-  const journeesFrom = selectedDate < format(new Date(Date.now() - 30 * 86400000), 'yyyy-MM-dd')
-    ? selectedDate
-    : format(new Date(Date.now() - 30 * 86400000), 'yyyy-MM-dd');
   const { data: journees } = useQuery({
-    queryKey: ['journees', journeesFrom],
-    queryFn: () => journeesApi.list({ from: journeesFrom }),
+    queryKey: ['journees'],
+    queryFn: () => journeesApi.list(),
   });
   const journee = journees?.find((j: any) => (j.jour as string).slice(0, 10) === selectedDate);
 

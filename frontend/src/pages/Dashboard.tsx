@@ -12,12 +12,13 @@ import { fr } from 'date-fns/locale';
 import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer } from 'recharts';
 import { STATUT_JOURNEE_LABELS } from '../types';
 import { useAuth } from '../contexts/AuthContext';
+import { useSelectedDate } from '../contexts/SelectedDateContext';
 
 const RELEVE_ROUTE: Record<string, string> = { operateur: '/releves-op', chef_bloc: '/releves-bloc' };
 
 export default function Dashboard() {
   const { user } = useAuth();
-  const [selectedDate, setSelectedDate] = useState(() => format(new Date(), 'yyyy-MM-dd'));
+  const { selectedDate, setSelectedDate } = useSelectedDate();
   const isToday = selectedDate === format(new Date(), 'yyyy-MM-dd');
   const { data, isLoading } = useQuery({
     queryKey: ['dashboard', selectedDate],
